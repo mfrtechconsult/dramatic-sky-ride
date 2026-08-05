@@ -1,93 +1,108 @@
 # Dramatic Sky Ride — alpha.13
 
-Addon indépendant pour **Gen1Recomp** et **Dramatic Shape Voxel Mod**. Il ajoute des montures volantes dans les vues voxel `FULL`, `15`, `35`, `50`, `75`, `1ST` et `3RD`.
+A gameplay add-on for **Gen1Recomp** and **Dramatic Shape Voxel Mod** that adds fully controllable flying mounts to the `FULL`, `15`, `35`, `50`, `75`, `1ST` and `3RD` voxel views.
 
-## Changements alpha.13
+## Download
 
-- suppression complète de `AUTO FLY` et de sa dépendance à la carte des destinations ;
-- le vol reste entièrement manuel, libre et continu en `1ST` et `3RD` ;
-- le suivi automatique de caméra reste disponible et ne pilote jamais la monture ;
-- le boost conserve son calcul unique par frame pour éviter les déplacements saccadés ;
-- les dix montures logiques de première génération restent disponibles ;
-- l'intégration Pokémon Stadium reste entièrement supprimée ;
-- si au moins un Pokémon de l'équipe connaît `SURF`, l'eau devient une zone d'atterrissage valide ;
-- un atterrissage sur l'eau active automatiquement l'état de surf natif, sa musique et ses collisions ;
-- le raccourci habituel de monture permet de redécoller directement depuis l'eau.
+Download the ready-to-install archive from the **GitHub Releases** page:
 
-## Pokémon utilisables
+https://github.com/mfrtechconsult/dramatic-sky-ride/releases
 
-Les Pokémon suivants peuvent utiliser `RIDE & FLY` lorsqu'ils sont dans l'équipe et ne sont pas K.O. :
+Do not use the repository source ZIP unless you specifically want the development files. For normal installation, download the `dramatic_sky_ride-<version>.zip` asset attached to the latest release.
 
-- Dracaufeu — `follower_006.png` ;
-- Roucarnage — `follower_018.png` ;
-- Rapasdepic — `follower_022.png` ;
-- Nosferalto — `follower_042.png` ;
-- Ptéra — `follower_142.png` ;
-- Artikodin — `follower_144.png` ;
-- Électhor — `follower_145.png` ;
-- Sulfura — `follower_146.png` ;
-- Draco — `follower_148.png` ;
-- Dracolosse — `follower_149.png`.
+## Alpha.13 changes
 
-Dodrio, Papilusion, Dardargnan, Insécateur et les petits Pokémon capables de léviter ne sont pas inclus : apprendre `VOL` ou quitter le sol ne signifie pas forcément pouvoir porter le dresseur de manière crédible.
+- Water becomes a valid landing surface when at least one Pokémon in the party knows `SURF`.
+- Landing on water automatically enables Gen1Recomp's native surfing state, water collision rules and Surf music.
+- The normal mount shortcut can take off again directly from the water.
+- Without a Pokémon that knows `SURF`, the landing marker remains invalid and displays `SURF REQUIRED`.
+- Flight remains fully manual, free and continuous in `1ST` and `3RD`.
+- Automatic camera follow remains optional and never controls the mount.
+- `AUTO FLY` and the Pokémon Stadium experiment remain completely removed.
 
-## Contrôles
+## Supported mounts
 
-| Action | Clavier | Manette |
+The following conscious Pokémon receive a `RIDE & FLY` party action:
+
+- Charizard — `follower_006.png`
+- Pidgeot — `follower_018.png`
+- Fearow — `follower_022.png`
+- Golbat — `follower_042.png`
+- Aerodactyl — `follower_142.png`
+- Articuno — `follower_144.png`
+- Zapdos — `follower_145.png`
+- Moltres — `follower_146.png`
+- Dragonair — `follower_148.png`
+- Dragonite — `follower_149.png`
+
+Dodrio, Butterfree, Beedrill, Scyther and small levitating Pokémon are intentionally excluded. Being able to learn Fly or leave the ground does not necessarily make a Pokémon large or strong enough to carry the trainer convincingly.
+
+If several compatible Pokémon are in the party, each one receives its own `RIDE & FLY` action. The quick-mount shortcut reuses the last valid selected mount, or the first valid mount in party order when necessary.
+
+## Controls
+
+| Action | Keyboard | Controller |
 |---|---|---|
-| Déplacement | Flèches / touches configurées | Stick gauche / croix |
-| Regarder | Souris | Stick droit |
-| Monter | `Page Up` | `R2` |
-| Descendre | `Page Down` | `L2` |
-| Accélérer | bouton B configuré | `B` du jeu |
-| Atterrir | bouton A configuré | `A` du jeu |
-| Monture rapide | `F` | `SELECT + R1` |
+| Move | Arrow keys / configured movement keys | Left stick / D-pad |
+| Look | Mouse | Right stick |
+| Ascend | `Page Up` | `R2` |
+| Descend | `Page Down` | `L2` |
+| Boost | Configured B action | In-game `B` |
+| Land | Configured A action | In-game `A` |
+| Quick mount / take off again | `F` | `SELECT + R1` |
 
-Sur l'eau, ce même raccourci quitte automatiquement le surf et relance le vol avec la dernière monture valide.
+On water, the same quick-mount shortcut leaves the Surf state and immediately starts a new flight with the last valid mount.
 
-### Suivi de caméra
+## Camera follow
 
-Avec `CAMERA FOLLOW : ON` :
+With `CAMERA FOLLOW: ON`:
 
-- en `3RD`, la caméra revient progressivement derrière la trajectoire réelle ;
-- en `1ST`, elle accompagne doucement les changements de direction sans rotation instantanée ;
-- une action sur le stick droit ou la souris donne immédiatement la priorité au joueur ;
-- le suivi reprend après une courte temporisation ;
-- reculer ne provoque pas de demi-tour automatique brutal.
+- in `3RD`, the camera gradually returns behind the actual flight path;
+- in `1ST`, it smoothly follows direction changes without instant snapping;
+- mouse or right-stick input immediately gives full control back to the player;
+- automatic follow resumes after a short delay;
+- reversing does not force a sudden automatic 180-degree turn.
 
-Avec `CAMERA FOLLOW : OFF`, la caméra reste entièrement manuelle.
+With `CAMERA FOLLOW: OFF`, the camera remains fully manual.
 
-## Autres fonctions conservées
+## Main features
 
-- vue depuis les yeux du dresseur en `1ST` ;
-- dresseur masqué en première personne ;
-- accès normal au menu pendant le vol ;
-- altitude manuelle de 20 à 96 pixels ;
-- sécurité automatique au-dessus du relief et des grands bâtiments connus ;
-- marqueur vert ou rouge d'atterrissage, y compris sur l'eau lorsque `SURF` est disponible ;
-- ombre dynamique ;
-- battement d'ailes sans variation de hauteur ;
-- suspension des rencontres, warps au sol et lignes de vue des dresseurs ;
-- protection `STORY SAFE` pour les entités runtime de quêtes ;
-- restauration des compagnons après l'atterrissage ;
-- avertissement `LAND FIRST` sans atterrissage forcé pour les raccourcis externes incompatibles.
+- Free analogue movement in `1ST` and `3RD`.
+- First-person view from the trainer's eye position.
+- Trainer hidden in first-person view.
+- Normal pause-menu access while airborne.
+- Manual altitude from 20 to 96 pixels.
+- Automatic safety altitude above terrain and known large buildings.
+- Green/red landing marker, including Surf-aware water validation.
+- Dynamic ground shadow.
+- Stable wing animation without vertical camera bobbing.
+- Ground encounters, underfoot warps and trainer sight lines suspended during flight.
+- `STORY SAFE` protection for runtime quest entities.
+- Followers hidden during flight and restored after landing.
+- `LAND FIRST` warnings for incompatible external shortcuts without forcing a normal landing.
 
-## Prérequis obligatoires
+## Required dependencies
 
-Avant d’installer Sky Ride, il faut déjà disposer de :
+Install and test these before Dramatic Sky Ride:
 
-1. **Gen1Recomp**, dans une version compatible avec l’API de mods 2 ;
-2. **Dramatic Shape Voxel Mod 1.6.0 ou plus récent**, qui fournit le monde 3D, les vues `1ST`/`3RD` et le déplacement libre :
+1. **Gen1Recomp**, using a build compatible with Mod API 2.
+2. **Dramatic Shape Voxel Mod 1.6.0 or newer**, which provides the 3D world, `1ST`/`3RD` cameras and continuous free movement:
    https://github.com/DramaticShape/DramaticShapeVoxelMod
-3. **un fournisseur compatible de sprites PokePC**, soit `PokePC Followers`, soit `PokePC Followers Voxel Merge`. Sky Ride lit leurs feuilles de sprites 16×96 déjà installées et ne redistribue pas les graphismes Pokémon.
+3. **A compatible PokePC follower-sprite provider**, either `PokePC Followers` or `PokePC Followers Voxel Merge`. Sky Ride reads the already-installed 16×96 follower sheets and does not redistribute Pokémon artwork.
 
-`Followers EX` n’est pas obligatoire. Il est toutefois pris en charge : ses compagnons sont masqués pendant le vol puis restaurés après l’atterrissage.
+`Followers EX` is optional but supported. Its follower entities are hidden during flight and restored after landing.
 
-La dépendance PokePC reste déclarée comme optionnelle dans le manifeste uniquement parce que plusieurs variantes utilisent des identifiants différents. **En pratique, l’une des installations PokePC compatibles est nécessaire pour afficher les montures.**
+The PokePC dependency is marked optional in the manifest only because different variants use different mod identifiers. **In practice, one compatible PokePC sprite installation is required to display the mounts.**
 
 ## Installation
 
-Supprimer l'ancien dossier, puis extraire l'archive dans le dossier `mods` :
+1. Download the archive attached to the desired GitHub release.
+2. Remove any older `dramatic_sky_ride` folder.
+3. Extract the archive into the Gen1Recomp `mods` directory.
+4. Confirm that the final path is `mods/dramatic_sky_ride/manifest.json`.
+5. Fully restart Gen1Recomp.
+
+Expected structure:
 
 ```text
 mods/
@@ -97,15 +112,12 @@ mods/
     ├── manifest.json
     ├── main.lua
     ├── src/
-    │   └── source parts main_01.lua … main_14.lua
     ├── mod.card
     ├── README.md
     └── TESTING.md
 ```
 
-Redémarrer complètement Gen1Recomp après le remplacement.
-
-## Options conseillées
+## Recommended options
 
 ```text
 SHOW RIDER       ON
@@ -121,24 +133,35 @@ SOUND & RUMBLE   ON
 STORY SAFE       ON
 ```
 
-## Limites restantes
+## Known limitations
 
-- les offsets visuels des nouvelles montures doivent être vérifiés en jeu ;
-- la détection géométrique complète des toits n'est pas encore intégrée ;
-- la posture assise dédiée du dresseur reste prévue pour plus tard ;
-- cette archive a été validée par analyse et simulation, mais seul un test dans Gen1Recomp confirme le rendu final de chaque sprite.
+- Rider offsets for the newer mounts still need in-game visual verification.
+- Complete geometry-based roof detection is not implemented yet.
+- A dedicated seated trainer pose is planned for a later version.
+- Quest compatibility is defensive and cannot guarantee compatibility with every third-party script.
+- First-person comfort and camera-follow tuning may still change based on player feedback.
 
-## Structure du dépôt
+## Bug reports
 
-- `dramatic_sky_ride/` : dossier du mod à copier dans `mods/` ;
-- `dramatic_sky_ride/` est le dossier installable : téléchargez le dépôt avec **Code → Download ZIP**, puis copiez ce dossier dans `mods/` ;
-- `CHANGELOG.md` : historique des versions ;
-- `.github/workflows/validate.yml` : validation automatique JSON et Lua.
+Please include:
 
-## Développement
+- Gen1Recomp version;
+- Dramatic Shape version;
+- follower mod and version;
+- Red, Blue or Yellow;
+- camera mode;
+- mount used;
+- keyboard or controller model;
+- exact reproduction steps;
+- screenshots, video or logs when possible.
 
-Le mod est encore en phase alpha. Les rapports de test doivent préciser la version de Gen1Recomp, la version de Dramatic Shape, la vue utilisée, le Pokémon monté et les étapes de reproduction.
+## Repository structure
 
-## Licence
+- `dramatic_sky_ride/`: installable mod folder;
+- `CHANGELOG.md`: version history;
+- `.github/workflows/validate.yml`: Lua and JSON validation;
+- `.github/workflows/release.yml`: automatic release archive generation.
 
-Aucune licence open source n'est accordée pour le moment. Le code reste soumis au droit d'auteur de son propriétaire jusqu'à l'ajout explicite d'un fichier `LICENSE`.
+## License
+
+No open-source license is currently granted. The code remains under the copyright of its owner until a `LICENSE` file is explicitly added.

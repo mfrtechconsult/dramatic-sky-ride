@@ -1,15 +1,18 @@
-# Dramatic Sky Ride — alpha.12
+# Dramatic Sky Ride — alpha.13
 
 Addon indépendant pour **Gen1Recomp** et **Dramatic Shape Voxel Mod**. Il ajoute des montures volantes dans les vues voxel `FULL`, `15`, `35`, `50`, `75`, `1ST` et `3RD`.
 
-## Changements alpha.12
+## Changements alpha.13
 
 - suppression complète de `AUTO FLY` et de sa dépendance à la carte des destinations ;
 - le vol reste entièrement manuel, libre et continu en `1ST` et `3RD` ;
 - le suivi automatique de caméra reste disponible et ne pilote jamais la monture ;
 - le boost conserve son calcul unique par frame pour éviter les déplacements saccadés ;
 - les dix montures logiques de première génération restent disponibles ;
-- l'intégration Pokémon Stadium reste entièrement supprimée.
+- l'intégration Pokémon Stadium reste entièrement supprimée ;
+- si au moins un Pokémon de l'équipe connaît `SURF`, l'eau devient une zone d'atterrissage valide ;
+- un atterrissage sur l'eau active automatiquement l'état de surf natif, sa musique et ses collisions ;
+- le raccourci habituel de monture permet de redécoller directement depuis l'eau.
 
 ## Pokémon utilisables
 
@@ -40,6 +43,8 @@ Dodrio, Papilusion, Dardargnan, Insécateur et les petits Pokémon capables de l
 | Atterrir | bouton A configuré | `A` du jeu |
 | Monture rapide | `F` | `SELECT + R1` |
 
+Sur l'eau, ce même raccourci quitte automatiquement le surf et relance le vol avec la dernière monture valide.
+
 ### Suivi de caméra
 
 Avec `CAMERA FOLLOW : ON` :
@@ -59,7 +64,7 @@ Avec `CAMERA FOLLOW : OFF`, la caméra reste entièrement manuelle.
 - accès normal au menu pendant le vol ;
 - altitude manuelle de 20 à 96 pixels ;
 - sécurité automatique au-dessus du relief et des grands bâtiments connus ;
-- marqueur vert ou rouge d'atterrissage ;
+- marqueur vert ou rouge d'atterrissage, y compris sur l'eau lorsque `SURF` est disponible ;
 - ombre dynamique ;
 - battement d'ailes sans variation de hauteur ;
 - suspension des rencontres, warps au sol et lignes de vue des dresseurs ;

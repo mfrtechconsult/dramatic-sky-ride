@@ -2,6 +2,14 @@
 
 Toutes les modifications notables de Dramatic Sky Ride sont documentées ici.
 
+## 0.1.0-alpha.13
+
+- Atterrissage autorisé sur l'eau lorsqu'au moins un Pokémon de l'équipe connaît `SURF`.
+- Activation automatique de l'état de surf natif, de la musique de surf et des collisions aquatiques après l'atterrissage.
+- Redécollage direct depuis l'eau avec `F` ou `SELECT + R1`, sans devoir rejoindre la terre ferme.
+- Le marqueur d'atterrissage tient désormais compte de la disponibilité de `SURF`.
+- Réinitialisation et restauration cohérentes du surf, des followers et de la musique lors des transitions.
+
 ## 0.1.0-alpha.12
 
 - Suppression complète du vol automatique, de son entrée de menu et de son code de destination.

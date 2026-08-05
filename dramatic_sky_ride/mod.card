@@ -1,5 +1,5 @@
 return {
-  summary = "Ride large Gen 1 flying Pokemon with free 1ST/3RD controls and smooth camera follow.",
+  summary = "Ride large Gen 1 flying Pokemon with free 1ST/3RD controls, water landings and smooth camera follow.",
   author = "Prototype prepared for Mathieu",
   tags = { "dramatic-shape", "flying", "mount", "voxel", "first-person" },
   differences = {
@@ -7,6 +7,9 @@ return {
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
       "1ST and 3RD use one continuous analog movement solve per frame",
       "the camera smoothly follows the actual flight course after manual look input stops",
+      "water cells become valid landing spots when a party Pokemon knows SURF",
+      "landing on water automatically continues in the native surfing state",
+      "the normal mount shortcut can take off again directly from surfing",
       "normal menus remain available while flying",
       "the Stadium model experiment has been removed completely"
     },
@@ -14,7 +17,8 @@ return {
       "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite mounts",
       "optional CAMERA FOLLOW with temporary manual override",
       "manual altitude, landing marker, dynamic shadow, boost, sounds and rumble",
-      "stable wing animation without vertical bob"
+      "stable wing animation without vertical bob",
+      "surf music, player state and follower restoration are synchronized on water landings"
     },
     known = {
       "new rider seat offsets may need visual tuning for some follower sheets",

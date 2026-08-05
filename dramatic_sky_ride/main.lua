@@ -1,38 +1,22 @@
 -- Dramatic Sky Ride entry point.
---
--- The implementation is split into line-preserving source parts so the public
--- repository remains easy to review and update. The parts are concatenated
--- before compilation, preserving the exact alpha.12 Lua program.
+-- Source chunks are line-preserving and concatenated before compilation.
 
 local mod = ...
-
-local parts = {
-  "src/main_01.lua",
-  "src/main_02.lua",
-  "src/main_03.lua",
-  "src/main_04.lua",
-  "src/main_05.lua",
-  "src/main_06.lua",
-  "src/main_07.lua",
-  "src/main_08.lua",
-  "src/main_09.lua",
-  "src/main_10.lua",
-  "src/main_11.lua",
-  "src/main_12a.lua",
-  "src/main_12b.lua",
-  "src/main_13a.lua",
-  "src/main_13b.lua",
-  "src/main_14.lua",
-}
+local index = mod:read("src/parts.txt")
+if not index then
+  error("DRAMATIC_SKY_RIDE: missing src/parts.txt — reinstall the mod", 0)
+end
 
 local source = {}
-for _, relative in ipairs(parts) do
+for filename in index:gmatch("[^\r\n]+") do
+  local relative = "src/" .. filename
   local text = mod:read(relative)
   if not text then
     error(("DRAMATIC_SKY_RIDE: missing %s — reinstall the mod"):format(relative), 0)
   end
   source[#source + 1] = text
 end
+
 
 local chunk, err = load(table.concat(source, ""),
                         "@" .. mod.path .. "/src/sky_ride.lua")

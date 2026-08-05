@@ -1,1 +1,1 @@
-log("loaded alpha.12; manual free flight and camera follow enabled")
+log("loaded alpha.13; water landings and surf takeoffs enabled")

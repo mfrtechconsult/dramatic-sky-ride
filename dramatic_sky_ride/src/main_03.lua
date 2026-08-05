@@ -38,10 +38,13 @@ local flight = {
   cameraManualTimer = 0,
   landingX = nil,
   landingY = nil,
+  landingKind = nil,
   suspended = nil,
   originMap = nil,
   originX = nil,
   originY = nil,
+  originSurf = false,
+  originSurfMon = nil,
 }
 
 local lastMountIndex = nil

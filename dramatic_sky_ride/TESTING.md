@@ -1,4 +1,4 @@
-# Test ciblé — Dramatic Sky Ride alpha.12
+# Test ciblé — Dramatic Sky Ride alpha.13
 
 Utiliser `OK`, `KO`, `PARTIEL` ou `N/T`.
 
@@ -6,12 +6,12 @@ Utiliser `OK`, `KO`, `PARTIEL` ou `N/T`.
 
 | ID | Test | Résultat attendu | Statut |
 |---|---|---|---|
-| A12-01 | Démarrer le jeu | Aucun message lié à Stadium, aucune option Stadium | |
-| A12-02 | Décoller avec Dracaufeu ou Roucarnage | Fonctionnement identique à alpha.9/10 | |
-| A12-03 | Ouvrir le menu en vol | Menu accessible, vol conservé | |
-| A12-04 | Battement d'ailes | Aucune variation verticale | |
-| A12-05 | Atterrissage valide/invalide | Même comportement que précédemment | |
-| A12-06 | Ouvrir le menu en croisière | Aucune entrée `AUTO FLY` | |
+| A13-01 | Démarrer le jeu | Aucun message lié à Stadium, aucune option Stadium | |
+| A13-02 | Décoller avec Dracaufeu ou Roucarnage | Fonctionnement identique à alpha.9/10 | |
+| A13-03 | Ouvrir le menu en vol | Menu accessible, vol conservé | |
+| A13-04 | Battement d'ailes | Aucune variation verticale | |
+| A13-05 | Atterrissage valide/invalide | Même comportement que précédemment | |
+| A13-06 | Ouvrir le menu en croisière | Aucune entrée `AUTO FLY` | |
 
 ## 2. Contrôles libres
 
@@ -69,3 +69,17 @@ Résultat :
 Résultat attendu :
 Capture/vidéo :
 ```
+
+## 5. Atterrissage sur l'eau et redécollage
+
+| ID | Test | Résultat attendu | Statut |
+|---|---|---|---|
+| SURF-01 | Survoler l'eau sans Pokémon connaissant `SURF` | Marqueur rouge et message `SURF REQUIRED` | |
+| SURF-02 | Ajouter un Pokémon connaissant `SURF`, puis survoler la même case | Marqueur vert | |
+| SURF-03 | Appuyer sur A au-dessus de l'eau | Descente normale puis état de surf actif sur la case visée | |
+| SURF-04 | Se déplacer après l'atterrissage | Déplacement aquatique natif et musique de surf | |
+| SURF-05 | Appuyer sur `F` en surfant | Décollage immédiat avec la dernière monture valide | |
+| SURF-06 | Utiliser `SELECT + R1` en surfant | Même résultat que `F` | |
+| SURF-07 | Atterrir sur la terre après un décollage depuis l'eau | État de surf désactivé et musique de carte restaurée | |
+| SURF-08 | Atterrir sur l'eau avec Pikachu connaissant `SURF` | Sprite Surfing Pikachu utilisé lorsque le moteur le permet | |
+| SURF-09 | Ouvrir le menu pendant le vol et retirer/remplacer `SURF` avant de toucher l'eau | Atterrissage annulé proprement avec `SURF REQUIRED` | |

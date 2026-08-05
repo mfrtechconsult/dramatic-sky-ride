@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.0-alpha.12",
+  "version": "0.1.0-alpha.13",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -21,5 +21,5 @@
   ],
   "affects_link": false,
   "experimental": false,
-  "description": "Flying mounts with smooth free-camera controls, automatic camera follow, first-person eye view, manual altitude and landing tools."
+  "description": "Flying mounts with free-camera controls, water landings that continue as Surf, first-person eye view, manual altitude and landing tools."
 }

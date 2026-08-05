@@ -1,0 +1,82 @@
+name: Publish release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - dramatic_sky_ride/manifest.json
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "archive=dramatic_sky_ride-$VERSION.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Validate manifest and Lua source
+        shell: bash
+        run: |
+          python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y lua5.4
+          cat dramatic_sky_ride/src/main_*.lua > /tmp/dramatic_sky_ride.lua
+          luac -p dramatic_sky_ride/main.lua dramatic_sky_ride/mod.card /tmp/dramatic_sky_ride.lua
+
+      - name: Build install archive
+        shell: bash
+        run: |
+          zip -qr "${{ steps.version.outputs.archive }}" dramatic_sky_ride
+          unzip -t "${{ steps.version.outputs.archive }}"
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          cat > /tmp/release-notes.md <<'EOF'
+          ## Dramatic Sky Ride alpha.13
+
+          This update adds Surf-aware water landings:
+
+          - land on water when any party Pokémon knows **Surf**;
+          - automatically continue in Gen1Recomp's native surfing state;
+          - restore Surf music and water movement immediately after landing;
+          - take off again directly from the water with `F` or `SELECT + R1`;
+          - receive a `SURF REQUIRED` warning when water landing is unavailable.
+
+          Flight remains fully manual and supports free movement in first- and third-person views.
+
+          Download the attached `dramatic_sky_ride-0.1.0-alpha.13.zip` file and extract its `dramatic_sky_ride` folder into the Gen1Recomp `mods` directory.
+          EOF
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          ARCHIVE: ${{ steps.version.outputs.archive }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ARCHIVE" --clobber
+          else
+            gh release create "$TAG" "$ARCHIVE" \
+              --target "$GITHUB_SHA" \
+              --title "Dramatic Sky Ride $VERSION" \
+              --notes-file /tmp/release-notes.md \
+              --prerelease
+          fi

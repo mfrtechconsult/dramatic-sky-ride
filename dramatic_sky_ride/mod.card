@@ -1,0 +1,30 @@
+return {
+  summary = "Ride large Gen 1 flying Pokemon with free 1ST/3RD controls and smooth camera follow.",
+  author = "Prototype prepared for Mathieu",
+  tags = { "dramatic-shape", "flying", "mount", "voxel", "first-person" },
+  differences = {
+    changed = {
+      "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
+      "1ST and 3RD use one continuous analog movement solve per frame",
+      "the camera smoothly follows the actual flight course after manual look input stops",
+      "normal menus remain available while flying",
+      "the Stadium model experiment has been removed completely"
+    },
+    added = {
+      "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite mounts",
+      "optional CAMERA FOLLOW with temporary manual override",
+      "manual altitude, landing marker, dynamic shadow, boost, sounds and rumble",
+      "stable wing animation without vertical bob"
+    },
+    known = {
+      "new rider seat offsets may need visual tuning for some follower sheets",
+      "tall-building safety still uses authored zones plus local terrain height",
+      "advanced geometry-based roof detection remains planned"
+    }
+  },
+  credits = {
+    { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "voxel scene, first/third-person cameras and continuous free movement" },
+    { who = "gamecorner-033/PokePCFollowers", for_ = "Gen 1 follower sprite assets supplied by the user's installation" }
+  },
+  compat = { engine = ">=0.1.69 <2.0.0", modApi = 2 }
+}

@@ -1,0 +1,24 @@
+name: Validate mod
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.4
+      - name: Validate manifest JSON
+        run: python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+      - name: Rebuild and validate Lua syntax
+        run: |
+          cat dramatic_sky_ride/src/main_*.lua > /tmp/dramatic_sky_ride.lua
+          luac -p dramatic_sky_ride/main.lua dramatic_sky_ride/mod.card /tmp/dramatic_sky_ride.lua
+      - name: Build and validate install archive
+        run: |
+          cd dramatic_sky_ride
+          zip -qr /tmp/dramatic_sky_ride-0.1.0-alpha.12.zip .
+          unzip -t /tmp/dramatic_sky_ride-0.1.0-alpha.12.zip

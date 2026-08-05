@@ -35,7 +35,10 @@ jobs:
           python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
           sudo apt-get update
           sudo apt-get install -y lua5.4
-          cat dramatic_sky_ride/src/main_*.lua > /tmp/dramatic_sky_ride.lua
+          : > /tmp/dramatic_sky_ride.lua
+          while IFS= read -r part; do
+            cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
+          done < dramatic_sky_ride/src/parts.txt
           luac -p dramatic_sky_ride/main.lua dramatic_sky_ride/mod.card /tmp/dramatic_sky_ride.lua
 
       - name: Build install archive
@@ -48,19 +51,20 @@ jobs:
         shell: bash
         run: |
           cat > /tmp/release-notes.md <<'EOF'
-          ## Dramatic Sky Ride alpha.13
+          ## Dramatic Sky Ride alpha.14
 
-          This update adds Surf-aware water landings:
+          This update introduces **Ground Ride**, a separate terrestrial mount system:
 
-          - land on water when any party Pokémon knows **Surf**;
-          - automatically continue in Gen1Recomp's native surfing state;
-          - restore Surf music and water movement immediately after landing;
-          - take off again directly from the water with `F` or `SELECT + R1`;
-          - receive a `SURF REQUIRED` warning when water landing is unavailable.
+          - ride Tauros, Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon or Kangaskhan;
+          - use `G` on keyboard or `SELECT + L1` on controller;
+          - travel at bicycle-class speed while retaining normal collisions, encounters, warps and scripts;
+          - use Ground Ride outdoors and in caves;
+          - jump official low ledges safely in either direction;
+          - switch cleanly between Ground Ride, flight, Surf, battles and map transitions.
 
-          Flight remains fully manual and supports free movement in first- and third-person views.
+          Flight remains on `F` / `SELECT + R1`, and Surf-aware water landings remain available.
 
-          Download the attached `dramatic_sky_ride-0.1.0-alpha.13.zip` file and extract its `dramatic_sky_ride` folder into the Gen1Recomp `mods` directory.
+          Download the attached ZIP and extract its `dramatic_sky_ride` folder into the Gen1Recomp `mods` directory.
           EOF
 
       - name: Create or update GitHub release

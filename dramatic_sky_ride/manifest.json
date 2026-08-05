@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.0-alpha.13",
+  "version": "0.1.0-alpha.14",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -21,5 +21,5 @@
   ],
   "affects_link": false,
   "experimental": false,
-  "description": "Flying mounts with free-camera controls, Surf-enabled water landings, first-person eye view, manual altitude and landing tools."
+  "description": "Flying and terrestrial mounts with free-camera flight, Surf water landings, official two-way ledge jumps and dedicated shortcuts."
 }

@@ -40,3 +40,5 @@ jobs:
           fi
           git commit -m 'Publish Dramatic Sky Ride alpha.12'
           git push origin HEAD:main
+
+# Second push intentionally triggers publication after the workflow exists.

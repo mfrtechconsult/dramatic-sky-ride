@@ -1,7 +1,7 @@
 return {
-  summary = "Ride large Gen 1 flying Pokemon with free 1ST/3RD controls, water landings and smooth camera follow.",
-  author = "Prototype prepared for Mathieu",
-  tags = { "dramatic-shape", "flying", "mount", "voxel", "first-person" },
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with free voxel controls and native world interactions.",
+  author = "MFR TechConsult",
+  tags = { "dramatic-shape", "flying", "mount", "ground-ride", "surf", "voxel" },
   differences = {
     changed = {
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
@@ -10,20 +10,27 @@ return {
       "water cells become valid landing spots when a party Pokemon knows SURF",
       "landing on water automatically continues in the native surfing state",
       "the normal mount shortcut can take off again directly from surfing",
-      "normal menus remain available while flying",
-      "the Stadium model experiment has been removed completely"
+      "Ground Ride remembers the preferred mount and restores it safely after battles and party changes",
+      "flight altitude and rider rendering survive wild and trainer battles",
+      "ordinary NPC and sign interactions remain available while mounted",
+      "incompatible item, machine and field actions dismount before using the native engine path"
     },
     added = {
-      "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite mounts",
+      "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite flying mounts",
+      "Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax Ground Ride mounts",
+      "species-aware Ground Ride acceleration, gallop, stamina, dust and rider offsets",
       "optional CAMERA FOLLOW with temporary manual override",
       "manual altitude, landing marker, dynamic shadow, boost, sounds and rumble",
-      "stable wing animation without vertical bob",
-      "surf music, player state and follower restoration are synchronized on water landings"
+      "visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts",
+      "a central MOUNTS menu for Ground Ride, flight and Surf selection",
+      "species-weighted ledge jumps with guarded landings and impact feedback",
+      "seamless boost continuity across connected maps in 2D, 1ST and 3RD"
     },
     known = {
-      "new rider seat offsets may need visual tuning for some follower sheets",
+      "rider seating still uses procedural offsets rather than dedicated seated sprites",
       "tall-building safety still uses authored zones plus local terrain height",
-      "advanced geometry-based roof detection remains planned"
+      "advanced geometry-based roof detection is deferred in the repository backlog",
+      "feature development is paused after alpha.15; future work is bug-fix focused"
     }
   },
   credits = {

@@ -25,8 +25,95 @@ mod.hooks:wrap("movement.speed", function(next, frames, ctx)
   return value
 end, 80)
 
+local flightBattleResume = nil
+
+local function partyIndexFor(mon)
+  for i, candidate in ipairs(Game.save and Game.save.party or {}) do
+    if candidate == mon then return i end
+  end
+  return nil
+end
+
+local function resolveFlightBattleMount(snapshot)
+  if not snapshot then return nil end
+  local party = Game.save and Game.save.party or {}
+  for _, mon in ipairs(party) do
+    if mon == snapshot.mon then return mon end
+  end
+  local slotted = snapshot.index and party[snapshot.index]
+  if slotted and mountSpecies(Game, slotted) then return slotted end
+  if snapshot.nickname and snapshot.nickname ~= "" then
+    for _, mon in ipairs(party) do
+      if mon.nickname == snapshot.nickname and mountSpecies(Game, mon) then
+        return mon
+      end
+    end
+  end
+  return nil
+end
+
 mod.events:on("battle.started", function()
-  if flight.active then forceImmediateLand(Game) end
+  if not flight.active then return end
+  -- The overworld is not updated while the battle is on top of the stack, so
+  -- keeping the flight state alive freezes the mount naturally. The previous
+  -- forceImmediateLand() call destroyed altitude and left a stale rider card.
+  flightBattleResume = {
+    mon = flight.mon,
+    index = partyIndexFor(flight.mon),
+    nickname = flight.mon and flight.mon.nickname,
+    phase = flight.phase,
+    altitude = flight.altitude,
+    requestedAltitude = flight.requestedAltitude,
+    targetAltitude = flight.targetAltitude,
+    safetyAltitude = flight.safetyAltitude,
+    boost = flight.boost,
+  }
+end)
+
+mod.events:on("battle.ended", function(ev)
+  local snapshot = flightBattleResume
+  flightBattleResume = nil
+  if not snapshot then return end
+
+  local mon = resolveFlightBattleMount(snapshot)
+  local species = mon and mountSpecies(Game, mon) or nil
+  if (ev and ev.result == "lose") or not healthy(mon) or not species then
+    -- A defeated, removed or no-longer-eligible mount cannot stay airborne.
+    forceImmediateLand(Game)
+    return
+  end
+
+  local sprite = flight.sprite
+  if species ~= flight.species then
+    local rebuilt = buildMountSprite(species)
+    if not rebuilt then
+      forceImmediateLand(Game)
+      return
+    end
+    sprite = rebuilt
+  end
+
+  -- Restore the exact pre-battle airborne state. This also protects against
+  -- another battle callback touching one of these values while the battle UI
+  -- is being assembled or dismissed.
+  flight.active = true
+  flight.mon = mon
+  flight.species = species
+  flight.sprite = sprite
+  flight.phase = snapshot.phase == "idle" and "cruise" or snapshot.phase
+  flight.altitude = snapshot.altitude
+  flight.requestedAltitude = snapshot.requestedAltitude
+  flight.targetAltitude = snapshot.targetAltitude
+  flight.safetyAltitude = snapshot.safetyAltitude
+  flight.boost = snapshot.boost
+  flight.boostWasHeld = false
+
+  local ow = Game.overworld
+  if ow then
+    purgeFollowersDuringFlight(ow)
+    if showRiderEnabled() then ensureRiderEntity(ow) else removeRiderEntity(ow) end
+    ensureGroundFxEntity(ow)
+  end
 end)
 
 mod.events:on("save.writing", function()

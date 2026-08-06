@@ -1,92 +1,71 @@
-# Dramatic Sky Ride — alpha.14
+# Dramatic Sky Ride — alpha.15
 
-A gameplay add-on for **Gen1Recomp** and **Dramatic Shape Voxel Mod** that adds controllable flying mounts, Surf-aware water landings and terrestrial Ground Ride mounts.
+Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp** when used with **Dramatic Shape Voxel Mod**.
 
-## Download
+## Alpha.15 highlights
 
-Download the ready-to-install archive from **GitHub Releases**:
+### Ground Ride
 
-https://github.com/mfrtechconsult/dramatic-sky-ride/releases
+Supported mounts:
 
-Use the `dramatic_sky_ride-<version>.zip` asset attached to the latest release.
+- Arcanine
+- Rapidash
+- Dodrio
+- Rhyhorn
+- Rhydon
+- Kangaskhan
+- Tauros
+- Snorlax
 
-## Alpha.14: Ground Ride
+Use `G` on keyboard or `SELECT + L1` on controller to mount or dismount.
 
-Ground Ride is a separate terrestrial mount system with its own shortcut and party action.
+Ground Ride now includes:
 
-Supported ground mounts:
+- species-specific speed, acceleration, gallop strength and stamina;
+- a visible stamina HUD and dust while galloping with `B`;
+- seamless boost continuity through connected maps in 2D, `1ST` and `3RD`;
+- safe two-way traversal of official low ledges;
+- species-weighted jump arcs, landing dust, sound and vibration;
+- remembered mount selection after party reordering;
+- safe restoration after wild and trainer battles;
+- no remount when the selected mount fainted, left the party or became incompatible;
+- ordinary NPC conversations and sign reading without dismounting;
+- automatic dismount before incompatible native actions such as item pickup, PCs, Cut, Surf, fishing, Fly, Dig, Teleport and Strength boulder pushes.
 
-- Arcanine — `follower_059.png`
-- Rapidash — `follower_078.png`
-- Dodrio — `follower_085.png`
-- Rhyhorn — `follower_111.png`
-- Rhydon — `follower_112.png`
-- Kangaskhan — `follower_115.png`
-- Tauros — `follower_128.png`
+### Flying
 
-Each compatible, conscious party member receives a **RIDE** action.
+Use `F` on keyboard or `SELECT + R1` on controller.
 
-Ground Ride features:
+The validated alpha.14 camera behaviour is preserved. Alpha.15 also keeps altitude, boost and rider rendering stable across battles, without leaving a ghost trainer sprite on the map.
 
-- bicycle-class movement speed;
-- normal collisions, encounters, warps and scripts remain active;
-- available outdoors and in caves;
-- official low ledges can be jumped in either direction;
-- ordinary walls, trees, rocks, buildings and water remain impassable;
-- compatible transitions preserve the mount;
-- incompatible indoor maps dismount automatically;
-- followers and battle transitions are restored safely.
+### Visible Surf mounts
 
-### Ground Ride controls
+The `MOUNTS` menu can select:
 
-| Action | Keyboard | Controller |
-|---|---|---|
-| Mount or dismount | `G` | `SELECT + L1` |
-| Move | Configured movement keys | Left stick / D-pad |
+- Blastoise
+- Tentacruel
+- Gyarados
+- Lapras
 
-## Flying mounts
-
-Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite receive **RIDE & FLY**.
-
-| Flight action | Keyboard | Controller |
-|---|---|---|
-| Move | Configured movement keys | Left stick / D-pad |
-| Look | Mouse | Right stick |
-| Ascend | `Page Up` | `R2` |
-| Descend | `Page Down` | `L2` |
-| Boost | Configured B action | In-game `B` |
-| Land | Configured A action | In-game `A` |
-| Quick flight mount | `F` | `SELECT + R1` |
-
-Using the flight shortcut while Ground Riding dismounts first and then attempts takeoff. Ground Ride cannot start while flying or surfing.
-
-## Surf integration
-
-When any party Pokémon knows **Surf**, water becomes a valid flight-landing surface. Landing activates Gen1Recomp's native surfing state, water collisions and Surf music. `F` or `SELECT + R1` can take off again directly from water.
-
-## Required dependencies
-
-1. **Gen1Recomp**, compatible with Mod API 2.
-2. **Dramatic Shape Voxel Mod 1.6.0 or newer**:
-   https://github.com/DramaticShape/DramaticShapeVoxelMod
-3. **PokePC Followers** or **PokePC Followers Voxel Merge** for the installed follower sprites.
-
-`Followers EX` is optional but supported.
+Native Surf movement, collisions, music and transitions remain in control.
 
 ## Installation
 
-Extract the release archive so the final path is:
+1. Remove the previous `mods/dramatic_sky_ride` directory.
+2. Extract the release archive into the Gen1Recomp `mods` directory.
+3. Confirm that the final path is `mods/dramatic_sky_ride/manifest.json`.
+4. Fully restart Gen1Recomp.
 
-```text
-mods/dramatic_sky_ride/manifest.json
-```
+## Dependencies
 
-Fully restart Gen1Recomp after replacing the mod.
+- Gen1Recomp with Mod API 2 support.
+- Dramatic Shape Voxel Mod `>=1.6.0 <2.0.0`.
+- A compatible PokePC follower-sprite provider.
 
-## Known limitations
+## Development status
 
-- Ground-mount rider offsets require in-game verification for all seven species.
-- Reverse jumps are deliberately limited to official ledge definitions.
-- Cave support follows cave/underground tileset metadata.
-- A dedicated seated trainer pose is planned later.
-- This remains an alpha and requires real-world testing.
+Alpha.15 completes the currently planned feature batch. Further feature work is paused; maintenance will focus on bug and compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
+
+## Bug reports
+
+Include the Gen1Recomp version, Dramatic Shape version, follower provider, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots or logs when available.

@@ -98,11 +98,21 @@ end
 
 local function removeRiderEntity(ow)
   local entity = flight.riderEntity
-  if not entity then return end
-  if ow then
-    removeFromList(ow.entities, entity)
-    removeFromList(ow.npcs, entity)
+  local function purge(list)
+    if type(list) ~= "table" then return end
+    for i = #list, 1, -1 do
+      local candidate = list[i]
+      if candidate == entity
+         or (type(candidate) == "table" and candidate.skyRideRider) then
+        table.remove(list, i)
+      end
+    end
   end
+  if ow then
+    purge(ow.entities)
+    purge(ow.npcs)
+  end
+  flight.riderEntity = nil
 end
 
 local function ensureRiderEntity(ow)

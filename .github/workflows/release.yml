@@ -50,22 +50,25 @@ jobs:
       - name: Prepare release notes
         shell: bash
         run: |
-          cat > /tmp/release-notes.md <<'EOF'
-          ## Dramatic Sky Ride alpha.14
+          cat > /tmp/release-notes.md <<'NOTES'
+          ## Dramatic Sky Ride alpha.15
 
-          This update introduces **Ground Ride**, a separate terrestrial mount system:
+          Alpha.15 completes the current feature batch:
 
-          - ride Tauros, Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon or Kangaskhan;
-          - use `G` on keyboard or `SELECT + L1` on controller;
-          - travel at bicycle-class speed while retaining normal collisions, encounters, warps and scripts;
-          - use Ground Ride outdoors and in caves;
-          - jump official low ledges safely in either direction;
-          - switch cleanly between Ground Ride, flight, Surf, battles and map transitions.
+          - species-aware Ground Ride for Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax;
+          - gallop with stamina, HUD, dust, cries and species-specific movement profiles;
+          - seamless boost continuity across connected maps in 2D, `1ST` and `3RD`;
+          - safe two-way official ledge jumps with weighted presentation and guarded landings;
+          - robust battle, evolution and party-change restoration;
+          - airborne battles preserve altitude, boost and rider rendering without ghost entities;
+          - visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts;
+          - central `MOUNTS` menu and mounted interaction safeguards;
+          - the validated alpha.14 flight camera behaviour remains unchanged.
 
-          Flight remains on `F` / `SELECT + R1`, and Surf-aware water landings remain available.
+          Feature development is paused after this release. Deferred work is preserved in the repository `backlog/` directory; future updates will primarily target bugs and compatibility.
 
           Download the attached ZIP and extract its `dramatic_sky_ride` folder into the Gen1Recomp `mods` directory.
-          EOF
+          NOTES
 
       - name: Create or update GitHub release
         env:

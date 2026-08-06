@@ -14,11 +14,17 @@ jobs:
       - name: Validate manifest JSON
         run: python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
       - name: Rebuild and validate Lua syntax
+        shell: bash
         run: |
-          cat dramatic_sky_ride/src/main_*.lua > /tmp/dramatic_sky_ride.lua
+          : > /tmp/dramatic_sky_ride.lua
+          while IFS= read -r part; do
+            cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
+          done < dramatic_sky_ride/src/parts.txt
           luac -p dramatic_sky_ride/main.lua dramatic_sky_ride/mod.card /tmp/dramatic_sky_ride.lua
       - name: Build and validate install archive
+        shell: bash
         run: |
-          cd dramatic_sky_ride
-          zip -qr /tmp/dramatic_sky_ride-0.1.0-alpha.12.zip .
-          unzip -t /tmp/dramatic_sky_ride-0.1.0-alpha.12.zip
+          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          ARCHIVE="/tmp/dramatic_sky_ride-$VERSION.zip"
+          zip -qr "$ARCHIVE" dramatic_sky_ride
+          unzip -t "$ARCHIVE"

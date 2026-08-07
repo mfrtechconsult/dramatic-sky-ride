@@ -39,4 +39,5 @@ main_19_ground_final_01.lua
 main_19_ground_final_02.lua
 main_19_ground_final_03.lua
 main_19_ground_final_04.lua
+main_20_compat.lua
 main_14.lua

@@ -52,10 +52,15 @@
   end
 
   local function mountDexNumber(species)
-    local cfg = ELIGIBLE[species]
-      or GROUND_ELIGIBLE[species]
-      or WATER_ELIGIBLE[species]
-    return cfg and tonumber(cfg.dex) or nil
+    -- WATER_ELIGIBLE lives inside the alpha.15 polish scope and is not
+    -- lexically visible here. Resolve known flight/ground mounts first, then
+    -- fall back to the canonical Pokemon definition so Surf species work
+    -- without reaching into another chunk's private locals.
+    local cfg = ELIGIBLE[species] or GROUND_ELIGIBLE[species]
+    if cfg and cfg.dex then return tonumber(cfg.dex) end
+    local pokemon = Game.data and Game.data.pokemon
+    local def = pokemon and pokemon[species]
+    return def and tonumber(def.dex) or nil
   end
 
   local function mountPokemonDef(species)
@@ -159,11 +164,10 @@
     return decorateMountSprite(sprite, species), reason
   end
 
-  local rawBuildWaterSprite = buildWaterSprite
-  buildWaterSprite = function(species, ...)
-    local sprite, reason = rawBuildWaterSprite(species, ...)
-    return decorateMountSprite(sprite, species), reason
-  end
+  -- Visible Surf's builder is private to the alpha.15 polish scope. Do not
+  -- install a global wrapper around a nil symbol: that polluted the runtime
+  -- and could turn a later external call into a hard error. Surf sizing will
+  -- use its dedicated bridge when that private path is refactored.
 
   -- Keep the trainer seated at the same relative point on a resized card. The
   -- trainer itself deliberately remains human-sized; only its seat height
@@ -179,29 +183,30 @@
     return sprite, px, py, facing, phase, flip, hopping
   end
 
+  -- main_17 keeps GROUND_PROFILES private inside its polish closure. The old
+  -- size wrapper accidentally indexed a global GROUND_PROFILES (nil) as soon
+  -- as Ground Ride mounted, which crashed on the first rider-pose evaluation.
+  -- Mirror only the seat heights we need here instead of depending on a
+  -- private table from another lexical scope.
+  local GROUND_RIDER_LIFT = {
+    ARCANINE = 6.8, RAPIDASH = 7.1, DODRIO = 7.2, RHYHORN = 6.2,
+    RHYDON = 7.4, KANGASKHAN = 7.8, TAUROS = 6.7, SNORLAX = 8.6,
+  }
   local rawGroundRiderPoseForSize = groundRiderPose
   groundRiderPose = function(entity)
     local sprite, px, py, facing, phase, flip, hopping =
       rawGroundRiderPoseForSize(entity)
     if ground.active and ground.species then
-      local cfg = GROUND_PROFILES[ground.species] or { lift = 6.5 }
-      py = py - (tonumber(cfg.lift) or 6.5)
-        * (mountVisualScale(ground.species) - 1)
+      local lift = GROUND_RIDER_LIFT[ground.species] or 6.5
+      py = py - lift * (mountVisualScale(ground.species) - 1)
     end
     return sprite, px, py, facing, phase, flip, hopping
   end
 
-  local rawWaterRiderPoseForSize = waterRiderPose
-  waterRiderPose = function(entity)
-    local sprite, px, py, facing, phase, flip, hopping =
-      rawWaterRiderPoseForSize(entity)
-    if water.active and water.species then
-      local cfg = WATER_ELIGIBLE[water.species] or { lift = 7 }
-      py = py - (tonumber(cfg.lift) or 7)
-        * (mountVisualScale(water.species) - 1)
-    end
-    return sprite, px, py, facing, phase, flip, hopping
-  end
+  -- WATER_ELIGIBLE, water and waterRiderPose are intentionally private to
+  -- main_17's polish closure. The previous code created unrelated globals
+  -- here and therefore never affected the real Surf rider. Leave that private
+  -- path alone rather than installing wrappers around nil symbols.
 
   -- Dramatic Shape does not call SpriteRenderer:draw in voxel mode: it builds
   -- a 16x16 billboard mesh from sprite.def. Replace only the billboard methods

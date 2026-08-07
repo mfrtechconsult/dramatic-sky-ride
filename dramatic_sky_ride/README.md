@@ -1,8 +1,8 @@
-# Dramatic Sky Ride — alpha.15.3
+# Dramatic Sky Ride — alpha.15.4
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp** when used with **Dramatic Shape Voxel Mod**.
 
-## Alpha.15.3 sizing and compatibility
+## Alpha.15.4 sizing and compatibility
 
 - Keeps the alpha.15.1 combined 20-option schema and saved option compatibility.
 - Blocks manual Surf while airborne; landing on water is the only way to enter Surf directly from flight.
@@ -10,6 +10,8 @@ Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts 
 - Resolves Dramatic Shape terrain heights through its exported companion API first, including Mod Manager ZIP installs.
 - Retains the unpacked-directory terrain resolver as a compatibility fallback.
 - Does not change the validated alpha.14 flight camera.
+- Adds the GitHub repository identifier used by the launcher and Mod Index for update tracking.
+- Uses a Mod Index-compatible release ZIP with `manifest.json` at the archive root.
 
 ## Alpha.15 highlights
 
@@ -70,10 +72,17 @@ Native Surf movement, collisions, music and transitions remain in control. While
 
 ## Installation
 
+### Launcher / Mod Index
+
+Import the release ZIP directly through the Gen1Recomp launcher.
+
+### Manual installation
+
 1. Remove the previous `mods/dramatic_sky_ride` directory.
-2. Extract the release archive into the Gen1Recomp `mods` directory.
-3. Confirm that the final path is `mods/dramatic_sky_ride/manifest.json`.
-4. Fully restart Gen1Recomp.
+2. Create `mods/dramatic_sky_ride/`.
+3. Extract the release ZIP contents directly into that folder.
+4. Confirm that the final path is `mods/dramatic_sky_ride/manifest.json`.
+5. Fully restart Gen1Recomp.
 
 ## Dependencies
 
@@ -83,7 +92,7 @@ Native Surf movement, collisions, music and transitions remain in control. While
 
 ## Development status
 
-Alpha.15.3 adds Pokédex-proportional mount sizing on top of the stabilized alpha.15.2.2 compatibility baseline. Broader feature work remains paused outside targeted improvements and bug/compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
+Alpha.15.4 keeps the alpha.15.3 Pokédex-proportional sizing work and adds Mod Index / launcher release compatibility. Broader feature work remains paused outside targeted improvements and bug/compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
 
 ## Bug reports
 

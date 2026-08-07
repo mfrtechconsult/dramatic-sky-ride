@@ -1,13 +1,17 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with free voxel controls and native world interactions.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with free voxel controls, story-aware FLY progression and optional Wild Skies encounters.",
   author = "MFR TechConsult",
-  tags = { "dramatic-shape", "flying", "mount", "ground-ride", "surf", "voxel" },
+  tags = { "dramatic-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
     changed = {
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
+      "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
+      "SOULBADGE can gate automatic water landings while retaining the existing SURF-user requirement",
+      "data-driven field.badgeGates remain enforced across connected-map flight so story progression is not bypassed",
       "1ST and 3RD use one continuous analog movement solve per frame",
+      "looking up/down in 1ST or 3RD can directly raise/lower requested flight altitude",
       "the camera smoothly follows the actual flight course after manual look input stops",
-      "water cells become valid landing spots when a party Pokemon knows SURF",
+      "water cells become valid landing spots when progression rules and a party SURF user allow it",
       "landing on water automatically continues in the native surfing state",
       "SURF cannot be started manually while airborne; water landing is the only flight-to-Surf transition",
       "the normal mount shortcut can take off again directly from surfing",
@@ -17,6 +21,11 @@ return {
       "incompatible item, machine and field actions dismount before using the native engine path"
     },
     added = {
+      "optional Wild Skies integration through its documented public exports rather than copied internals",
+      "Wild Skies flyers prefer real imported species follower/overworld sprites when available",
+      "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
+      "ground wild-battle starts are suppressed while airborne so only explicit air encounters can begin",
+      "Free Fly-shaped isFlying/altitude/mount exports for future hook-based interoperability",
       "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite flying mounts",
       "Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax Ground Ride mounts",
       "species-aware Ground Ride acceleration, gallop, stamina, dust and rider offsets",
@@ -29,15 +38,17 @@ return {
       "Pokedex-proportional visual sizing for all 22 mounts with per-species controls"
     },
     known = {
+      "Wild Skies currently exposes species/level but not flyer altitude, so alpha.16 interception is cell-radius based",
+      "Wild Skies applies its own dexScale after sprite resolution; exact DSR scaling needs a future scale hook from Wild Skies",
       "rider seating still uses procedural offsets rather than dedicated seated sprites",
       "tall-building safety still uses authored zones plus local terrain height",
-      "advanced geometry-based roof detection is deferred in the repository backlog",
-      "feature development is paused after alpha.15; future work is bug-fix focused"
+      "advanced geometry-based roof detection is deferred in the repository backlog"
     }
   },
   credits = {
     { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "voxel scene, first/third-person cameras and continuous free movement" },
-    { who = "gamecorner-033/PokePCFollowers", for_ = "Gen 1 follower sprite assets supplied by the user's installation" }
+    { who = "gamecorner-033/PokePCFollowers", for_ = "Gen 1 follower sprite assets supplied by the user's installation" },
+    { who = "ShaneHudson/gen1recomp-mods", for_ = "Wild Skies public integration seams and Free Fly progression/API patterns" }
   },
   compat = { engine = ">=0.1.69 <2.0.0", modApi = 2 }
 }

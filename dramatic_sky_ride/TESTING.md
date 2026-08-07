@@ -1,10 +1,10 @@
 # Dramatic Sky Ride alpha.16 experimental validation checklist
 
-Alpha.16 is developed only on `feature/wild-skies-integration`. It adds story-aware FLY progression, camera-driven altitude in `1ST`/`3RD`, and optional integration with ShaneHudson's separate Wild Skies mod.
+Alpha.16 is developed only on `feature/wild-skies-integration`. It adds story-aware FLY progression, legitimate-discovery safeguards, camera-driven altitude in `1ST`/`3RD`, and optional integration with ShaneHudson's separate Wild Skies mod.
 
 ## Alpha.16 progression rules
 
-- Confirm that the mod options screen exposes the existing options plus `REQUIRE FLY`, `BADGE CHECKS`, `STORY GATES`, `CAMERA ALTITUDE` and `AIR ENCOUNTERS`.
+- Confirm that the mod options screen exposes the existing options plus `REQUIRE FLY`, `BADGE CHECKS`, `STORY GATES`, `DISCOVERY GATES`, `CAMERA ALTITUDE` and `AIR ENCOUNTERS`.
 - With `REQUIRE FLY` enabled, try to take off with a supported mount that does not know FLY; confirm `FLY REQUIRED` and no takeoff.
 - Teach FLY to the mount but remove/withhold THUNDERBADGE; confirm `THUNDERBADGE REQUIRED`.
 - With FLY and THUNDERBADGE, confirm party action, keyboard shortcut and gamepad shortcut all take off normally.
@@ -12,6 +12,19 @@ Alpha.16 is developed only on `feature/wild-skies-integration`. It adds story-aw
 - Approach a connected-map route protected by `field.badgeGates` while airborne; confirm the crossing is blocked until the required badge/event has been satisfied.
 - With `BADGE CHECKS` enabled, attempt a water landing with a SURF user but without SOULBADGE; confirm the landing is refused.
 - Add SOULBADGE and confirm the same landing transitions directly into native Surf.
+
+## Alpha.16.4 discovery safeguards
+
+- Confirm `DISCOVERY GATES` is enabled by default.
+- Reach a vanilla route/city normally, then take off and re-enter it from a connected map; confirm airborne re-entry is allowed.
+- From a save where a connected vanilla route has never been reached normally, try to cross into it while airborne; confirm `AREA NOT VISITED` and no transition.
+- Before legitimate Saffron access, try to enter `SAFFRON_CITY` while airborne; confirm it is blocked. Enter Saffron normally later, then confirm airborne re-entry becomes allowed.
+- Confirm entering a vanilla map while DSR flight is active does not mark it as legitimately reached.
+- Confirm walking, Ground Ride, native Surf and ordinary/scripted non-flight map entries do mark the destination as legitimately reached.
+- Install alpha.16.4 on an existing save and confirm the map currently loaded at startup is seeded as legitimately reached.
+- Enter a custom/unknown map id through an airborne connection and confirm it remains accessible by default.
+- Disable `DISCOVERY GATES` and confirm only the visited-area rule is relaxed; `STORY GATES`, FLY and badge checks remain independent.
+- For an integration using `flightRules.registerDiscoveryGate(mapId, true)`, confirm an opted-in custom map is blocked until `markMapReached(mapId)` is called.
 
 ## Alpha.16 camera altitude
 
@@ -55,6 +68,7 @@ Known Wild Skies API limitations for this experiment:
 
 ## Ground Ride
 
+- Press `G` from a normal outdoor map and confirm Ground Ride starts without a crash before continuing the wider integration checklist.
 - Mount and dismount every supported species.
 - Compare Tauros and Snorlax movement profiles.
 - Hold `B` in 2D, `1ST` and `3RD`; confirm acceleration, stamina, HUD and dust.

@@ -13,7 +13,17 @@ end, 90)
 mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   local out = next(game, items, mon, ctx)
   if type(out) ~= "table" then out = items end
-  if flight.active then return out end
+  if flight.active then
+    -- Native Gen1Recomp adds SURF to this submenu. While airborne the only
+    -- legal transition to Surf is a water landing, so remove the manual row.
+    for i = #out, 1, -1 do
+      local item = out[i]
+      if type(item) == "table" and item.action == "surf" then
+        table.remove(out, i)
+      end
+    end
+    return out
+  end
   if ctx and ctx.battle then return out end
   if not mountSpecies(game, mon) then return out end
 

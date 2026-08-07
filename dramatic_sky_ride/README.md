@@ -1,23 +1,50 @@
-# Dramatic Sky Ride — alpha.15.4
+# Dramatic Sky Ride 0.1.0
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp** when used with **Dramatic Shape Voxel Mod**.
 
-## Alpha.15.4 sizing and compatibility
+## Highlights
 
-- Keeps the alpha.15.1 combined 20-option schema and saved option compatibility.
-- Blocks manual Surf while airborne; landing on water is the only way to enter Surf directly from flight.
-- Keeps compatibility with Gen1Recomp `>=0.1.69 <2.0.0` and targets Dramatic Shape `>=1.7.0 <2.0.0`.
-- Resolves Dramatic Shape terrain heights through its exported companion API first, including Mod Manager ZIP installs.
-- Retains the unpacked-directory terrain resolver as a compatibility fallback.
-- Does not change the validated alpha.14 flight camera.
-- Adds the GitHub repository identifier used by the launcher and Mod Index for update tracking.
-- Uses a Mod Index-compatible release ZIP with `manifest.json` at the archive root.
+### Flying
 
-## Alpha.15 highlights
+Supported flying mounts:
+
+- Charizard
+- Pidgeot
+- Fearow
+- Golbat
+- Aerodactyl
+- Articuno
+- Zapdos
+- Moltres
+- Dragonair
+- Dragonite
+
+Use `F` on keyboard or `SELECT + R1` on controller.
+
+Flight includes altitude control, boost, rider rendering, battle restoration, connected-map traversal, safe landing and Dramatic Shape camera support.
+
+### Story-aware FLY progression
+
+The stable release can require the selected mount to use FLY and can enforce the normal progression concepts around THUNDERBADGE and SOULBADGE.
+
+`STORY GATES` respects data-driven badge/event gates while airborne.
+
+`DISCOVERY GATES` prevents first-time airborne entry into canonical vanilla Kanto routes and cities until those maps have been reached through legitimate non-DSR-flight gameplay. This prevents sequence breaks such as flying into Saffron City or an unvisited route too early.
+
+Unknown/custom map ids are **allowed by default** so custom map packs and total conversions remain compatible. Mods that want stricter integration can opt in through DSR's public discovery-gate helpers.
+
+### Camera-directed altitude
+
+In Dramatic Shape `1ST` and `3RD`, vertical camera input can directly control requested flight altitude:
+
+- look up to climb;
+- look down to descend;
+- existing `R2/L2` and `Page Up/Page Down` manual altitude controls remain available;
+- `CAMERA ALTITUDE` can be disabled independently.
 
 ### Ground Ride
 
-Supported mounts:
+Supported Ground Ride mounts:
 
 - Arcanine
 - Rapidash
@@ -28,47 +55,38 @@ Supported mounts:
 - Tauros
 - Snorlax
 
-Use `G` on keyboard or `SELECT + L1` on controller to mount or dismount.
+Use `G` on keyboard or `SELECT + L1` on controller.
 
-Ground Ride now includes:
-
-- species-specific speed, acceleration, gallop strength and stamina;
-- a visible stamina HUD and dust while galloping with `B`;
-- seamless boost continuity through connected maps in 2D, `1ST` and `3RD`;
-- safe two-way traversal of official low ledges;
-- species-weighted jump arcs, landing dust, sound and vibration;
-- remembered mount selection after party reordering;
-- safe restoration after wild and trainer battles;
-- no remount when the selected mount fainted, left the party or became incompatible;
-- ordinary NPC conversations and sign reading without dismounting;
-- automatic dismount before incompatible native actions such as item pickup, PCs, Cut, Surf, fishing, Fly, Dig, Teleport and Strength boulder pushes.
-
-### Flying
-
-Use `F` on keyboard or `SELECT + R1` on controller.
-
-The validated alpha.14 camera behaviour is preserved. Alpha.15 also keeps altitude, boost and rider rendering stable across battles, without leaving a ghost trainer sprite on the map.
+Ground Ride includes species-specific movement profiles, gallop/stamina, dust, ledge traversal, connected-map continuity, battle restoration and mounted interaction safeguards.
 
 ### Visible Surf mounts
 
-The `MOUNTS` menu can select:
+Supported visible Surf mounts:
 
 - Blastoise
 - Tentacruel
 - Gyarados
 - Lapras
 
-Native Surf movement, collisions, music and transitions remain in control. While flying, manual Surf is unavailable: the only way to enter Surf from the air is to land on a valid water cell with a Surf-capable party.
+Native Surf movement, collisions, music and transitions remain in control. While flying, manual Surf is blocked; a valid water landing can continue directly into native Surf when progression and party requirements are satisfied.
 
 ### Pokédex-proportional mount sizing
 
-- Every flying, Ground Ride and visible Surf mount is visually scaled from its Gen 1 Pokédex height.
-- A 1.70 m Pokémon uses the original 16 px mount size; other species scale proportionally.
-- The MODS > Dramatic Sky Ride > OPTIONS screen includes an individual numeric size control for all 22 mounts.
-- `100` means the Pokédex-derived size; each species can be adjusted from 50 to 200 in 5-point steps.
-- `POKEDEX SIZES` can be disabled to use the original 16 px size as the 100 baseline.
-- Rider seat height follows the resized mount while the trainer remains human-sized.
-- Scaling is visual only: collisions, cells, movement, encounters and map logic are unchanged.
+Flying and Ground Ride mounts use Gen 1 Pokédex height as the visual baseline, with per-species size controls. Scaling is visual only and does not alter logical cells, collisions or map rules.
+
+## Optional Wild Skies integration
+
+[Wild Skies](https://github.com/ShaneHudson/gen1recomp-mods) remains a completely separate optional mod.
+
+When installed, DSR integrates through Wild Skies' public API:
+
+- ambient Wild Skies flyers remain owned and simulated by Wild Skies;
+- real species-specific follower/overworld sprites are preferred when available;
+- an aerial interception starts a battle against the exact visible species and level returned by Wild Skies;
+- DSR restores its mount/flight state after the battle;
+- ground wild-battle starts are suppressed while DSR is airborne.
+
+Free Fly and Dramatic Sky Ride are alternative player-flight engines and are declared conflicting. Wild Skies itself remains compatible with its wider ecosystem.
 
 ## Installation
 
@@ -86,14 +104,28 @@ Import the release ZIP directly through the Gen1Recomp launcher.
 
 ## Dependencies
 
-- Gen1Recomp `>=0.1.69 <2.0.0` with Mod API 2 support.
+Required:
+
+- Gen1Recomp `>=0.1.69 <2.0.0` with Mod API 2 support;
 - Dramatic Shape Voxel Mod `>=1.7.0 <2.0.0`.
-- A compatible PokePC follower-sprite provider.
 
-## Development status
+Optional:
 
-Alpha.15.4 keeps the alpha.15.3 Pokédex-proportional sizing work and adds Mod Index / launcher release compatibility. Broader feature work remains paused outside targeted improvements and bug/compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
+- a compatible PokePC follower-sprite provider;
+- Wild Skies.
+
+## Compatibility philosophy
+
+DSR avoids hard-blocking unknown maps. Vanilla Kanto progression protections are deliberately conservative, while custom maps remain open unless a mod explicitly opts into DSR discovery gating.
+
+Wild Skies is integrated only through its public interfaces; its code and ambient ecosystem are not embedded into DSR.
+
+## Credits
+
+- DramaticShape/DramaticShapeVoxelMod — voxel scene, first/third-person cameras and continuous free movement.
+- gamecorner-033/PokePCFollowers — Gen 1 follower sprite assets when installed by the user.
+- ShaneHudson/gen1recomp-mods — Wild Skies public integration seams and Free Fly progression/API patterns.
 
 ## Bug reports
 
-Include the Gen1Recomp version, Dramatic Shape version, follower provider, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots or logs when available.
+Include the Gen1Recomp version, Dramatic Shape version, follower provider, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots/logs when available.

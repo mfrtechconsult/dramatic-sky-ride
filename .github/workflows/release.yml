@@ -57,13 +57,22 @@ jobs:
         shell: bash
         run: |
           cat > /tmp/release-notes.md <<'NOTES'
-          ## Dramatic Sky Ride alpha.15
+          ## Dramatic Sky Ride 0.1.0
 
-          Alpha.15 includes species-aware Ground Ride, controllable flying mounts, visible Surf mounts, stable battle/map transitions, and Pokédex-proportional mount sizing with per-species controls.
+          First stable Dramatic Sky Ride release for Gen1Recomp.
 
-          This release also uses the Gen1Recomp Mod Index / launcher ZIP layout: `manifest.json` is at the archive root.
+          ### Highlights
+          - controllable flying, Ground Ride and visible Surf mounts;
+          - Pokédex-proportional mount sizing with per-species controls;
+          - story-aware FLY progression with FLY, THUNDERBADGE and SOULBADGE checks;
+          - discovery gates that stop first-time airborne sequence breaks on vanilla Kanto maps while leaving unknown/custom maps open by default;
+          - camera-directed altitude control in Dramatic Shape 1ST/3RD;
+          - optional Wild Skies integration through its public API, including species-specific sprites and exact visible flyer species/level encounters;
+          - stable battle restoration, connected-map traversal and mounted interaction safeguards.
 
-          Install through the Gen1Recomp launcher, or manually create `mods/dramatic_sky_ride/` and extract the ZIP contents directly into that folder.
+          Wild Skies remains a separate optional mod. Free Fly is an alternative flight engine and is declared conflicting with DSR.
+
+          The release ZIP uses the Gen1Recomp Mod Index / launcher layout with `manifest.json` at the archive root.
           NOTES
 
       - name: Create or update GitHub release
@@ -76,12 +85,13 @@ jobs:
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" "$ARCHIVE" --clobber
+            gh release edit "$TAG" --title "Dramatic Sky Ride $VERSION" --notes-file /tmp/release-notes.md --latest
           else
             gh release create "$TAG" "$ARCHIVE" \
               --target "$GITHUB_SHA" \
               --title "Dramatic Sky Ride $VERSION" \
               --notes-file /tmp/release-notes.md \
-              --prerelease
+              --latest
           fi
 
       - name: Record successful publication

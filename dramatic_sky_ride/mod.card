@@ -9,6 +9,7 @@ return {
       "the camera smoothly follows the actual flight course after manual look input stops",
       "water cells become valid landing spots when a party Pokemon knows SURF",
       "landing on water automatically continues in the native surfing state",
+      "SURF cannot be started manually while airborne; water landing is the only flight-to-Surf transition",
       "the normal mount shortcut can take off again directly from surfing",
       "Ground Ride remembers the preferred mount and restores it safely after battles and party changes",
       "flight altitude and rider rendering survive wild and trainer battles",

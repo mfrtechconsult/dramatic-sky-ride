@@ -54,6 +54,7 @@ end
 mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   local out = next(game, items, mon, ctx)
   if type(out) ~= "table" then out = items end
+  if flight.active then return out end
   local species = waterSpecies(game, mon)
   if not species or not monKnowsMove(mon, "SURF") or (ctx and ctx.battle) then return out end
   table.insert(out, 1, { label = Strings("SURF & RIDE"), onSelect = function(selected, liveGame)
@@ -93,7 +94,7 @@ if mod.content and mod.content.screens and mod.ui and mod.ui.ListMenu then
           value = { kind = "ground", index = i } } end
         if fs then items[#items + 1] = { label = partyName(game, mon, fs), right = "FLY",
           value = { kind = "flight", index = i } } end
-        if ws and monKnowsMove(mon, "SURF") then
+        if not flight.active and ws and monKnowsMove(mon, "SURF") then
           items[#items + 1] = { label = partyName(game, mon, ws), right = "SURF",
             value = { kind = "water", index = i } }
         end

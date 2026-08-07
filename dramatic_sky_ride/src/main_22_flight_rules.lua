@@ -1,3 +1,4 @@
+(function()
 -- alpha.16 flight progression rules.
 -- Keep Dramatic Sky Ride's authored mount roster, but gate actual takeoff and
 -- water landing through the same progression concepts as the vanilla field
@@ -246,6 +247,8 @@ mod.exports.flightRules = {
   requireFlyMove = requireFlyMoveEnabled,
   badgeChecks = badgeChecksEnabled,
   storyGates = storyGatesEnabled,
+  cameraAltitudeEnabled = cameraAltitudeEnabled,
+  airEncountersEnabled = airEncountersEnabled,
   canTakeOff = function(mon)
     local ow = Game.overworld
     if not (ow and mon and mountSpecies(Game, mon)) then return false end
@@ -256,3 +259,4 @@ mod.exports.flightRules = {
 }
 
 log("alpha.16 FLY, badge and story progression rules loaded")
+end)()

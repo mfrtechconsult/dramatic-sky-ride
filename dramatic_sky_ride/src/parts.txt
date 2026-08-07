@@ -44,4 +44,5 @@ main_21_mount_size.lua
 main_22_flight_rules.lua
 main_23_camera_altitude.lua
 main_24_wild_skies.lua
+main_25_discovery_gates.lua
 main_14.lua

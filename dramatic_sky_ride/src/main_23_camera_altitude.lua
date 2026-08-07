@@ -62,9 +62,15 @@ local function installCameraAltitudeHook()
         local rightY = dramaticFirstPerson.stickY and dramaticFirstPerson.stickY() or 0
         local intent = 0
         if math.abs(rightY) > 0.20 then
+          -- Mirror Dramatic Shape's dead-zone + squared stick response so the
+          -- altitude rate feels proportional to the camera's own pitch rate.
+          local dead = tonumber(dramaticFirstPerson.STICK_DEAD) or 0.18
+          local a = math.abs(rightY)
+          a = clamp((a - dead) / math.max(0.01, 1 - dead), 0, 1)
+          local curved = a * a
           -- Positive Dramatic Shape pitch looks DOWN, therefore positive stick
-          -- Y means descend. Preserve analog magnitude for smooth climbing.
-          intent = clamp(-rightY, -1, 1)
+          -- Y means descend.
+          intent = rightY < 0 and curved or -curved
         else
           local delta = afterPitch - beforePitch
           if math.abs(delta) > 0.0005 then

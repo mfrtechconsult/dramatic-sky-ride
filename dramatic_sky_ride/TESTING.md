@@ -1,8 +1,8 @@
-# Dramatic Sky Ride alpha.15.2.1 validation checklist
+# Dramatic Sky Ride alpha.15.2.2 validation checklist
 
-Alpha.15 was validated interactively before publication. Alpha.15.2.1 keeps the option repair, blocks manual Surf during flight and targets current Gen1Recomp/Dramatic Shape releases.
+Alpha.15 was validated interactively before publication. Alpha.15.2.2 keeps the option repair, blocks manual Surf during flight and targets current Gen1Recomp/Dramatic Shape releases.
 
-## Alpha.15.2.1 regression
+## Alpha.15.2.2 regression
 
 - Confirm that the mod options screen exposes 20 entries: 11 flight options and 9 mount options.
 - Toggle `SHOW RIDER`, `FLIGHT BOOST`, `GROUND GALLOP` and `VISIBLE SURF MOUNTS`; confirm each feature follows its setting.

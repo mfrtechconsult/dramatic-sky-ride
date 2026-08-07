@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.1-compat.2",
+  "version": "0.1.1-compat.3",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -24,5 +24,5 @@
   ],
   "affects_link": false,
   "experimental": true,
-  "description": "Temporary compatibility build with full capability-checked support for either Dramatic Shape 1.7+ or Battle Art Voxel Fork 1.7.6+, plus optional Wild Skies integration."
+  "description": "Temporary dual-provider compatibility build for Dramatic Shape 1.7+ or Battle Art Voxel Fork 1.7.6+, validated against the exact LuaJIT runtime concatenation."
 }

@@ -8,7 +8,8 @@
 -- public capability DSR actually patches or reads. An incompatible future
 -- build fails clearly instead of partially installing camera or sizing hooks.
 
-local state = detectDramaticProvider() or {}
+if not mod.exports._dramaticProviderState then loadDramaticLib() end
+local state = mod.exports._dramaticProviderState or {}
 if state.conflict then
   error("DRAMATIC_SKY_RIDE: enable only one voxel provider: DRAMATIC_SHAPE or BATTLE_ART_VOXEL_FORK", 0)
 end

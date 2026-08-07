@@ -44,19 +44,34 @@ jobs:
       - name: Validate manifest and exact runtime Lua source
         shell: bash
         run: |
-          set -euo pipefail
-          python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y luajit
-          : > /tmp/dramatic_sky_ride.lua
-          while IFS= read -r part; do
-            cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
-          done < dramatic_sky_ride/src/parts.txt
-          luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
-          luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
-          luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
+          set +e
+          {
+            set -x
+            python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y luajit
+            : > /tmp/dramatic_sky_ride.lua
+            while IFS= read -r part; do
+              cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua || exit 91
+            done < dramatic_sky_ride/src/parts.txt
+            wc -l /tmp/dramatic_sky_ride.lua
+            luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
+            luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
+            luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
+          } > /tmp/dsr-validation.log 2>&1
+          RC=$?
+          cat /tmp/dsr-validation.log
+          if [ "$RC" -ne 0 ]; then
+            cp /tmp/dsr-validation.log .github/temporary-validation.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/temporary-validation.txt
+            git commit -m "Record temporary LuaJIT validation failure" || true
+            git push origin HEAD:temporary/dramatic-shape-fork-compat || true
+            exit "$RC"
+          fi
+          rm -f .github/temporary-validation.txt
           echo "LuaJIT validation OK"
-          echo "Runtime concat lines: $(wc -l < /tmp/dramatic_sky_ride.lua)"
 
       - name: Build launcher-ready ZIP
         shell: bash

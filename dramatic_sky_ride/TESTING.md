@@ -1,6 +1,15 @@
-# Dramatic Sky Ride alpha.15 validation checklist
+# Dramatic Sky Ride alpha.15.2.1 validation checklist
 
-Alpha.15 was validated interactively before publication. This file remains as a regression checklist for future bug fixes.
+Alpha.15 was validated interactively before publication. Alpha.15.2.1 keeps the option repair, blocks manual Surf during flight and targets current Gen1Recomp/Dramatic Shape releases.
+
+## Alpha.15.2.1 regression
+
+- Confirm that the mod options screen exposes 20 entries: 11 flight options and 9 mount options.
+- Toggle `SHOW RIDER`, `FLIGHT BOOST`, `GROUND GALLOP` and `VISIBLE SURF MOUNTS`; confirm each feature follows its setting.
+- Restart Gen1Recomp and confirm the selected values remain saved.
+- Run one takeoff/landing, one Ground Ride gallop and one Surf transition to confirm no behavioural regression.
+- Test with Gen1Recomp 0.1.75 and Dramatic Shape 1.7.0.
+- Install Dramatic Shape through the in-game Mod Manager ZIP flow and confirm flight terrain-height compensation remains active.
 
 ## Ground Ride
 
@@ -27,9 +36,14 @@ Alpha.15 was validated interactively before publication. This file remains as a 
 
 ## Surf and flight
 
-- Land on water with a Surf-capable party.
+- While airborne, open a Surf-capable Pokemon's party submenu and confirm native `SURF` is not available.
+- While airborne, confirm `SURF & RIDE` is not available and `MOUNTS` contains no `SURF` entries.
+- Attempt any native Surf activation path while airborne and confirm it is refused with `LAND FIRST`.
+- Land on water with a Surf-capable party and confirm Surf starts automatically.
+- Confirm the visible Surf mount activates after that water landing.
 - Take off again from Surf.
-- Select each visible Surf mount through `MOUNTS`.
+- Land on dry ground and confirm normal manual Surf is available again.
+- Select each visible Surf mount through `MOUNTS` while not flying.
 - Confirm the alpha.14 flight camera behaviour in `1ST` and `3RD`.
 
 ## Installation regression

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0
+
+- Promoted the validated alpha.16 feature set to the first stable Dramatic Sky Ride release.
+- Removed the experimental manifest flag and restored GitHub/Mod Index update metadata for stable SemVer releases.
+- Added story-aware FLY progression: optional FLY requirement, THUNDERBADGE takeoff gate, SOULBADGE water-landing gate and data-driven story gates.
+- Added `DISCOVERY GATES`: first-time airborne entry into canonical vanilla Kanto routes/cities is blocked until the map has been reached through normal gameplay.
+- Unknown/custom map ids remain allowed by default; custom mods can optionally register discovery gates or mark legitimate visits through DSR's public flight-rules API.
+- Added camera-directed altitude in Dramatic Shape 1ST/3RD modes.
+- Added optional Wild Skies integration through its public API, including real per-species follower/overworld sprites when available and exact visible flyer species/level battles.
+- Kept Wild Skies separate and optional; Free Fly remains a conflicting alternative flight engine.
+- Includes the alpha.16 startup/scope fixes and the Ground Ride sizing crash fix validated during testing.
+
 ## 0.1.0-alpha.16.4
 
 - Added `DISCOVERY GATES`: airborne traversal cannot enter canonical vanilla routes/cities until that map has been reached through normal non-DSR-flight gameplay.

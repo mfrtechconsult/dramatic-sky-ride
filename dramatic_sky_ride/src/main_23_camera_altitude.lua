@@ -98,4 +98,4 @@ installCameraAltitudeHook()
 mod.events:on("game.ready", installCameraAltitudeHook)
 
 log("alpha.16 1ST/3RD camera altitude control loaded")
-end)()
+end)();

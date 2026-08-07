@@ -1,8 +1,8 @@
-# Dramatic Sky Ride — alpha.15.2.1
+# Dramatic Sky Ride — alpha.15.2.2
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp** when used with **Dramatic Shape Voxel Mod**.
 
-## Alpha.15.2.1 maintenance and compatibility
+## Alpha.15.2.2 maintenance and compatibility
 
 - Keeps the alpha.15.1 combined 20-option schema and saved option compatibility.
 - Blocks manual Surf while airborne; landing on water is the only way to enter Surf directly from flight.
@@ -73,7 +73,7 @@ Native Surf movement, collisions, music and transitions remain in control. While
 
 ## Development status
 
-Alpha.15.2.1 is a maintenance and current-engine compatibility build of the completed alpha.15 feature batch. Further feature work is paused; maintenance will focus on bug and compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
+Alpha.15.2.2 is a maintenance and current-engine compatibility build of the completed alpha.15 feature batch. Further feature work is paused; maintenance will focus on bug and compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
 
 ## Bug reports
 

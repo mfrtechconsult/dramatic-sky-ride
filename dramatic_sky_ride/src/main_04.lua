@@ -24,8 +24,8 @@ end
 
 -- Load only the selected voxel provider's public library. DSR supports either
 -- upstream Dramatic Shape or the Battle Art Voxel Fork, never both at once.
--- Keeping provider selection here avoids rewriting mod.find and makes every
--- existing dramaticModule() call use the exact same provider automatically.
+-- Provider detection stays inside this already-existing function so the huge
+-- concatenated DSR chunk does not gain more top-level locals.
 local dramaticTileShape = nil
 local dramaticTileShapeTried = false
 local dramaticRoot = nil
@@ -34,36 +34,26 @@ local dramaticData = {}
 local dramaticLib = nil
 local dramaticFirstPerson = nil
 local dramaticFreeMove = nil
-local dramaticProviderState = nil
-
-local function rawModFind(id)
-  if not mod.find then return nil end
-  local ok, handle = pcall(mod.find, mod, id)
-  return ok and handle or nil
-end
-
-local function detectDramaticProvider()
-  if dramaticProviderState then return dramaticProviderState end
-  local upstream = rawModFind("DRAMATIC_SHAPE")
-  local battleArt = rawModFind("BATTLE_ART_VOXEL_FORK")
-  dramaticProviderState = {
-    upstream = upstream,
-    battleArt = battleArt,
-    conflict = upstream ~= nil and battleArt ~= nil,
-    handle = upstream or battleArt,
-  }
-  dramaticProviderState.id = dramaticProviderState.handle
-    and dramaticProviderState.handle.id or nil
-  dramaticProviderState.version = dramaticProviderState.handle
-    and dramaticProviderState.handle.version or nil
-  mod.exports._dramaticProviderState = dramaticProviderState
-  return dramaticProviderState
-end
 
 local function loadDramaticLib()
   if dramaticLib then return dramaticLib end
-  local state = detectDramaticProvider()
-  local handle = state and state.handle or nil
+  if not mod.find then return nil end
+
+  local okUpstream, upstream = pcall(mod.find, mod, "DRAMATIC_SHAPE")
+  local okBattleArt, battleArt = pcall(mod.find, mod, "BATTLE_ART_VOXEL_FORK")
+  upstream = okUpstream and upstream or nil
+  battleArt = okBattleArt and battleArt or nil
+  local handle = upstream or battleArt
+
+  mod.exports._dramaticProviderState = {
+    upstream = upstream,
+    battleArt = battleArt,
+    conflict = upstream ~= nil and battleArt ~= nil,
+    handle = handle,
+    id = handle and handle.id or nil,
+    version = handle and handle.version or nil,
+  }
+
   local lib = handle and handle.exports and handle.exports.lib or nil
   if type(lib) ~= "table" or type(lib.require) ~= "function" then return nil end
   dramaticLib = lib
@@ -82,8 +72,9 @@ local function findDramaticRoot()
   if not (love and love.filesystem and love.filesystem.getDirectoryItems) then
     return nil
   end
-  local state = detectDramaticProvider()
-  local targetId = state and state.id or nil
+  if not mod.exports._dramaticProviderState then loadDramaticLib() end
+  local state = mod.exports._dramaticProviderState or {}
+  local targetId = state.id
   if not targetId then return nil end
   local ok, names = pcall(love.filesystem.getDirectoryItems, "mods")
   if not ok or type(names) ~= "table" then return nil end

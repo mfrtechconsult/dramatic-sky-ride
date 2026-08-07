@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.0-alpha.15.2.2",
+  "version": "0.1.0-alpha.15.2.3",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -21,5 +21,6 @@
   ],
   "affects_link": false,
   "experimental": false,
-  "description": "Ride Gen 1 Pokemon on land, water and in the air, with species-aware Ground Ride, visible Surf mounts and stable battle/map transitions."
+  "description": "Ride Gen 1 Pokemon on land, water and in the air, with species-aware Ground Ride, visible Surf mounts and stable battle/map transitions.",
+  "github": "mfrtechconsult/dramatic-sky-ride"
 }

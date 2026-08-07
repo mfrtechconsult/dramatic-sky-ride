@@ -1,5 +1,5 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with free voxel controls, story-aware FLY progression and optional Wild Skies encounters.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with free voxel controls, story-aware FLY progression, discovery safeguards and optional Wild Skies encounters.",
   author = "MFR TechConsult",
   tags = { "dramatic-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
@@ -8,6 +8,7 @@ return {
       "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
       "SOULBADGE can gate automatic water landings while retaining the existing SURF-user requirement",
       "data-driven field.badgeGates remain enforced across connected-map flight so story progression is not bypassed",
+      "canonical vanilla routes/cities must be reached normally before first airborne entry, while unknown custom maps stay open by default",
       "1ST and 3RD use one continuous analog movement solve per frame",
       "looking up/down in 1ST or 3RD can directly raise/lower requested flight altitude",
       "the camera smoothly follows the actual flight course after manual look input stops",
@@ -26,6 +27,7 @@ return {
       "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
       "ground wild-battle starts are suppressed while airborne so only explicit air encounters can begin",
       "Free Fly-shaped isFlying/altitude/mount exports for future hook-based interoperability",
+      "per-save legitimate-map discovery with optional public opt-in/override helpers for custom integrations",
       "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite flying mounts",
       "Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax Ground Ride mounts",
       "species-aware Ground Ride acceleration, gallop, stamina, dust and rider offsets",

@@ -8,7 +8,7 @@ Download the ready-to-install archive from GitHub Releases:
 
 https://github.com/mfrtechconsult/dramatic-sky-ride/releases
 
-Use the `dramatic_sky_ride-<version>.zip` asset attached to the latest release, not GitHub's source-code ZIP.
+Use the `dramatic_sky_ride-<version>.zip` asset attached to the latest release, not GitHub's source-code ZIP. Starting with `0.1.0-alpha.15.2.3`, the archive uses the Gen1Recomp Mod Index / launcher layout with `manifest.json` at the ZIP root.
 
 ## Alpha.15
 
@@ -63,16 +63,23 @@ Blastoise, Tentacruel, Gyarados and Lapras can be selected through the `MOUNTS` 
 ## Required dependencies
 
 1. Gen1Recomp with Mod API 2 support.
-2. Dramatic Shape Voxel Mod `>=1.6.0 <2.0.0`.
+2. Dramatic Shape Voxel Mod `>=1.7.0 <2.0.0`.
 3. A compatible PokePC follower-sprite provider.
 
 ## Installation
 
+### Launcher / Mod Index
+
+Import the release ZIP directly through the Gen1Recomp launcher. The archive is already packaged in the layout expected by the Mod Index.
+
+### Manual installation
+
 1. Download the release archive.
 2. Remove any older `dramatic_sky_ride` folder.
-3. Extract the archive into the Gen1Recomp `mods` directory.
-4. Confirm `mods/dramatic_sky_ride/manifest.json` exists.
-5. Fully restart Gen1Recomp.
+3. Create `mods/dramatic_sky_ride/`.
+4. Extract the ZIP contents directly into that folder.
+5. Confirm `mods/dramatic_sky_ride/manifest.json` exists.
+6. Fully restart Gen1Recomp.
 
 ## Development status
 

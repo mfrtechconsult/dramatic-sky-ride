@@ -44,8 +44,14 @@ jobs:
       - name: Build install archive
         shell: bash
         run: |
-          zip -qr "${{ steps.version.outputs.archive }}" dramatic_sky_ride
-          unzip -t "${{ steps.version.outputs.archive }}"
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          (
+            cd dramatic_sky_ride
+            zip -qr "../$ARCHIVE" . \
+              -x "*/__pycache__/*" "*.pyc" "*.pyo" ".DS_Store" "Thumbs.db"
+          )
+          unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
+          unzip -t "$ARCHIVE"
 
       - name: Prepare release notes
         shell: bash
@@ -53,21 +59,11 @@ jobs:
           cat > /tmp/release-notes.md <<'NOTES'
           ## Dramatic Sky Ride alpha.15
 
-          Alpha.15 completes the current feature batch:
+          Alpha.15 includes species-aware Ground Ride, controllable flying mounts, visible Surf mounts, stable battle/map transitions, and Pokédex-proportional mount sizing with per-species controls.
 
-          - species-aware Ground Ride for Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax;
-          - gallop with stamina, HUD, dust, cries and species-specific movement profiles;
-          - seamless boost continuity across connected maps in 2D, `1ST` and `3RD`;
-          - safe two-way official ledge jumps with weighted presentation and guarded landings;
-          - robust battle, evolution and party-change restoration;
-          - airborne battles preserve altitude, boost and rider rendering without ghost entities;
-          - visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts;
-          - central `MOUNTS` menu and mounted interaction safeguards;
-          - the validated alpha.14 flight camera behaviour remains unchanged.
+          This release also uses the Gen1Recomp Mod Index / launcher ZIP layout: `manifest.json` is at the archive root.
 
-          Feature development is paused after this release. Deferred work is preserved in the repository `backlog/` directory; future updates will primarily target bugs and compatibility.
-
-          Download the attached ZIP and extract its `dramatic_sky_ride` folder into the Gen1Recomp `mods` directory.
+          Install through the Gen1Recomp launcher, or manually create `mods/dramatic_sky_ride/` and extract the ZIP contents directly into that folder.
           NOTES
 
       - name: Create or update GitHub release

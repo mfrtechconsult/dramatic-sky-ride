@@ -3,12 +3,12 @@
 --   * DRAMATIC_SHAPE (upstream)
 --   * BATTLE_ART_VOXEL_FORK (absol89)
 --
--- Selection happens in main_01a before any DSR module resolves Dramatic Shape.
--- From here on we validate the provider by manifest version AND every public
--- capability DSR actually patches or reads. An incompatible future build fails
--- clearly instead of partially installing camera, movement or sizing hooks.
+-- Provider selection is owned by the core dramaticModule()/loadDramaticLib()
+-- path. From here on we validate the provider by manifest version AND every
+-- public capability DSR actually patches or reads. An incompatible future
+-- build fails clearly instead of partially installing camera or sizing hooks.
 
-local state = mod.exports._dramaticProviderState or {}
+local state = detectDramaticProvider() or {}
 if state.conflict then
   error("DRAMATIC_SKY_RIDE: enable only one voxel provider: DRAMATIC_SHAPE or BATTLE_ART_VOXEL_FORK", 0)
 end

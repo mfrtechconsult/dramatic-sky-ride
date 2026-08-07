@@ -1,3 +1,4 @@
+(function()
 -- alpha.16 optional Wild Skies integration.
 -- Wild Skies remains an independent mod and owns its flyers. DSR only uses
 -- its documented exports: registerSpriteSource() and takeFlyer().
@@ -108,7 +109,7 @@ local function wildSkiesTakeFlyer()
 end
 
 local function tryWildSkiesIntercept(ow)
-  if not (flight.active and flight.phase == "cruise" and airEncountersEnabled()) then
+  if not (flight.active and flight.phase == "cruise" and mod.exports.flightRules.airEncountersEnabled()) then
     return
   end
   if not (Game.stack and Game.stack:top() == ow) then return end
@@ -187,3 +188,4 @@ mod.exports.wildSkies = {
 }
 
 log("alpha.16 optional Wild Skies integration loaded")
+end)()

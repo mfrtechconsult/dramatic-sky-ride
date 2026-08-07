@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.0",
+  "version": "0.1.1-compat.1",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -9,7 +9,7 @@
   "game_version": "0.0.0-dev || >=0.1.69 <2.0.0",
   "priority": 900,
   "dependencies": [
-    "DRAMATIC_SHAPE@>=1.7.0 <2.0.0"
+    "DRAMATIC_SHAPE@>=1.3.1 <2.0.0"
   ],
   "optional_dependencies": [
     "PokePCFollowers_VoxelMerge",
@@ -23,6 +23,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Ride Gen 1 Pokemon on land, water and in the air, with story-aware FLY progression, discovery gates, camera altitude control and optional Wild Skies integration.",
-  "github": "mfrtechconsult/dramatic-sky-ride"
+  "experimental": true,
+  "description": "Temporary compatibility build for capability-based Dramatic Shape providers, including the Battle-Art-compatible 1.3.1 fork."
 }

@@ -22,6 +22,16 @@ jobs:
       - name: Check out temporary branch
         uses: actions/checkout@v4
 
+      - name: Record workflow start
+        shell: bash
+        run: |
+          printf 'started_for=%s\nstarted_at=%s\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > .github/temporary-workflow-start.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/temporary-workflow-start.txt
+          git commit -m "Record temporary workflow start" || true
+          git push origin HEAD:temporary/dramatic-shape-fork-compat
+
       - name: Read version
         id: version
         shell: bash
@@ -42,13 +52,9 @@ jobs:
           while IFS= read -r part; do
             cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
           done < dramatic_sky_ride/src/parts.txt
-
-          # Gen1Recomp concatenates parts.txt into one Lua chunk at runtime.
-          # LuaJIT is the runtime parser/compiler, so compile that exact chunk.
           luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
           luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
           luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
-
           echo "LuaJIT validation OK"
           echo "Runtime concat lines: $(wc -l < /tmp/dramatic_sky_ride.lua)"
 
@@ -113,6 +119,7 @@ jobs:
           ARCHIVE: ${{ steps.version.outputs.archive }}
         shell: bash
         run: |
+          git pull --rebase origin temporary/dramatic-shape-fork-compat
           printf 'version=%s\ntag=%s\nasset=%s\ncommit=%s\n' \
             "$VERSION" "$TAG" "$ARCHIVE" "$GITHUB_SHA" > .github/temporary-released-version
           git config user.name "github-actions[bot]"
@@ -120,6 +127,5 @@ jobs:
           git add .github/temporary-released-version
           if ! git diff --cached --quiet; then
             git commit -m "Record temporary compatibility release $TAG"
-            git pull --rebase origin temporary/dramatic-shape-fork-compat
             git push origin HEAD:temporary/dramatic-shape-fork-compat
           fi

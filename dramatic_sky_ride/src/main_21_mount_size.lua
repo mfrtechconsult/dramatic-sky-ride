@@ -1,0 +1,286 @@
+-- alpha.15.3: Pokédex-proportional mount sizing with per-species overrides.
+-- Visual scale only: logical cells, collision, movement and encounter rules stay
+-- unchanged. A 1.70 m Pokémon maps to the original 16 px overworld card.
+;(function()
+  local PaletteFX = require("src.render.PaletteFX")
+
+  local POKEDEX_REFERENCE_METERS = 1.70
+  local MIN_CANONICAL_SCALE = 0.50
+  local MAX_CANONICAL_SCALE = 4.00
+  local MIN_USER_PERCENT = 50
+  local MAX_USER_PERCENT = 200
+  local USER_STEP_PERCENT = 5
+
+  local MOUNT_SIZE_SPECIES = {
+    -- Flying
+    "CHARIZARD", "PIDGEOT", "FEAROW", "GOLBAT", "AERODACTYL",
+    "ARTICUNO", "ZAPDOS", "MOLTRES", "DRAGONAIR", "DRAGONITE",
+    -- Ground Ride
+    "ARCANINE", "RAPIDASH", "DODRIO", "RHYHORN", "RHYDON",
+    "KANGASKHAN", "TAUROS", "SNORLAX",
+    -- Visible Surf
+    "BLASTOISE", "TENTACRUEL", "GYARADOS", "LAPRAS",
+  }
+
+  local function sizeOptionKey(species)
+    return "mount_size_" .. tostring(species):lower()
+  end
+
+  -- The normal Gen1Recomp option UI supports numeric rows, so each species can
+  -- be tuned independently without adding a second custom settings screen.
+  OPTION_SCHEMA[#OPTION_SCHEMA + 1] = {
+    key = "pokedex_mount_sizes",
+    type = "toggle",
+    label = "POKEDEX SIZES",
+    default = true,
+    help = "Scale mount sprites from each Pokemon's Pokedex height.",
+  }
+  for _, species in ipairs(MOUNT_SIZE_SPECIES) do
+    OPTION_SCHEMA[#OPTION_SCHEMA + 1] = {
+      key = sizeOptionKey(species),
+      type = "number",
+      label = "SIZE " .. species,
+      default = 100,
+      min = MIN_USER_PERCENT,
+      max = MAX_USER_PERCENT,
+      step = USER_STEP_PERCENT,
+      help = "100 keeps this mount at its Pokedex-derived size.",
+    }
+  end
+  if mod.options and mod.options.define then
+    mod.options:define(OPTION_SCHEMA)
+  end
+
+  local function mountDexNumber(species)
+    local cfg = ELIGIBLE[species]
+      or GROUND_ELIGIBLE[species]
+      or WATER_ELIGIBLE[species]
+    return cfg and tonumber(cfg.dex) or nil
+  end
+
+  local function mountPokemonDef(species)
+    local pokemon = Game.data and Game.data.pokemon
+    if type(pokemon) ~= "table" then return nil end
+    if pokemon[species] then return pokemon[species] end
+    local dex = mountDexNumber(species)
+    if not dex then return nil end
+    for _, def in pairs(pokemon) do
+      if type(def) == "table" and tonumber(def.dex) == dex then return def end
+    end
+    return nil
+  end
+
+  local function pokedexHeightMeters(species)
+    local def = mountPokemonDef(species)
+    local entry = def and def.dexEntry
+    local ft = entry and tonumber(entry.heightFt)
+    local inch = entry and tonumber(entry.heightIn)
+    if not ft or not inch then return nil end
+    local totalInches = ft * 12 + inch
+    if totalInches <= 0 then return nil end
+    return totalInches * 0.0254
+  end
+
+  local function canonicalMountScale(species)
+    if optionValue("pokedex_mount_sizes", true) ~= true then return 1 end
+    local meters = pokedexHeightMeters(species)
+    if not meters then return 1 end
+    return clamp(meters / POKEDEX_REFERENCE_METERS,
+      MIN_CANONICAL_SCALE, MAX_CANONICAL_SCALE)
+  end
+
+  local function mountVisualScale(species)
+    if not species then return 1 end
+    local percent = tonumber(optionValue(sizeOptionKey(species), 100)) or 100
+    percent = clamp(percent, MIN_USER_PERCENT, MAX_USER_PERCENT)
+    return canonicalMountScale(species) * percent / 100
+  end
+
+  -- Mount sprites use true-color follower sheets. Draw the chosen frame
+  -- directly so the scale pivots around the feet while PaletteFX receives the
+  -- actual enlarged/shrunk screen rect. This keeps 2D palette masking correct.
+  local function decorateMountSprite(sprite, species)
+    if not (sprite and sprite.def) then return sprite end
+    if sprite.def.dramaticSkyRideMountSpecies then return sprite end
+    sprite.def.dramaticSkyRideMountSpecies = species
+
+    local rawDraw = sprite.draw
+    sprite.draw = function(self, px, py, camX, camY, facing, walkPhase,
+                           stepFlip, topHalf)
+      local scale = mountVisualScale(species)
+      if topHalf or math.abs(scale - 1) < 0.0001
+         or not (love and love.graphics and love.graphics.draw) then
+        return rawDraw(self, px, py, camX, camY, facing, walkPhase,
+                       stepFlip, topHalf)
+      end
+
+      local def = self.def or {}
+      local frame = 0
+      if (def.frames or 1) > 1 then
+        frame = (def.walker and walkPhase == 1)
+          and SpriteRenderer.WALK[facing] or SpriteRenderer.STAND[facing]
+      end
+      local mirror = facing == "right"
+        or ((facing == "down" or facing == "up")
+          and walkPhase == 1 and stepFlip)
+      local quad = self.frames and (self.frames[frame] or self.frames[0])
+      if not quad then
+        return rawDraw(self, px, py, camX, camY, facing, walkPhase,
+                       stepFlip, topHalf)
+      end
+
+      local x = math.floor((px or 0) - (camX or 0))
+      local y = math.floor((py or 0) - (camY or 0)) - 4
+      local anchorX, anchorY = x + 8, y + 16
+      local w, h = 16 * scale, 16 * scale
+      if def.trueColor and PaletteFX.markTrueColor then
+        PaletteFX.markTrueColor(math.floor(anchorX - w / 2),
+          math.floor(anchorY - h), math.ceil(w), math.ceil(h))
+      end
+      local sx = mirror and -scale or scale
+      love.graphics.draw(self.image, quad, anchorX, anchorY,
+                         0, sx, scale, 8, 16)
+    end
+    return sprite
+  end
+
+  -- Every path which creates a mount now receives the same scale metadata.
+  -- Battle restoration and map transitions also rebuild through these helpers,
+  -- so the setting survives all existing lifecycle paths.
+  local rawBuildMountSprite = buildMountSprite
+  buildMountSprite = function(species, ...)
+    local sprite, reason = rawBuildMountSprite(species, ...)
+    return decorateMountSprite(sprite, species), reason
+  end
+
+  local rawBuildGroundMountSprite = buildGroundMountSprite
+  buildGroundMountSprite = function(species, ...)
+    local sprite, reason = rawBuildGroundMountSprite(species, ...)
+    return decorateMountSprite(sprite, species), reason
+  end
+
+  local rawBuildWaterSprite = buildWaterSprite
+  buildWaterSprite = function(species, ...)
+    local sprite, reason = rawBuildWaterSprite(species, ...)
+    return decorateMountSprite(sprite, species), reason
+  end
+
+  -- Keep the trainer seated at the same relative point on a resized card. The
+  -- trainer itself deliberately remains human-sized; only its seat height
+  -- follows the Pokémon visual scale.
+  local rawFlightRiderPose = riderPose
+  riderPose = function(entity)
+    local sprite, px, py, facing, phase, flip, hopping = rawFlightRiderPose(entity)
+    if flight.active and flight.species then
+      local cfg = RIDER_OFFSETS[flight.species] or DEFAULT_RIDER_OFFSET
+      py = py - (tonumber(cfg.lift) or DEFAULT_RIDER_OFFSET.lift)
+        * (mountVisualScale(flight.species) - 1)
+    end
+    return sprite, px, py, facing, phase, flip, hopping
+  end
+
+  local rawGroundRiderPoseForSize = groundRiderPose
+  groundRiderPose = function(entity)
+    local sprite, px, py, facing, phase, flip, hopping =
+      rawGroundRiderPoseForSize(entity)
+    if ground.active and ground.species then
+      local cfg = GROUND_PROFILES[ground.species] or { lift = 6.5 }
+      py = py - (tonumber(cfg.lift) or 6.5)
+        * (mountVisualScale(ground.species) - 1)
+    end
+    return sprite, px, py, facing, phase, flip, hopping
+  end
+
+  local rawWaterRiderPoseForSize = waterRiderPose
+  waterRiderPose = function(entity)
+    local sprite, px, py, facing, phase, flip, hopping =
+      rawWaterRiderPoseForSize(entity)
+    if water.active and water.species then
+      local cfg = WATER_ELIGIBLE[water.species] or { lift = 7 }
+      py = py - (tonumber(cfg.lift) or 7)
+        * (mountVisualScale(water.species) - 1)
+    end
+    return sprite, px, py, facing, phase, flip, hopping
+  end
+
+  -- Dramatic Shape does not call SpriteRenderer:draw in voxel mode: it builds
+  -- a 16x16 billboard mesh from sprite.def. Replace only the billboard methods
+  -- for our tagged mount definitions, leaving every other Dramatic Shape sprite
+  -- exactly untouched.
+  local scaledVoxelMeshes = {}
+  local dramaticSpriteBillboards = dramaticModule("SpriteBillboards")
+  local dramaticVoxel3D = dramaticModule("Voxel3D")
+
+  local function clearScaledVoxelMeshes()
+    for _, mesh in pairs(scaledVoxelMeshes) do
+      if mesh and mesh.release then pcall(mesh.release, mesh) end
+    end
+    scaledVoxelMeshes = {}
+  end
+
+  local function buildScaledVoxelCard(def, frame, scale)
+    if not (dramaticVoxel3D and dramaticVoxel3D.newMesh
+            and dramaticVoxel3D.pushQuad) then return nil end
+    local okImage, img = pcall(Assets.image, def.image)
+    if not (okImage and img) then return nil end
+    local iw, ih = img:getDimensions()
+    local fy = (tonumber(frame) or 0) * 16
+    if fy + 16 > ih then fy = 0 end
+    local u0, u1 = 0.02 / iw, (16 - 0.02) / iw
+    local v0, v1 = (fy + 0.05) / ih, (fy + 15.95) / ih
+    local halfW = 8 * scale
+    local x0, x1 = 8 - halfW, 8 + halfW
+    local y1 = 16 * scale
+    local verts = {
+      { x0, 0,  0, u0, v1, 1 }, { x1, 0,  0, u1, v1, 1 },
+      { x1, y1, 0, u1, v0, 1 }, { x0, y1, 0, u0, v0, 1 },
+    }
+    local indices = {}
+    dramaticVoxel3D.pushQuad(indices, 0)
+    local ok, mesh = pcall(dramaticVoxel3D.newMesh, verts, indices)
+    return ok and mesh or nil
+  end
+
+  if dramaticSpriteBillboards and dramaticVoxel3D
+     and not dramaticSpriteBillboards.dramaticSkyRideSizeHook then
+    local rawMesh = dramaticSpriteBillboards.mesh
+    local rawShadowQuad = dramaticSpriteBillboards.shadowQuad
+
+    local function scaledMesh(def, frame, fallback)
+      local species = def and def.dramaticSkyRideMountSpecies
+      if not species then return fallback(def, frame) end
+      local scale = mountVisualScale(species)
+      if math.abs(scale - 1) < 0.0001 then return fallback(def, frame) end
+      local key = table.concat({ tostring(def.image), tostring(frame),
+        tostring(species), string.format("%.4f", scale) }, "#")
+      if scaledVoxelMeshes[key] == nil then
+        scaledVoxelMeshes[key] = buildScaledVoxelCard(def, frame, scale) or false
+      end
+      return scaledVoxelMeshes[key] or fallback(def, frame)
+    end
+
+    dramaticSpriteBillboards.mesh = function(def, frame)
+      return scaledMesh(def, frame, rawMesh)
+    end
+    dramaticSpriteBillboards.shadowQuad = function(def, frame)
+      return scaledMesh(def, frame, rawShadowQuad)
+    end
+    dramaticSpriteBillboards.dramaticSkyRideSizeHook = true
+
+    if Assets.register then Assets.register(clearScaledVoxelMeshes) end
+  end
+
+  mod.events:on("mod.options_changed", function(payload)
+    if not (payload and payload.mod == mod.id) then return end
+    local key = tostring(payload.key or "")
+    if key == "pokedex_mount_sizes" or key:match("^mount_size_") then
+      clearScaledVoxelMeshes()
+    end
+  end)
+
+  -- Small public inspection surface useful for compatibility/debug tools.
+  mod.exports.mountVisualScale = mountVisualScale
+  mod.exports.mountPokedexHeightMeters = pokedexHeightMeters
+
+  log("alpha.15.3 Pokedex-proportional mount sizing loaded")
+end)()

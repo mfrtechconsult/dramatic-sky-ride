@@ -1,1 +1,1 @@
-log("loaded alpha.13; water landings and surf takeoffs enabled")
+log("Dramatic Sky Ride alpha.15.2 maintenance baseline loaded")

@@ -259,4 +259,4 @@ mod.exports.flightRules = {
 }
 
 log("alpha.16 FLY, badge and story progression rules loaded")
-end)()
+end)();

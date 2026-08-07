@@ -1,14 +1,56 @@
-# Dramatic Sky Ride alpha.15.3 validation checklist
+# Dramatic Sky Ride alpha.16 experimental validation checklist
 
-Alpha.15 was validated interactively before publication. Alpha.15.3 keeps the option repair, blocks manual Surf during flight and targets current Gen1Recomp/Dramatic Shape releases.
+Alpha.16 is developed only on `feature/wild-skies-integration`. It adds story-aware FLY progression, camera-driven altitude in `1ST`/`3RD`, and optional integration with ShaneHudson's separate Wild Skies mod.
 
-## Alpha.15.3 regression
+## Alpha.16 progression rules
 
-- Confirm that the mod options screen exposes 20 entries: 11 flight options and 9 mount options.
+- Confirm that the mod options screen exposes the existing options plus `REQUIRE FLY`, `BADGE CHECKS`, `STORY GATES`, `CAMERA ALTITUDE` and `AIR ENCOUNTERS`.
+- With `REQUIRE FLY` enabled, try to take off with a supported mount that does not know FLY; confirm `FLY REQUIRED` and no takeoff.
+- Teach FLY to the mount but remove/withhold THUNDERBADGE; confirm `THUNDERBADGE REQUIRED`.
+- With FLY and THUNDERBADGE, confirm party action, keyboard shortcut and gamepad shortcut all take off normally.
+- Disable `REQUIRE FLY` and `BADGE CHECKS` separately and confirm each rule can be relaxed without disabling the other.
+- Approach a connected-map route protected by `field.badgeGates` while airborne; confirm the crossing is blocked until the required badge/event has been satisfied.
+- With `BADGE CHECKS` enabled, attempt a water landing with a SURF user but without SOULBADGE; confirm the landing is refused.
+- Add SOULBADGE and confirm the same landing transitions directly into native Surf.
+
+## Alpha.16 camera altitude
+
+- In `1ST`, look upward with the right stick and confirm requested altitude rises smoothly.
+- Look downward and confirm requested altitude falls smoothly.
+- Repeat with mouse look and touch look where available.
+- Repeat the same checks in `3RD`.
+- Enter `1ST` or `3RD` while already airborne and confirm the camera's initial pitch reset does not change altitude by itself.
+- Hold the right stick against the camera's vertical pitch limit and confirm altitude can continue to change.
+- Confirm `R2/L2` and `Page Up/Page Down` still work and take priority when held.
+- Change `VERTICAL SPEED` and confirm camera-driven altitude follows the same speed setting.
+- Disable `CAMERA ALTITUDE` and confirm looking around no longer changes altitude.
+
+## Alpha.16 Wild Skies integration
+
+- Install `wild_skies` and PokePC follower sprites; keep `free_fly` disabled because DSR and Free Fly are alternative flight engines.
+- Confirm Wild Skies still owns spawning, landing, resting, takeoff, night populations and route-seam behaviour.
+- Confirm flying species use their real species-specific follower/overworld sprite when `follower_###.png` is available.
+- Verify Pidgey/Pidgeotto, Spearow, Zubat/Golbat and at least one sea-route flyer rather than testing only DSR mount species.
+- While grounded, confirm Wild Skies low-flyer bump encounters still work normally.
+- While DSR is airborne, confirm low flyers do not trigger the grounded bump path.
+- Intercept a visible flyer in the same cell/radius and confirm the battle uses that exact species and level.
+- Win, run and capture from an intercepted battle; confirm DSR restores mount, altitude, boost and rider state.
+- Faint/remove the selected mount during the intercepted battle and confirm DSR performs its existing safe landing.
+- Confirm an overworld ground-roamer mod cannot start a ground wild battle while DSR is airborne.
+- Disable `AIR ENCOUNTERS`; confirm Wild Skies remains visible/alive but DSR no longer consumes flyers into mid-air battles.
+- Uninstall/disable Wild Skies and confirm DSR operates normally with no errors.
+
+Known Wild Skies API limitations for this experiment:
+
+- `takeFlyer()` currently exposes species and level but not flyer altitude/mode, so interception is cell-radius based rather than true 3D distance.
+- Wild Skies currently applies its own `dexScale()` after sprite resolution, so real DSR-provided sprites do not yet use DSR's exact mount sizing formula.
+
+## Core regression
+
 - Toggle `SHOW RIDER`, `FLIGHT BOOST`, `GROUND GALLOP` and `VISIBLE SURF MOUNTS`; confirm each feature follows its setting.
 - Restart Gen1Recomp and confirm the selected values remain saved.
 - Run one takeoff/landing, one Ground Ride gallop and one Surf transition to confirm no behavioural regression.
-- Test with Gen1Recomp 0.1.75 and Dramatic Shape 1.7.0.
+- Test with the current supported Gen1Recomp and Dramatic Shape 1.7.x releases.
 - Install Dramatic Shape through the in-game Mod Manager ZIP flow and confirm flight terrain-height compensation remains active.
 
 ## Ground Ride
@@ -39,12 +81,12 @@ Alpha.15 was validated interactively before publication. Alpha.15.3 keeps the op
 - While airborne, open a Surf-capable Pokemon's party submenu and confirm native `SURF` is not available.
 - While airborne, confirm `SURF & RIDE` is not available and `MOUNTS` contains no `SURF` entries.
 - Attempt any native Surf activation path while airborne and confirm it is refused with `LAND FIRST`.
-- Land on water with a Surf-capable party and confirm Surf starts automatically.
+- Land on water with the required progression and a Surf-capable party and confirm Surf starts automatically.
 - Confirm the visible Surf mount activates after that water landing.
 - Take off again from Surf.
 - Land on dry ground and confirm normal manual Surf is available again.
 - Select each visible Surf mount through `MOUNTS` while not flying.
-- Confirm the alpha.14 flight camera behaviour in `1ST` and `3RD`.
+- Confirm the existing flight camera behaviour in `1ST` and `3RD` remains stable with `CAMERA ALTITUDE` disabled.
 
 ## Installation regression
 

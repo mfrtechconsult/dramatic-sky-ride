@@ -1,4 +1,4 @@
-(function()
+;(function()
 -- alpha.16 flight progression rules.
 -- Keep Dramatic Sky Ride's authored mount roster, but gate actual takeoff and
 -- water landing through the same progression concepts as the vanilla field

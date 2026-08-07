@@ -40,8 +40,8 @@ return {
       "Pokedex-proportional visual sizing for all 22 mounts with per-species controls"
     },
     known = {
-      "Wild Skies currently exposes species/level but not flyer altitude, so alpha.16 interception is cell-radius based",
-      "Wild Skies applies its own dexScale after sprite resolution; exact DSR scaling needs a future scale hook from Wild Skies",
+      "Wild Skies' public takeFlyer result exposes species/level but not flyer altitude, so interception is cell-radius based",
+      "Wild Skies keeps its own dexScale after sprite resolution; DSR intentionally does not patch Wild Skies internals",
       "rider seating still uses procedural offsets rather than dedicated seated sprites",
       "tall-building safety still uses authored zones plus local terrain height",
       "advanced geometry-based roof detection is deferred in the repository backlog"

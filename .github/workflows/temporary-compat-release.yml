@@ -31,17 +31,26 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "archive=dramatic_sky_ride-$VERSION.zip" >> "$GITHUB_OUTPUT"
 
-      - name: Validate manifest and Lua source
+      - name: Validate manifest and exact runtime Lua source
         shell: bash
         run: |
           python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
           sudo apt-get update
-          sudo apt-get install -y lua5.4
+          sudo apt-get install -y luajit lua5.1
           : > /tmp/dramatic_sky_ride.lua
           while IFS= read -r part; do
             cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
           done < dramatic_sky_ride/src/parts.txt
-          luac -p dramatic_sky_ride/main.lua dramatic_sky_ride/mod.card /tmp/dramatic_sky_ride.lua
+
+          # Gen1Recomp concatenates parts.txt into one Lua chunk at runtime.
+          # Compile that exact chunk with LuaJIT (the runtime language) and
+          # stock Lua 5.1 so chunk-boundary mistakes cannot pass CI again.
+          luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
+          luac5.1 -p /tmp/dramatic_sky_ride.lua
+          luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
+          luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
+
+          echo "Runtime concat lines: $(wc -l < /tmp/dramatic_sky_ride.lua)"
 
       - name: Build launcher-ready ZIP
         shell: bash
@@ -66,6 +75,8 @@ jobs:
           - Upstream: `DRAMATIC_SHAPE >=1.7.0 <2.0.0`.
           - Community Battle Art: `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`.
           - Full provider capability validation covers TileShape, Voxel3D, SpriteBillboards, 1ST/3RD FirstPerson controls and FreeMove.
+          - Provider selection now lives inside DSR's existing Dramatic Shape library loader; no `mod.find` aliasing is used.
+          - The exact concatenated runtime source is compiled with LuaJIT and Lua 5.1 before publication.
           - Staged-battle ordering is explicit: Ground Ride is cleaned before Battle Art snapshots the cast, and airborne DSR visuals reconcile only after the provider restores the world.
           - Wild Skies `>=1.3.1 <2.0.0` remains optional and uses only its documented public API.
           - PokePC Followers remains optional; DSR keeps its asset/API fallbacks.

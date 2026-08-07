@@ -58,13 +58,18 @@ jobs:
         shell: bash
         run: |
           cat > /tmp/release-notes.md <<'NOTES'
-          ## Temporary Dramatic Shape compatibility build
+          ## Temporary dual-provider compatibility build
 
-          This build is for community testing during the compatibility work for the alternate Dramatic Shape fork.
+          This build keeps stable/main on v0.1.0 while validating one DSR ZIP against either supported voxel provider.
 
-          - Supports `DRAMATIC_SHAPE >=1.3.1 <2.0.0`.
-          - Uses capability detection so the official Dramatic Shape remains fully supported.
-          - 1ST/3RD-specific DSR hooks are only enabled when those Dramatic Shape modules exist.
+          - Upstream: `DRAMATIC_SHAPE >=1.7.0 <2.0.0`.
+          - Community Battle Art: `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`.
+          - Full provider capability validation covers TileShape, Voxel3D, SpriteBillboards, 1ST/3RD FirstPerson controls and FreeMove.
+          - Staged-battle event ordering is explicitly reconciled so Ground Ride and airborne rider state cannot leave stale/ghost entities around Battle Art battles.
+          - Wild Skies `>=1.3.1 <2.0.0` remains optional and uses only its documented public API.
+          - PokePC Followers remains optional; DSR keeps its asset/API fallbacks.
+          - `free_fly` remains a conflicting alternative flight engine.
+          - Do not enable upstream Dramatic Shape and Battle Art Voxel Fork simultaneously; DSR deliberately rejects an ambiguous dual-provider setup.
           - Main/stable remains v0.1.0.
 
           The attached ZIP is launcher-ready: `manifest.json` is at the archive root.

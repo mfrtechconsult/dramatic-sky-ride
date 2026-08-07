@@ -44,8 +44,15 @@ jobs:
       - name: Build install archive
         shell: bash
         run: |
-          zip -qr "${{ steps.version.outputs.archive }}" dramatic_sky_ride
-          unzip -t "${{ steps.version.outputs.archive }}"
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          (
+            cd dramatic_sky_ride
+            zip -qr "../$ARCHIVE" . \
+              -x "*/__pycache__/*" "*.pyc" "*.pyo" ".DS_Store" "Thumbs.db"
+          )
+          test "$(unzip -Z1 "$ARCHIVE" | head -n 1)" != "dramatic_sky_ride/"
+          unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
+          unzip -t "$ARCHIVE"
 
       - name: Prepare release notes
         shell: bash
@@ -65,9 +72,9 @@ jobs:
           - central `MOUNTS` menu and mounted interaction safeguards;
           - the validated alpha.14 flight camera behaviour remains unchanged.
 
-          Feature development is paused after this release. Deferred work is preserved in the repository `backlog/` directory; future updates will primarily target bugs and compatibility.
+          This release also switches the downloadable ZIP to the Gen1Recomp Mod Index / launcher archive layout: `manifest.json` is at the archive root.
 
-          Download the attached ZIP and extract its `dramatic_sky_ride` folder into the Gen1Recomp `mods` directory.
+          Install through the Gen1Recomp launcher, or manually create `mods/dramatic_sky_ride/` and extract the ZIP contents directly into that folder.
           NOTES
 
       - name: Create or update GitHub release

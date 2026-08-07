@@ -42,6 +42,7 @@ main_19_ground_final_03.lua
 main_19_ground_final_04.lua
 main_20_compat.lua
 main_20a_dramatic_compat.lua
+main_20b_battle_provider_compat.lua
 main_21_mount_size.lua
 main_22_flight_rules.lua
 main_23_camera_altitude.lua

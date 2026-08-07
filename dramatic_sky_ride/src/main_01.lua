@@ -63,8 +63,10 @@ local VERTICAL_RATES = {
   fast = 72,
 }
 
-if mod.options and mod.options.define then
-  mod.options:define({
+-- Gen1Recomp replaces a mod's complete option schema on every define() call.
+-- Keep the schema in one shared table so later feature chunks can append rows
+-- and republish the complete list without hiding the original flight options.
+local OPTION_SCHEMA = {
     {
       key = "show_rider",
       type = "toggle",
@@ -152,7 +154,10 @@ if mod.options and mod.options.define then
       default = true,
       help = "Keep runtime quest characters and barriers solid in flight.",
     },
-  })
+}
+
+if mod.options and mod.options.define then
+  mod.options:define(OPTION_SCHEMA)
 end
 
 local function optionValue(key, default)

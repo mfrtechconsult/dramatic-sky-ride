@@ -150,6 +150,45 @@ landingCellKind = function(ow, x, y)
   return kind, surfMon, reason
 end
 
+-- Prefer a mount that satisfies the FLY rule when the shortcut auto-selects a
+-- party member. If none does, fall back to the legacy choice so startFlight()
+-- can still explain the precise blocker to the player.
+local preferredMountWithoutFlightRules = preferredMount
+preferredMount = function(game)
+  local party = game and game.save and game.save.party or {}
+  local ow = game and game.overworld
+  if lastMountIndex and healthy(party[lastMountIndex])
+     and mountSpecies(game, party[lastMountIndex])
+     and selectedMountCanFly(game, ow, party[lastMountIndex]) then
+    return party[lastMountIndex]
+  end
+  for i, mon in ipairs(party) do
+    if healthy(mon) and mountSpecies(game, mon)
+       and selectedMountCanFly(game, ow, mon) then
+      lastMountIndex = i
+      return mon
+    end
+  end
+  return preferredMountWithoutFlightRules(game)
+end
+
+-- Give the badge-specific explanation before the older generic landing error.
+local beginLandingWithoutProgressionMessage = beginLanding
+beginLanding = function(game, forced)
+  local ow = game and game.overworld
+  local p = ow and ow.player
+  if not forced and flight.active and badgeChecksEnabled()
+     and p and ow.map and ow.map.isWaterCell
+     and ow.map:isWaterCell(p.cellX, p.cellY)
+     and not hasBadge(game, "SOULBADGE") then
+    notifyHud("SOULBADGE REQUIRED")
+    say(game, "The SOULBADGE is\nrequired to land here.")
+    feedback("blocked")
+    return false
+  end
+  return beginLandingWithoutProgressionMessage(game, forced)
+end
+
 -- Data-driven story barriers: use the same field.badgeGates table the game's
 -- walking checkpoints use. Mods that add their own badge/event gates are
 -- therefore respected automatically.

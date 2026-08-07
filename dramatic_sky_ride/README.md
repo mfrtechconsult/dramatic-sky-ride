@@ -1,8 +1,8 @@
-# Dramatic Sky Ride — alpha.15.2.2
+# Dramatic Sky Ride — alpha.15.3
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp** when used with **Dramatic Shape Voxel Mod**.
 
-## Alpha.15.2.2 maintenance and compatibility
+## Alpha.15.3 sizing and compatibility
 
 - Keeps the alpha.15.1 combined 20-option schema and saved option compatibility.
 - Blocks manual Surf while airborne; landing on water is the only way to enter Surf directly from flight.
@@ -58,6 +58,16 @@ The `MOUNTS` menu can select:
 
 Native Surf movement, collisions, music and transitions remain in control. While flying, manual Surf is unavailable: the only way to enter Surf from the air is to land on a valid water cell with a Surf-capable party.
 
+### Pokédex-proportional mount sizing
+
+- Every flying, Ground Ride and visible Surf mount is visually scaled from its Gen 1 Pokédex height.
+- A 1.70 m Pokémon uses the original 16 px mount size; other species scale proportionally.
+- The MODS > Dramatic Sky Ride > OPTIONS screen includes an individual numeric size control for all 22 mounts.
+- `100` means the Pokédex-derived size; each species can be adjusted from 50 to 200 in 5-point steps.
+- `POKEDEX SIZES` can be disabled to use the original 16 px size as the 100 baseline.
+- Rider seat height follows the resized mount while the trainer remains human-sized.
+- Scaling is visual only: collisions, cells, movement, encounters and map logic are unchanged.
+
 ## Installation
 
 1. Remove the previous `mods/dramatic_sky_ride` directory.
@@ -73,7 +83,7 @@ Native Surf movement, collisions, music and transitions remain in control. While
 
 ## Development status
 
-Alpha.15.2.2 is a maintenance and current-engine compatibility build of the completed alpha.15 feature batch. Further feature work is paused; maintenance will focus on bug and compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
+Alpha.15.3 adds Pokédex-proportional mount sizing on top of the stabilized alpha.15.2.2 compatibility baseline. Broader feature work remains paused outside targeted improvements and bug/compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
 
 ## Bug reports
 

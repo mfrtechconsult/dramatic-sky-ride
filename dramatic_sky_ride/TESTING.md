@@ -1,8 +1,8 @@
-# Dramatic Sky Ride alpha.15.2.2 validation checklist
+# Dramatic Sky Ride alpha.15.3 validation checklist
 
-Alpha.15 was validated interactively before publication. Alpha.15.2.2 keeps the option repair, blocks manual Surf during flight and targets current Gen1Recomp/Dramatic Shape releases.
+Alpha.15 was validated interactively before publication. Alpha.15.3 keeps the option repair, blocks manual Surf during flight and targets current Gen1Recomp/Dramatic Shape releases.
 
-## Alpha.15.2.2 regression
+## Alpha.15.3 regression
 
 - Confirm that the mod options screen exposes 20 entries: 11 flight options and 9 mount options.
 - Toggle `SHOW RIDER`, `FLIGHT BOOST`, `GROUND GALLOP` and `VISIBLE SURF MOUNTS`; confirm each feature follows its setting.
@@ -51,3 +51,14 @@ Alpha.15 was validated interactively before publication. Alpha.15.2.2 keeps the 
 - Validate `manifest.json`.
 - Compile `main.lua`, `mod.card` and concatenated source in `src/parts.txt` order.
 - Build and test the install ZIP.
+
+## Mount sizing
+
+- Confirm `POKEDEX SIZES` is enabled by default.
+- Compare a small mount (Rhyhorn/Fearow) with a large mount (Lapras/Dragonair/Gyarados).
+- Confirm Gyarados is dramatically larger than Blastoise at 100.
+- Change at least one flying, Ground and Surf species size while mounted; confirm the visual scale updates.
+- Confirm the rider remains human-sized and its seat height follows the mount.
+- Repeat in 2D, voxel orbit, `1ST` and `3RD` where the player card is visible.
+- Confirm collisions, ledges, encounters and Surf transitions remain cell-based and unchanged.
+- Reset defaults and confirm every species returns to 100.

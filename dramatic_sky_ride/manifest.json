@@ -1,19 +1,19 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.1-compat.1",
+  "version": "0.1.1-compat.2",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
   "category": "GAMEPLAY",
   "game_version": "0.0.0-dev || >=0.1.69 <2.0.0",
   "priority": 900,
-  "dependencies": [
-    "DRAMATIC_SHAPE@>=1.3.1 <2.0.0"
-  ],
+  "dependencies": [],
   "optional_dependencies": [
+    "DRAMATIC_SHAPE@>=1.7.0 <2.0.0",
+    "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "PokePCFollowers_VoxelMerge",
-    "wild_skies"
+    "wild_skies@>=1.3.1 <2.0.0"
   ],
   "conflicts": [
     "free_fly"
@@ -24,5 +24,5 @@
   ],
   "affects_link": false,
   "experimental": true,
-  "description": "Temporary compatibility build for capability-based Dramatic Shape providers, including the Battle-Art-compatible 1.3.1 fork."
+  "description": "Temporary compatibility build with full capability-checked support for either Dramatic Shape 1.7+ or Battle Art Voxel Fork 1.7.6+, plus optional Wild Skies integration."
 }

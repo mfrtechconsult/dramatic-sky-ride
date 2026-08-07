@@ -1,6 +1,15 @@
-# Dramatic Sky Ride — alpha.15
+# Dramatic Sky Ride — alpha.15.2.1
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp** when used with **Dramatic Shape Voxel Mod**.
+
+## Alpha.15.2.1 maintenance and compatibility
+
+- Keeps the alpha.15.1 combined 20-option schema and saved option compatibility.
+- Blocks manual Surf while airborne; landing on water is the only way to enter Surf directly from flight.
+- Keeps compatibility with Gen1Recomp `>=0.1.69 <2.0.0` and targets Dramatic Shape `>=1.7.0 <2.0.0`.
+- Resolves Dramatic Shape terrain heights through its exported companion API first, including Mod Manager ZIP installs.
+- Retains the unpacked-directory terrain resolver as a compatibility fallback.
+- Does not change the validated alpha.14 flight camera.
 
 ## Alpha.15 highlights
 
@@ -47,7 +56,7 @@ The `MOUNTS` menu can select:
 - Gyarados
 - Lapras
 
-Native Surf movement, collisions, music and transitions remain in control.
+Native Surf movement, collisions, music and transitions remain in control. While flying, manual Surf is unavailable: the only way to enter Surf from the air is to land on a valid water cell with a Surf-capable party.
 
 ## Installation
 
@@ -58,13 +67,13 @@ Native Surf movement, collisions, music and transitions remain in control.
 
 ## Dependencies
 
-- Gen1Recomp with Mod API 2 support.
-- Dramatic Shape Voxel Mod `>=1.6.0 <2.0.0`.
+- Gen1Recomp `>=0.1.69 <2.0.0` with Mod API 2 support.
+- Dramatic Shape Voxel Mod `>=1.7.0 <2.0.0`.
 - A compatible PokePC follower-sprite provider.
 
 ## Development status
 
-Alpha.15 completes the currently planned feature batch. Further feature work is paused; maintenance will focus on bug and compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
+Alpha.15.2.1 is a maintenance and current-engine compatibility build of the completed alpha.15 feature batch. Further feature work is paused; maintenance will focus on bug and compatibility fixes. Deferred improvements are documented in the repository `backlog/` directory.
 
 ## Bug reports
 

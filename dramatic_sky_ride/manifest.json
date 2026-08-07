@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.0-alpha.15",
+  "version": "0.1.0-alpha.15.2.1",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -9,7 +9,7 @@
   "game_version": "0.0.0-dev || >=0.1.69 <2.0.0",
   "priority": 900,
   "dependencies": [
-    "DRAMATIC_SHAPE@>=1.6.0 <2.0.0"
+    "DRAMATIC_SHAPE@>=1.7.0 <2.0.0"
   ],
   "optional_dependencies": [
     "PokePCFollowers_VoxelMerge"

@@ -73,9 +73,20 @@ end
 local function loadDramaticTileShape()
   if dramaticTileShapeTried then return dramaticTileShape end
   dramaticTileShapeTried = true
+
+  -- Dramatic Shape 1.7 exposes its companion API through mod.exports.lib.
+  -- Prefer that public seam: it works whether the dependency was installed
+  -- unpacked or imported as a mounted ZIP by Gen1Recomp's Mod Manager.
+  local exported = dramaticModule("TileShape")
+  if type(exported) == "table" and type(exported.forMap) == "function" then
+    dramaticTileShape = exported
+    return exported
+  end
+
+  -- Compatibility fallback for older unpacked Dramatic Shape installs.
   local root = findDramaticRoot()
   if not root then
-    mod.log:warn("DRAMATIC_SHAPE directory not found; terrain height compensation disabled")
+    mod.log:warn("DRAMATIC_SHAPE TileShape API unavailable; terrain height compensation disabled")
     return nil
   end
 

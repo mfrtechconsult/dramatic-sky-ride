@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.16.3
+
+- Fixed a Ground Ride crash triggered immediately by `G`: the Pokédex sizing wrapper referenced `GROUND_PROFILES`, which is private to the alpha.15 polish scope and therefore resolved as nil.
+- Ground rider seat scaling now uses its own stable lift table instead of another chunk's private locals.
+- Removed invalid global wrappers around the private visible-Surf builder/rider symbols and made Pokédex height lookup fall back to the canonical Pokémon definition.
+- Added a Ground Ride smoke-test requirement before Wild Skies validation.
+
 ## 0.1.0-alpha.16.1
 
 - Fixed the alpha.16.0 startup failure caused by exceeding Lua's 200-local-variable limit in the concatenated DSR source.

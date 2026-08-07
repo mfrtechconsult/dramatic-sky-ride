@@ -7,6 +7,7 @@ on:
     paths:
       - dramatic_sky_ride/manifest.json
       - dramatic_sky_ride/src/**
+      - dramatic_sky_ride/TESTING_BATTLE_ART.md
       - .github/workflows/temporary-compat-release.yml
   workflow_dispatch:
 
@@ -65,11 +66,12 @@ jobs:
           - Upstream: `DRAMATIC_SHAPE >=1.7.0 <2.0.0`.
           - Community Battle Art: `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`.
           - Full provider capability validation covers TileShape, Voxel3D, SpriteBillboards, 1ST/3RD FirstPerson controls and FreeMove.
-          - Staged-battle event ordering is explicitly reconciled so Ground Ride and airborne rider state cannot leave stale/ghost entities around Battle Art battles.
+          - Staged-battle ordering is explicit: Ground Ride is cleaned before Battle Art snapshots the cast, and airborne DSR visuals reconcile only after the provider restores the world.
           - Wild Skies `>=1.3.1 <2.0.0` remains optional and uses only its documented public API.
           - PokePC Followers remains optional; DSR keeps its asset/API fallbacks.
           - `free_fly` remains a conflicting alternative flight engine.
           - Do not enable upstream Dramatic Shape and Battle Art Voxel Fork simultaneously; DSR deliberately rejects an ambiguous dual-provider setup.
+          - The ZIP includes `TESTING_BATTLE_ART.md` with the full compatibility matrix.
           - Main/stable remains v0.1.0.
 
           The attached ZIP is launcher-ready: `manifest.json` is at the archive root.

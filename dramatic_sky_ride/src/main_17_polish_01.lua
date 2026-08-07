@@ -9,8 +9,7 @@ local function mountOption(key, default)
   return optionValue(key, default)
 end
 
-if mod.options and mod.options.define then
-  mod.options:define({
+local MOUNT_OPTION_SCHEMA = {
     { key = "mount_cries", type = "toggle", label = "MOUNT CRIES", default = true,
       help = "Play the selected Pokemon's cry when mounting or taking off." },
     { key = "ground_gallop", type = "toggle", label = "GROUND GALLOP", default = true,
@@ -29,7 +28,13 @@ if mod.options and mod.options.define then
       help = "Add a MOUNTS entry to the START menu." },
     { key = "mount_hints", type = "toggle", label = "MOUNT HINTS", default = true,
       help = "Show a short control reminder the first time each ride type is used." },
-  })
+}
+
+for _, row in ipairs(MOUNT_OPTION_SCHEMA) do
+  OPTION_SCHEMA[#OPTION_SCHEMA + 1] = row
+end
+if mod.options and mod.options.define then
+  mod.options:define(OPTION_SCHEMA)
 end
 
 local GROUND_PROFILES = {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.16.4
+
+- Added `DISCOVERY GATES`: airborne traversal cannot enter canonical vanilla routes/cities until that map has been reached through normal non-DSR-flight gameplay.
+- Progression discovery is stored per save through `mod.save`; walking, Ground Ride, Surf and ordinary/scripted non-flight entries count as legitimate visits, while DSR flight entries do not.
+- Saffron City and unvisited vanilla routes are therefore protected from first-time airborne sequence breaks even when no explicit badge gate catches the seam.
+- Unknown/custom map ids remain allowed by default for map-pack and total-conversion compatibility.
+- Added optional `flightRules.registerDiscoveryGate`, `markMapReached`, `isMapReached` and override helpers so custom integrations can opt in without depending on DSR internals.
+
 ## 0.1.0-alpha.16.3
 
 - Fixed a Ground Ride crash triggered immediately by `G`: the Pokédex sizing wrapper referenced `GROUND_PROFILES`, which is private to the alpha.15 polish scope and therefore resolved as nil.

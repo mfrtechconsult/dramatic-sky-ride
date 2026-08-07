@@ -25,7 +25,8 @@ return {
       "visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts",
       "a central MOUNTS menu for Ground Ride, flight and Surf selection",
       "species-weighted ledge jumps with guarded landings and impact feedback",
-      "seamless boost continuity across connected maps in 2D, 1ST and 3RD"
+      "seamless boost continuity across connected maps in 2D, 1ST and 3RD",
+      "Pokedex-proportional visual sizing for all 22 mounts with per-species controls"
     },
     known = {
       "rider seating still uses procedural offsets rather than dedicated seated sprites",

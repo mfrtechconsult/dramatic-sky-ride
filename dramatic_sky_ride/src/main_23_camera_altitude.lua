@@ -1,3 +1,4 @@
+(function()
 -- alpha.16 first/third-person camera altitude control.
 -- Dramatic Shape owns camera pitch. DSR observes that public module state and
 -- converts intentional vertical look input into the same requested-altitude
@@ -23,7 +24,7 @@ updateRequestedAltitude = function(dt)
 
   local cameraDir = tonumber(flight.cameraVerticalInput) or 0
   flight.cameraVerticalInput = 0
-  if not cameraAltitudeEnabled() or math.abs(cameraDir) < 0.01 then
+  if not mod.exports.flightRules.cameraAltitudeEnabled() or math.abs(cameraDir) < 0.01 then
     return updateRequestedAltitudeWithoutCamera(dt)
   end
 
@@ -45,13 +46,13 @@ local function installCameraAltitudeHook()
   dramaticFirstPerson.update = function(dt)
     local beforePitch = tonumber(dramaticFirstPerson.pitch) or 0
     local activeBefore = flight.active and flight.phase == "cruise"
-      and isFreeCamera() and cameraAltitudeEnabled()
+      and isFreeCamera() and mod.exports.flightRules.cameraAltitudeEnabled()
       and Game.stack and Game.stack:top() == Game.overworld
 
     local result = innerUpdate(dt)
 
     local activeNow = flight.active and flight.phase == "cruise"
-      and isFreeCamera() and cameraAltitudeEnabled()
+      and isFreeCamera() and mod.exports.flightRules.cameraAltitudeEnabled()
       and Game.stack and Game.stack:top() == Game.overworld
     local afterPitch = tonumber(dramaticFirstPerson.pitch) or beforePitch
 
@@ -97,3 +98,4 @@ installCameraAltitudeHook()
 mod.events:on("game.ready", installCameraAltitudeHook)
 
 log("alpha.16 1ST/3RD camera altitude control loaded")
+end)()

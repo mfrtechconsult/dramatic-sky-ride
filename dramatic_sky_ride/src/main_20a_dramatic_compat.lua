@@ -4,9 +4,9 @@
 --   * BATTLE_ART_VOXEL_FORK (absol89)
 --
 -- Selection happens in main_01a before any DSR module resolves Dramatic Shape.
--- From here on we validate the provider by manifest version AND public
--- capabilities, so an incompatible future build fails clearly instead of
--- partially installing hooks and corrupting camera/battle state.
+-- From here on we validate the provider by manifest version AND every public
+-- capability DSR actually patches or reads. An incompatible future build fails
+-- clearly instead of partially installing camera, movement or sizing hooks.
 
 local state = mod.exports._dramaticProviderState or {}
 if state.conflict then
@@ -43,34 +43,43 @@ local capabilities = {
   providerId = providerId,
   providerVersion = providerVersion,
   supportedRange = providerRange,
-  voxelState = type(voxelState) == "table",
+  voxelState = type(voxelState) == "table"
+    and type(voxelState.isFirstPerson) == "function"
+    and type(voxelState.isThirdPerson) == "function"
+    and type(voxelState.isFreeCam) == "function"
+    and tonumber(voxelState.MAX_LEVEL) ~= nil
+    and tonumber(voxelState.FP_LEVEL) ~= nil
+    and tonumber(voxelState.TP_LEVEL) ~= nil,
   tileShape = type(tileShape) == "table" and type(tileShape.forMap) == "function",
   voxel3D = type(voxel3D) == "table"
     and type(voxel3D.newMesh) == "function"
     and type(voxel3D.pushQuad) == "function",
   spriteBillboards = type(spriteBillboards) == "table"
-    and type(spriteBillboards.mesh) == "function",
+    and type(spriteBillboards.mesh) == "function"
+    and type(spriteBillboards.shadowQuad) == "function",
   firstPerson = type(firstPerson) == "table"
     and type(firstPerson.update) == "function"
     and type(firstPerson.frame) == "function"
-    and type(firstPerson.stickY) == "function",
-  freeMove = type(freeMove) == "table",
+    and type(firstPerson.stickX) == "function"
+    and type(firstPerson.stickY) == "function"
+    and type(firstPerson.moveVector) == "function"
+    and type(firstPerson.moveWorld) == "function"
+    and tonumber(firstPerson.yaw) ~= nil
+    and tonumber(firstPerson.pitch) ~= nil,
+  freeMove = type(freeMove) == "table"
+    and type(freeMove.tick) == "function"
+    and tonumber(freeMove.WALK) ~= nil
+    and tonumber(freeMove.BIKE) ~= nil,
 }
 
-capabilities.thirdPerson = capabilities.voxelState
-  and type(voxelState.isThirdPerson) == "function"
-  and tonumber(voxelState.TP_LEVEL) ~= nil
-capabilities.freeCamera = capabilities.voxelState
-  and type(voxelState.isFreeCam) == "function"
 capabilities.full = capabilities.voxelState and capabilities.tileShape
   and capabilities.voxel3D and capabilities.spriteBillboards
-  and capabilities.firstPerson and capabilities.thirdPerson
-  and capabilities.freeCamera and capabilities.freeMove
+  and capabilities.firstPerson and capabilities.freeMove
 
 if not capabilities.full then
   local missing = {}
   for _, key in ipairs({ "voxelState", "tileShape", "voxel3D",
-      "spriteBillboards", "firstPerson", "thirdPerson", "freeCamera", "freeMove" }) do
+      "spriteBillboards", "firstPerson", "freeMove" }) do
     if not capabilities[key] then missing[#missing + 1] = key end
   end
   error(("DRAMATIC_SKY_RIDE: %s %s is missing required public APIs: %s")
@@ -105,7 +114,7 @@ isSupportedVoxelMode = function(level)
 end
 
 function capabilities.supportsCameraAltitude()
-  return capabilities.firstPerson and capabilities.freeCamera
+  return capabilities.firstPerson and capabilities.voxelState
 end
 
 mod.exports.dramaticShapeCompatibility = capabilities

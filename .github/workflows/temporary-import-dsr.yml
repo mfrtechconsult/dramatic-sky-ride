@@ -17,21 +17,81 @@ jobs:
       - name: Check out temporary branch
         uses: actions/checkout@v4
 
-      - name: Rebuild exact test ZIP
+      - name: Apply 0.1.3-test.3 source patch
         shell: bash
         run: |
           set -euo pipefail
-          cat .tmp/dsr.part.* | base64 -d > /tmp/dsr-test.zip
-          echo "1f6bd8786d08510dad253b7923852f663710d3820996018187e1dd05f57890e8  /tmp/dsr-test.zip" | sha256sum -c -
-          unzip -t /tmp/dsr-test.zip
+          git apply --check .tmp/dsr-source.patch
+          git apply .tmp/dsr-source.patch
 
-      - name: Import mod sources
+      - name: Write temporary test metadata
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf dramatic_sky_ride
-          mkdir -p dramatic_sky_ride
-          unzip -q /tmp/dsr-test.zip -d dramatic_sky_ride
+          cat > dramatic_sky_ride/manifest.json <<'JSON'
+          {
+            "id": "DRAMATIC_SKY_RIDE",
+            "name": "Dramatic Sky Ride",
+            "version": "0.1.3-test.3",
+            "api": 2,
+            "entry": "main.lua",
+            "profile": "content",
+            "category": "GAMEPLAY",
+            "game_version": "0.0.0-dev || >=0.1.69 <2.0.0",
+            "priority": 900,
+            "dependencies": [
+              "PokePCFollowers_VoxelMerge"
+            ],
+            "optional_dependencies": [
+              "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
+              "DRAMALESS_SHAPE",
+              "wild_skies@>=1.4.1 <2.0.0"
+            ],
+            "conflicts": [
+              "free_fly"
+            ],
+            "permissions": [
+              "engine_internals",
+              "filesystem"
+            ],
+            "affects_link": false,
+            "experimental": true,
+            "description": "Full test build: Battle Art or Dramaless Shape voxel provider support, global Flight/Ground speed controls, quieter Ground/Surf notices and Wild Skies integration."
+          }
+          JSON
+
+          cat > dramatic_sky_ride/LOCAL_TEST_NOTES.txt <<'NOTES'
+          Dramatic Sky Ride 0.1.3-test.3 temporary compatibility build
+
+          Voxel providers:
+          - Battle Art Voxel Fork 1.7.6+ (preferred)
+          - OR Dramaless Shape (DRAMALESS_SHAPE)
+
+          Required sprite provider:
+          - PokePCFollowers_VoxelMerge
+
+          Dramaless-specific keyboard mapping:
+          - H = Flight
+          - J = Ground Ride (G is left to Dramaless V-GRID)
+          - Controller X/Y unchanged
+
+          Also includes:
+          - FLIGHT SPEED / GROUND SPEED global options (50-200%)
+          - no Ground Ride JUMP notice
+          - no Visible Surf mount active dialog
+          - Surf 3RD water-boom fix from 0.1.2
+          - Wild Skies 1.4.1+ integration
+          NOTES
+
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('dramatic_sky_ride/CHANGELOG.md')
+          old = p.read_text(encoding='utf-8')
+          if '## 0.1.3-test.3' not in old:
+              header = '''# Changelog\n\n## 0.1.3-test.3\n\n- Added Dramaless Shape (`DRAMALESS_SHAPE`) as an alternative supported voxel provider.\n- Battle Art Voxel Fork remains the preferred provider when both are installed.\n- Provider integration reads the selected provider's exported voxel pipeline (`voxel` or `st_voxel`).\n- With Dramaless, Ground Ride uses `J` because Dramaless reserves `G` for V-GRID; controller X/Y remain unchanged.\n- Added global `FLIGHT SPEED` and `GROUND SPEED` settings from 50% to 200%.\n- Removed the Ground Ride `JUMP` notice and the `Visible Surf mount active.` dialog.\n\n'''
+              body = old[len('# Changelog\n\n'):] if old.startswith('# Changelog\n\n') else old
+              p.write_text(header + body, encoding='utf-8')
+          PY
 
       - name: Validate concatenated runtime
         shell: bash
@@ -48,8 +108,13 @@ jobs:
           luajit -b /tmp/sky_ride.lua /tmp/sky_ride.ljbc
           luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
           luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
+          grep -q 'DRAMALESS_SHAPE' dramatic_sky_ride/src/main_04.lua
+          grep -q 'flight_speed' dramatic_sky_ride/src/main_01.lua
+          grep -q 'ground_speed' dramatic_sky_ride/src/main_01.lua
+          ! grep -q 'groundNotice("JUMP"' dramatic_sky_ride/src/main_17_polish_02.lua
+          ! grep -q 'Visible Surf mount active' dramatic_sky_ride/src/main_17_polish_04.lua
 
-      - name: Commit exact temporary build
+      - name: Commit temporary compatibility branch
         shell: bash
         run: |
           set -euo pipefail

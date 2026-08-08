@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1-compat.6 — temporary test branch
+
+- Promotes `BATTLE_ART_VOXEL_FORK` 1.7.6+ to the primary voxel provider used by DSR.
+- Keeps the retired `DRAMATIC_SHAPE` id as a best-effort legacy fallback for existing installations.
+- Uses the fork's normal public `exports.lib` API instead of patching Battle Art internals.
+- Moves the keyboard flight shortcut from `F` to `H`: Gen1PC Overworld Encounters reserves `F`/`V` for follower attacks and was displaying `No follower POKéMON found!` when DSR removed the follower for flight.
+- Keeps `G` for Ground Ride and updates Ground Ride -> Flight switching to use `H` as well.
+- Controller shortcuts remain `X` for Flight and `Y` for Ground Ride.
+- Retains Battle Art 3D battle lifecycle protection: Ground Ride is removed before the battle-world snapshot and normal mount restoration runs after battle.
+- Final release packaging is validated by rebuilding the exact concatenated `sky_ride.lua` from the packaged ZIP and compiling it with LuaJIT.
+
 ## 0.1.0
 
 - Promoted the validated alpha.16 feature set to the first stable Dramatic Sky Ride release.

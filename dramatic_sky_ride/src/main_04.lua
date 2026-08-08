@@ -22,8 +22,9 @@
   return nil
 end
 
--- Load only the selected voxel provider's public library. DSR supports either
--- upstream Dramatic Shape or the Battle Art Voxel Fork, never both at once.
+-- Load only the selected voxel provider's public library. Battle Art Voxel
+-- Fork is the primary/current community provider; the retired upstream
+-- Dramatic Shape id remains a best-effort fallback for existing installs.
 -- Provider detection stays inside this already-existing function so the huge
 -- concatenated DSR chunk does not gain more top-level locals.
 local dramaticTileShape = nil
@@ -39,11 +40,11 @@ local function loadDramaticLib()
   if dramaticLib then return dramaticLib end
   if not mod.find then return nil end
 
-  local okUpstream, upstream = pcall(mod.find, mod, "DRAMATIC_SHAPE")
   local okBattleArt, battleArt = pcall(mod.find, mod, "BATTLE_ART_VOXEL_FORK")
-  upstream = okUpstream and upstream or nil
+  local okUpstream, upstream = pcall(mod.find, mod, "DRAMATIC_SHAPE")
   battleArt = okBattleArt and battleArt or nil
-  local handle = upstream or battleArt
+  upstream = okUpstream and upstream or nil
+  local handle = battleArt or upstream
 
   mod.exports._dramaticProviderState = {
     upstream = upstream,
@@ -52,6 +53,7 @@ local function loadDramaticLib()
     handle = handle,
     id = handle and handle.id or nil,
     version = handle and handle.version or nil,
+    primary = battleArt ~= nil,
   }
 
   local lib = handle and handle.exports and handle.exports.lib or nil

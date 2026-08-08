@@ -41,41 +41,31 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "archive=dramatic_sky_ride-$VERSION.zip" >> "$GITHUB_OUTPUT"
 
-      - name: Validate manifest and exact runtime Lua source
+      - name: Install LuaJIT
         shell: bash
         run: |
-          set +e
-          {
-            set -x
-            python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
-            sudo apt-get update
-            sudo apt-get install -y luajit
-            : > /tmp/dramatic_sky_ride.lua
-            while IFS= read -r part; do
-              cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua || exit 91
-            done < dramatic_sky_ride/src/parts.txt
-            wc -l /tmp/dramatic_sky_ride.lua
-            luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
-            luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
-            luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
-          } > /tmp/dsr-validation.log 2>&1
-          RC=$?
-          cat /tmp/dsr-validation.log
-          if [ "$RC" -ne 0 ]; then
-            cp /tmp/dsr-validation.log .github/temporary-validation.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add .github/temporary-validation.txt
-            git commit -m "Record temporary LuaJIT validation failure" || true
-            git push origin HEAD:temporary/dramatic-shape-fork-compat || true
-            exit "$RC"
-          fi
-          rm -f .github/temporary-validation.txt
-          echo "LuaJIT validation OK"
+          sudo apt-get update
+          sudo apt-get install -y luajit
+
+      - name: Validate repository runtime source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+          : > /tmp/dramatic_sky_ride.lua
+          while IFS= read -r part; do
+            test -n "$part" || continue
+            cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
+          done < dramatic_sky_ride/src/parts.txt
+          luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
+          luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
+          luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
+          echo "Repository runtime concat lines: $(wc -l < /tmp/dramatic_sky_ride.lua)"
 
       - name: Build launcher-ready ZIP
         shell: bash
         run: |
+          set -euo pipefail
           ARCHIVE="${{ steps.version.outputs.archive }}"
           (
             cd dramatic_sky_ride
@@ -85,26 +75,48 @@ jobs:
           unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
           unzip -t "$ARCHIVE"
 
+      - name: Validate exact release ZIP with LuaJIT
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          rm -rf /tmp/dsr-release-check
+          mkdir -p /tmp/dsr-release-check
+          unzip -q "$ARCHIVE" -d /tmp/dsr-release-check
+          python -m json.tool /tmp/dsr-release-check/manifest.json > /dev/null
+          : > /tmp/dsr-release-sky-ride.lua
+          while IFS= read -r part; do
+            test -n "$part" || continue
+            cat "/tmp/dsr-release-check/src/$part" >> /tmp/dsr-release-sky-ride.lua
+          done < /tmp/dsr-release-check/src/parts.txt
+          luajit -b /tmp/dsr-release-sky-ride.lua /tmp/dsr-release-sky-ride.ljbc
+          luajit -b /tmp/dsr-release-check/main.lua /tmp/dsr-release-main.ljbc
+          luajit -b /tmp/dsr-release-check/mod.card /tmp/dsr-release-card.ljbc
+          if grep -q 'main_20a_dramatic_compat.lua\|main_20b_battle_provider_compat.lua' /tmp/dsr-release-check/src/parts.txt; then
+            echo "Obsolete compatibility chunks are still present in the release archive" >&2
+            exit 92
+          fi
+          echo "Release ZIP runtime concat lines: $(wc -l < /tmp/dsr-release-sky-ride.lua)"
+          sha256sum "$ARCHIVE"
+
       - name: Prepare prerelease notes
         shell: bash
         run: |
           cat > /tmp/release-notes.md <<'NOTES'
-          ## Temporary dual-provider compatibility build
+          ## Temporary Dramatic Shape / Battle Art compatibility build
 
-          This build keeps stable/main on v0.1.0 while validating one DSR ZIP against either supported voxel provider.
+          Main/stable remains v0.1.0. This temporary build supports either voxel provider through the same public `exports.lib` seam used by DSR.
 
-          - Upstream: `DRAMATIC_SHAPE >=1.7.0 <2.0.0`.
-          - Community Battle Art: `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`.
-          - Full provider capability validation covers TileShape, Voxel3D, SpriteBillboards, 1ST/3RD FirstPerson controls and FreeMove.
-          - Provider selection lives inside DSR's existing Dramatic Shape library loader; no `mod.find` aliasing is used.
-          - The exact concatenated runtime source is compiled with LuaJIT before publication.
-          - DSR keys do not overlap Battle Art 1.7.6 hotkeys: Battle Art owns 3/5/6/7/8/9; DSR keeps F/G, Page Up/Page Down, L2/R2 and SELECT+L1/R1.
-          - Staged-battle ordering is explicit: Ground Ride is cleaned before Battle Art snapshots the cast, and airborne DSR visuals reconcile after the provider restores the world.
+          - Upstream Dramatic Shape: `DRAMATIC_SHAPE >=1.7.0 <2.0.0` (current upstream checked against 1.7.2).
+          - Battle Art Voxel Fork: `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0` (checked against the actual 1.7.6 release tag, not the stale repository master).
+          - No Battle Art internals are patched or copied. DSR only selects the installed provider's public library.
+          - The previous standalone compatibility chunks were removed from `parts.txt`; provider selection now lives in DSR's existing Dramatic Shape loader.
+          - Ground Ride dismounts before a staged battle snapshots the overworld cast, preserving clean Battle Art battle entry and normal remount afterward.
+          - Controller shortcuts avoid current engine/voxel controls: X = Flight, Y = Ground Ride. Keyboard remains F/G. L2/R2 remain altitude controls only while airborne and are consumed before the engine speed hotkey can also fire.
           - Wild Skies `>=1.3.1 <2.0.0` remains optional and uses its public API.
-          - PokePC Followers remains optional; DSR keeps its asset/API fallbacks.
           - `free_fly` remains a conflicting alternative flight engine.
-          - Do not enable upstream Dramatic Shape and Battle Art Voxel Fork simultaneously.
-          - Main/stable remains v0.1.0.
+          - Do not enable both voxel providers at the same time.
+          - The built ZIP itself is unpacked, reconstructed exactly like Gen1Recomp's runtime source, and compiled with LuaJIT before publication.
 
           The attached ZIP is launcher-ready: `manifest.json` is at the archive root.
           NOTES

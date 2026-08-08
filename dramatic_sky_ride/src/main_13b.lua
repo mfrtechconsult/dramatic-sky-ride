@@ -2,16 +2,12 @@
       or button == "triggerleft" or button == "triggerright") then
     return
   end
-  local selectHeld = Game.input and Game.input:isDown("select")
-  if not selectHeld and joystick and joystick.isGamepadDown then
-    local ok, down = pcall(joystick.isGamepadDown, joystick, "back")
-    selectHeld = ok and down == true
-  end
-  if button == "rightshoulder" and selectHeld and useMountShortcut(self) then
+  -- X is reserved by DSR as the free-roam flight shortcut. Unlike SELECT,
+  -- shoulders/triggers and stick clicks, X alone is not claimed by Gen1Recomp
+  -- or current Dramatic Shape camera controls. Menus and battles still receive
+  -- it because useMountShortcut() only succeeds while the overworld is on top.
+  if button == "x" and useMountShortcut(self) then
     return
-  end
-  if flight.active and (button == "y" or button == "x") then
-    if not blockExternalActionUntilManualLanding(self) then return end
   end
   return gameGamepadpressed(self, joystick, button, ...)
 end
@@ -151,4 +147,3 @@ end
 mod.exports.requestLanding = function()
   return beginLanding(Game, false)
 end
-

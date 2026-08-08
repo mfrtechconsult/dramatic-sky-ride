@@ -232,20 +232,35 @@ end, 85)
 local groundKeypressed = Game.keypressed
 function Game:keypressed(key, ...)
   if key == "g" and useGroundShortcut(self) then return end
-  if key == "f" and ground.active then stopGroundRide(self, "switch_to_flight") end
+  if key == "h" and ground.active then stopGroundRide(self, "switch_to_flight") end
   return groundKeypressed(self, key, ...)
 end
 
 local groundGamepadpressed = Game.gamepadpressed
 function Game:gamepadpressed(joystick, button, ...)
-  local selectHeld = Game.input and Game.input:isDown("select")
-  if not selectHeld and joystick and joystick.isGamepadDown then
-    local ok, down = pcall(joystick.isGamepadDown, joystick, "back")
-    selectHeld = ok and down == true
+  -- Y toggles Ground Ride in free-roam. X belongs to the flight wrapper below
+  -- this one; when already ground-mounted, dismount first and forward X so the
+  -- same press can transition directly into flight.
+  if button == "y" and useGroundShortcut(self) then return end
+  if button == "x" and ground.active then
+    stopGroundRide(self, "switch_to_flight")
   end
-  if button == "leftshoulder" and selectHeld and useGroundShortcut(self) then return end
-  if button == "rightshoulder" and selectHeld and ground.active then stopGroundRide(self, "switch_to_flight") end
   return groundGamepadpressed(self, joystick, button, ...)
+end
+
+-- Battle Art/Dramatic Shape staged battles snapshot the overworld cast inside
+-- OverworldState:pushBattle, before battle.started. DSR loads after either
+-- voxel provider, so this wrapper is outermost and removes the Ground Ride
+-- rider before that snapshot. The later Lot 1 stopGroundRide wrapper still
+-- receives reason="battle", preserving normal post-battle remount behavior.
+local groundPushBattle = OverworldState.pushBattle
+if type(groundPushBattle) == "function" then
+  function OverworldState:pushBattle(battle, ...)
+    if ground.active and Game.overworld == self then
+      stopGroundRide(Game, "battle", true)
+    end
+    return groundPushBattle(self, battle, ...)
+  end
 end
 
 local groundSetMap = OverworldState.setMap

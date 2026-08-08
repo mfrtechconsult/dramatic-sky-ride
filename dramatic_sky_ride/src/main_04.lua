@@ -22,9 +22,11 @@
   return nil
 end
 
--- Load only Dramatic Shape's lightweight TileShape resolver from the
--- installed mod. This avoids changing the voxel mod while still using the
--- exact same authored terrain heights it uses for cliffs, walls and roofs.
+-- Load only the selected voxel provider's public library. Battle Art Voxel
+-- Fork is the primary/current community provider; the retired upstream
+-- Dramatic Shape id remains a best-effort fallback for existing installs.
+-- Provider detection stays inside this already-existing function so the huge
+-- concatenated DSR chunk does not gain more top-level locals.
 local dramaticTileShape = nil
 local dramaticTileShapeTried = false
 local dramaticRoot = nil
@@ -37,8 +39,24 @@ local dramaticFreeMove = nil
 local function loadDramaticLib()
   if dramaticLib then return dramaticLib end
   if not mod.find then return nil end
-  local ok, handle = pcall(mod.find, mod, "DRAMATIC_SHAPE")
-  local lib = ok and handle and handle.exports and handle.exports.lib or nil
+
+  local okBattleArt, battleArt = pcall(mod.find, mod, "BATTLE_ART_VOXEL_FORK")
+  local okUpstream, upstream = pcall(mod.find, mod, "DRAMATIC_SHAPE")
+  battleArt = okBattleArt and battleArt or nil
+  upstream = okUpstream and upstream or nil
+  local handle = battleArt or upstream
+
+  mod.exports._dramaticProviderState = {
+    upstream = upstream,
+    battleArt = battleArt,
+    conflict = upstream ~= nil and battleArt ~= nil,
+    handle = handle,
+    id = handle and handle.id or nil,
+    version = handle and handle.version or nil,
+    primary = battleArt ~= nil,
+  }
+
+  local lib = handle and handle.exports and handle.exports.lib or nil
   if type(lib) ~= "table" or type(lib.require) ~= "function" then return nil end
   dramaticLib = lib
   return lib
@@ -56,13 +74,17 @@ local function findDramaticRoot()
   if not (love and love.filesystem and love.filesystem.getDirectoryItems) then
     return nil
   end
+  if not mod.exports._dramaticProviderState then loadDramaticLib() end
+  local state = mod.exports._dramaticProviderState or {}
+  local targetId = state.id
+  if not targetId then return nil end
   local ok, names = pcall(love.filesystem.getDirectoryItems, "mods")
   if not ok or type(names) ~= "table" then return nil end
   for _, name in ipairs(names) do
     local root = "mods/" .. name
     local raw = love.filesystem.read(root .. "/manifest.json")
     local decoded = raw and Json.decode(raw) or nil
-    if decoded and decoded.id == "DRAMATIC_SHAPE" then
+    if decoded and decoded.id == targetId then
       dramaticRoot = root
       return root
     end
@@ -74,8 +96,8 @@ local function loadDramaticTileShape()
   if dramaticTileShapeTried then return dramaticTileShape end
   dramaticTileShapeTried = true
 
-  -- Dramatic Shape 1.7 exposes its companion API through mod.exports.lib.
-  -- Prefer that public seam: it works whether the dependency was installed
+  -- Both supported providers expose their companion API through exports.lib.
+  -- Prefer that public seam: it works whether the provider was installed
   -- unpacked or imported as a mounted ZIP by Gen1Recomp's Mod Manager.
   local exported = dramaticModule("TileShape")
   if type(exported) == "table" and type(exported.forMap) == "function" then
@@ -83,10 +105,11 @@ local function loadDramaticTileShape()
     return exported
   end
 
-  -- Compatibility fallback for older unpacked Dramatic Shape installs.
+  -- Compatibility fallback for an unpacked provider whose public library is
+  -- unavailable. Current supported releases should normally never need this.
   local root = findDramaticRoot()
   if not root then
-    mod.log:warn("DRAMATIC_SHAPE TileShape API unavailable; terrain height compensation disabled")
+    mod.log:warn("voxel provider TileShape API unavailable; terrain height compensation disabled")
     return nil
   end
 
@@ -95,7 +118,7 @@ local function loadDramaticTileShape()
     if dramaticData[name] ~= nil then return dramaticData[name] end
     local rel = root .. "/data/" .. name .. ".lua"
     local source = love.filesystem.read(rel)
-    if not source then error("missing Dramatic Shape data file: " .. rel, 0) end
+    if not source then error("missing voxel provider data file: " .. rel, 0) end
     local chunk, err = load(source, "@" .. rel)
     if not chunk then error(err, 0) end
     local value = chunk(V)
@@ -106,17 +129,17 @@ local function loadDramaticTileShape()
   local rel = root .. "/lib/TileShape.lua"
   local source = love.filesystem.read(rel)
   if not source then
-    mod.log:warn("Dramatic Shape TileShape.lua is missing")
+    mod.log:warn("voxel provider TileShape.lua is missing")
     return nil
   end
   local chunk, err = load(source, "@" .. rel)
   if not chunk then
-    mod.log:warn("Dramatic Shape TileShape.lua did not compile: %s", tostring(err))
+    mod.log:warn("voxel provider TileShape.lua did not compile: %s", tostring(err))
     return nil
   end
   local ok, module = pcall(chunk, V)
   if not ok or type(module) ~= "table" then
-    mod.log:warn("unable to load Dramatic Shape TileShape: %s", tostring(module))
+    mod.log:warn("unable to load voxel provider TileShape: %s", tostring(module))
     return nil
   end
   dramaticTileShape = module

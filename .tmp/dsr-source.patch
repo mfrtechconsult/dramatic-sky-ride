@@ -1,0 +1,324 @@
+--- a/dramatic_sky_ride/src/main_01.lua
++++ b/dramatic_sky_ride/src/main_01.lua
+@@ -106,6 +106,26 @@
+       help = "How quickly the requested flight altitude changes.",
+     },
+     {
++      key = "flight_speed",
++      type = "number",
++      label = "FLIGHT SPEED",
++      default = 100,
++      min = 50,
++      max = 200,
++      step = 10,
++      help = "Global horizontal flight speed percentage. 100 keeps the default speed.",
++    },
++    {
++      key = "ground_speed",
++      type = "number",
++      label = "GROUND SPEED",
++      default = 100,
++      min = 50,
++      max = 200,
++      step = 10,
++      help = "Global Ground Ride speed percentage. Species differences and gallop still apply.",
++    },
++    {
+       key = "landing_marker",
+       type = "toggle",
+       label = "LANDING MARKER",
+@@ -124,7 +144,7 @@
+       type = "toggle",
+       label = "MOUNT SHORTCUT",
+       default = true,
+-      help = "F or SELECT+R1 takes off with the last available mount.",
++      help = "H on keyboard or X on controller takes off with the last available mount.",
+     },
+     {
+       key = "flight_boost",
+--- a/dramatic_sky_ride/src/main_03.lua
++++ b/dramatic_sky_ride/src/main_03.lua
+@@ -113,8 +113,20 @@
+ end
+ 
+ local function voxelLevel()
+-  local ok, level = pcall(Pipelines.level, "voxel")
+-  return ok and tonumber(level) or 0
++  local state = mod.exports and mod.exports._dramaticProviderState or nil
++  local selected = state and state.voxelPipeline
++  if selected then
++    local ok, level = pcall(Pipelines.level, selected)
++    if ok then return tonumber(level) or 0 end
++  end
++  -- Startup fallback before provider discovery has populated the state.
++  -- Battle Art/upstream use "voxel"; Dramaless exports "st_voxel".
++  for _, pipelineId in ipairs({ "voxel", "st_voxel" }) do
++    local ok, level = pcall(Pipelines.level, pipelineId)
++    level = ok and tonumber(level) or 0
++    if level > 0 then return level end
++  end
++  return 0
+ end
+ 
+ local function isFirstPerson()
+--- a/dramatic_sky_ride/src/main_04.lua
++++ b/dramatic_sky_ride/src/main_04.lua
+@@ -23,8 +23,9 @@
+ end
+ 
+ -- Load only the selected voxel provider's public library. Battle Art Voxel
+--- Fork is the primary/current community provider; the retired upstream
+--- Dramatic Shape id remains a best-effort fallback for existing installs.
++-- Fork remains the preferred provider. Dramaless Shape is a supported
++-- alternative provider, and the retired upstream Dramatic Shape id remains a
++-- best-effort fallback for existing manual installs.
+ -- Provider detection stays inside this already-existing function so the huge
+ -- concatenated DSR chunk does not gain more top-level locals.
+ local dramaticTileShape = nil
+@@ -41,22 +42,31 @@
+   if not mod.find then return nil end
+ 
+   local okBattleArt, battleArt = pcall(mod.find, mod, "BATTLE_ART_VOXEL_FORK")
++  local okDramaless, dramaless = pcall(mod.find, mod, "DRAMALESS_SHAPE")
+   local okUpstream, upstream = pcall(mod.find, mod, "DRAMATIC_SHAPE")
+   battleArt = okBattleArt and battleArt or nil
++  dramaless = okDramaless and dramaless or nil
+   upstream = okUpstream and upstream or nil
+-  local handle = battleArt or upstream
++  local handle = battleArt or dramaless or upstream
++  local exports = handle and handle.exports or nil
++  local pipelines = exports and exports.pipelines or nil
++  local voxelPipeline = pipelines and pipelines.voxel
++    or (handle and handle.id == "DRAMALESS_SHAPE" and "st_voxel" or "voxel")
+ 
+   mod.exports._dramaticProviderState = {
+     upstream = upstream,
+     battleArt = battleArt,
+-    conflict = upstream ~= nil and battleArt ~= nil,
++    dramaless = dramaless,
++    conflict = ((battleArt and dramaless) or (battleArt and upstream)
++      or (dramaless and upstream)) ~= nil,
+     handle = handle,
+     id = handle and handle.id or nil,
+-    version = handle and handle.version or nil,
+-    primary = battleArt ~= nil,
++    version = handle and (handle.version or (exports and exports.version)) or nil,
++    voxelPipeline = voxelPipeline,
++    primary = battleArt ~= nil and handle == battleArt,
+   }
+ 
+-  local lib = handle and handle.exports and handle.exports.lib or nil
++  local lib = exports and exports.lib or nil
+   if type(lib) ~= "table" or type(lib.require) ~= "function" then return nil end
+   dramaticLib = lib
+   return lib
+@@ -96,7 +106,7 @@
+   if dramaticTileShapeTried then return dramaticTileShape end
+   dramaticTileShapeTried = true
+ 
+-  -- Both supported providers expose their companion API through exports.lib.
++  -- Supported voxel providers expose their companion API through exports.lib.
+   -- Prefer that public seam: it works whether the provider was installed
+   -- unpacked or imported as a mounted ZIP by Gen1Recomp's Mod Manager.
+   local exported = dramaticModule("TileShape")
+--- a/dramatic_sky_ride/src/main_07.lua
++++ b/dramatic_sky_ride/src/main_07.lua
+@@ -84,7 +84,10 @@
+     function dramaticFreeMove.tick(state)
+       local oldWalk, oldBike = dramaticFreeMove.WALK, dramaticFreeMove.BIKE
+       if flight.active and isFreeCamera() and flight.phase == "cruise" then
+-        local multiplier = 1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0)
++        local speedPercent = tonumber(optionValue("flight_speed", 100)) or 100
++        speedPercent = math.max(50, math.min(200, speedPercent))
++        local multiplier = (speedPercent / 100)
++          * (1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0))
+         dramaticFreeMove.WALK = (tonumber(oldWalk) or 1) * multiplier
+         dramaticFreeMove.BIKE = (tonumber(oldBike) or 2) * multiplier
+       end
+--- a/dramatic_sky_ride/src/main_13b.lua
++++ b/dramatic_sky_ride/src/main_13b.lua
+@@ -14,8 +14,14 @@
+ 
+ mod.hooks:wrap("movement.speed", function(next, frames, ctx)
+   local value = next(frames, ctx)
+-  if flight.active and not isFreeCamera() and flightBoostEnabled() then
+-    local multiplier = 1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0)
++  if flight.active and not isFreeCamera() then
++    local speedPercent = tonumber(optionValue("flight_speed", 100)) or 100
++    speedPercent = math.max(50, math.min(200, speedPercent))
++    local multiplier = speedPercent / 100
++    if flightBoostEnabled() then
++      multiplier = multiplier
++        * (1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0))
++    end
+     return math.max(4, (tonumber(value) or tonumber(frames) or 16) / multiplier)
+   end
+   return value
+--- a/dramatic_sky_ride/src/main_15_ground.lua
++++ b/dramatic_sky_ride/src/main_15_ground.lua
+@@ -258,7 +258,9 @@
+ -- continue into the existing flight shortcut; G/Y is exclusively terrestrial.
+ local groundKeypressed = Game.keypressed
+ function Game:keypressed(key, ...)
+-  if key == "g" and useGroundShortcut(self) then return end
++  local provider = mod.exports and mod.exports._dramaticProviderState or nil
++  local groundKey = provider and provider.id == "DRAMALESS_SHAPE" and "j" or "g"
++  if key == groundKey and useGroundShortcut(self) then return end
+   if key == "h" and ground.active then stopGroundRide(self, "switch_to_flight") end
+   return groundKeypressed(self, key, ...)
+ end
+--- a/dramatic_sky_ride/src/main_17_polish_01.lua
++++ b/dramatic_sky_ride/src/main_17_polish_01.lua
+@@ -9,6 +9,12 @@
+   return optionValue(key, default)
+ end
+ 
++local function mountSpeedMultiplier(key)
++  local percent = tonumber(mountOption(key, 100)) or 100
++  percent = math.max(50, math.min(200, percent))
++  return percent / 100
++end
++
+ local MOUNT_OPTION_SCHEMA = {
+     { key = "mount_cries", type = "toggle", label = "MOUNT CRIES", default = true,
+       help = "Play the selected Pokemon's cry when mounting or taking off." },
+@@ -90,7 +96,9 @@
+   playSpeciesCry(ground.species)
+   if mountOption("mount_hints", true) and not mountHintsShown.ground then
+     mountHintsShown.ground = true
+-    groundNotice("G DISMOUNT  B GALLOP", 3.0)
++    local provider = mod.exports and mod.exports._dramaticProviderState or nil
++    local key = provider and provider.id == "DRAMALESS_SHAPE" and "J" or "G"
++    groundNotice(key .. " DISMOUNT  B GALLOP", 3.0)
+   end
+   return true
+ end
+@@ -105,7 +113,7 @@
+     playSpeciesCry(flight.species)
+     if mountOption("mount_hints", true) and not mountHintsShown.flight then
+       mountHintsShown.flight = true
+-      notifyHud("F LAND  B BOOST", 3.0)
++      notifyHud("H LAND  B BOOST", 3.0)
+     end
+   end
+   return ok
+--- a/dramatic_sky_ride/src/main_17_polish_02.lua
++++ b/dramatic_sky_ride/src/main_17_polish_02.lua
+@@ -6,7 +6,6 @@
+   if nativeCheckLedgeHop(self, dir) then
+     if ground.active then
+       ground.jumpPulse = 0.35
+-      groundNotice("JUMP", 0.55)
+       rumble(0.14, 0.24, 0.12)
+     end
+     return true
+@@ -33,7 +32,6 @@
+     require("src.core.Sound").play(Game.data, "Ledge")
+     p.hopFrames, p.hopTotal = 32, 32
+     ground.jumpPulse = 0.35
+-    groundNotice("JUMP", 0.55)
+     self:scriptMove(p, dir, 1, function() self:checkEdgeExit(dir) end)
+     return true
+   end
+@@ -45,7 +43,6 @@
+   require("src.core.Sound").play(Game.data, "Ledge")
+   p.hopFrames, p.hopTotal = 32, 32
+   ground.jumpPulse = 0.35
+-  groundNotice("JUMP", 0.55)
+   rumble(0.14, 0.24, 0.12)
+   self:scriptMove(p, dir, 2)
+   return true
+@@ -58,7 +55,8 @@
+   local value = next(frames, ctx)
+   if not ground.active then return value end
+   local profile = GROUND_PROFILES[ground.species] or GROUND_PROFILES.TAUROS
+-  local multiplier = profile.base * (1 + (profile.gallop - 1) * (ground.speedBlend or 0))
++  local multiplier = mountSpeedMultiplier("ground_speed")
++    * profile.base * (1 + (profile.gallop - 1) * (ground.speedBlend or 0))
+   return math.max(3, (tonumber(value) or tonumber(frames) or 8) / multiplier)
+ end, 95)
+ 
+@@ -72,7 +70,7 @@
+     local oldWalk, oldBike = dramaticFreeMove.WALK, dramaticFreeMove.BIKE
+     if ground.active and isFreeCamera() then
+       local profile = GROUND_PROFILES[ground.species] or GROUND_PROFILES.TAUROS
+-      local multiplier = profile.base
++      local multiplier = mountSpeedMultiplier("ground_speed") * profile.base
+         * (1 + (profile.gallop - 1) * (ground.speedBlend or 0))
+       local bicycleSpeed = tonumber(oldBike) or 2
+       dramaticFreeMove.WALK = bicycleSpeed * multiplier
+--- a/dramatic_sky_ride/src/main_17_polish_04.lua
++++ b/dramatic_sky_ride/src/main_17_polish_04.lua
+@@ -11,7 +11,6 @@
+   playSpeciesCry(species)
+   if mountOption("mount_hints", true) and not mountHintsShown.water then
+     mountHintsShown.water = true
+-    say(game, "Visible Surf mount active.")
+   end
+   return true
+ end
+--- a/dramatic_sky_ride/src/main_18_boost_continuity.lua
++++ b/dramatic_sky_ride/src/main_18_boost_continuity.lua
+@@ -27,6 +27,12 @@
+ local SEAM_MAX_FRAMES = 180
+ local SEAM_RELEASE_MOVING_FRAMES = 3
+ 
++local function seamSpeedMultiplier(key)
++  local percent = tonumber(optionValue(key, 100)) or 100
++  percent = math.max(50, math.min(200, percent))
++  return percent / 100
++end
++
+ local function boostDown()
+   local input = Game and Game.input
+   if not (input and input.isDown) then return false end
+@@ -36,7 +42,8 @@
+ 
+ local function flightConnectorFrames(p)
+   local boost = flight and tonumber(flight.boost) or 0
+-  local multiplier = 1 + (BOOST_MAX_MULTIPLIER - 1) * boost
++  local multiplier = seamSpeedMultiplier("flight_speed")
++    * (1 + (BOOST_MAX_MULTIPLIER - 1) * boost)
+   local base = tonumber(p and p.stepFrames) or 16
+   -- Match the existing non-FreeMove flight hook's lower bound. In FreeMove
+   -- this is still close to the continuous pixels-per-frame equivalent and,
+@@ -59,7 +66,7 @@
+   local profile = SEAM_GROUND_SPEED[ground and ground.species]
+     or SEAM_GROUND_SPEED.TAUROS
+   local blend = ground and tonumber(ground.speedBlend) or 0
+-  local multiplier = profile.base
++  local multiplier = seamSpeedMultiplier("ground_speed") * profile.base
+     * (1 + (profile.gallop - 1) * blend)
+   -- Ground Ride's alpha.14 hook first changes the ordinary 16-frame walk
+   -- into bicycle-class 8-frame movement; the profile hook then divides by
+@@ -73,7 +80,8 @@
+   local p = self and self.player
+   if flight and flight.active then
+     local amount = tonumber(flight.boost) or 0
+-    if amount > 0.01 or flight.boostWasHeld or boostDown() then
++    if amount > 0.01 or flight.boostWasHeld or boostDown()
++       or math.abs(seamSpeedMultiplier("flight_speed") - 1) > 0.001 then
+       seamMomentum.active = true
+       seamMomentum.mode = "flight"
+       seamMomentum.targetMap = mapId
+@@ -85,7 +93,8 @@
+     end
+   elseif ground and ground.active then
+     local amount = tonumber(ground.speedBlend) or 0
+-    if amount > 0.01 or ground.gallop or boostDown() then
++    if amount > 0.01 or ground.gallop or boostDown()
++       or math.abs(seamSpeedMultiplier("ground_speed") - 1) > 0.001 then
+       seamMomentum.active = true
+       seamMomentum.mode = "ground"
+       seamMomentum.targetMap = mapId
+--- a/dramatic_sky_ride/src/main_19_ground_final_02.lua
++++ b/dramatic_sky_ride/src/main_19_ground_final_02.lua
+@@ -151,8 +151,6 @@
+   p.hopFrames, p.hopTotal = 32, 32
+   ground.jumpWasActive = true
+   ground.jumpLandingPending = true
+-  ground.notice = "JUMP"
+-  ground.noticeTimer = 0.55
+   rumble(0.14, 0.24, 0.12)
+   if crossesConnection then
+     self:scriptMove(p, dir, 1, function() self:checkEdgeExit(dir) end)

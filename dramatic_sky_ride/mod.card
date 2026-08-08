@@ -1,11 +1,12 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork, required overworld Pokemon sprites, story-aware progression and optional Wild Skies encounters.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork, required PokéPC overworld sprites, story-aware progression and strongly recommended Wild Skies encounters.",
   author = "MFR TechConsult",
   tags = { "battle-art-voxel", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
     changed = {
-      "Battle Art Voxel Fork 1.7.6+ is the primary required voxel provider",
-      "PokePC Followers (W/Voxel Support) is required as the overworld Pokemon/NPC sprite provider",
+      "Battle Art Voxel Fork 1.7.6+ is now the required voxel provider",
+      "PokéPC Followers (W/Voxel Support) is required as the overworld Pokémon/NPC sprite provider used by mounts",
+      "Wild Skies remains optional but is strongly recommended for the intended airborne encounter experience",
       "keyboard flight shortcut is H instead of F to avoid Gen1PC Overworld Encounters' follower-attack binding",
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
       "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
@@ -14,38 +15,33 @@ return {
       "canonical vanilla routes/cities must be reached normally before first airborne entry, while unknown custom maps stay open by default",
       "1ST and 3RD use one continuous analog movement solve per frame",
       "looking up/down in 1ST or 3RD can directly raise/lower requested flight altitude",
-      "the camera smoothly follows the actual flight course after manual look input stops",
       "water cells become valid landing spots when progression rules and a party SURF user allow it",
-      "landing on water automatically continues in the native surfing state",
-      "SURF cannot be started manually while airborne; water landing is the only flight-to-Surf transition",
       "Ground Ride remembers the preferred mount and restores it safely after battles and party changes",
       "flight altitude and rider rendering survive wild and trainer battles"
     },
     added = {
       "Battle Art Voxel Fork provider-first selection through its public exports.lib API",
-      "Battle Art staged-battle lifecycle protection for Ground Ride mount entities",
-      "optional but strongly recommended Wild Skies integration through its documented public exports",
-      "Wild Skies flyers prefer real species follower/overworld sprites when available",
+      "optional Wild Skies integration through its documented public exports rather than copied internals",
+      "Wild Skies flyers prefer real imported species follower/overworld sprites when available",
       "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
       "ground wild-battle starts are suppressed while airborne so only explicit air encounters can begin",
       "per-save legitimate-map discovery with optional public opt-in/override helpers for custom integrations",
       "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite flying mounts",
       "Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax Ground Ride mounts",
       "visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts",
-      "Pokedex-proportional visual sizing for all mounts with per-species controls"
+      "Pokedex-proportional visual sizing for all 22 mounts with per-species controls"
     },
     known = {
       "Wild Skies' public takeFlyer result exposes species/level but not flyer altitude, so interception is cell-radius based",
       "Wild Skies keeps its own dexScale after sprite resolution; DSR intentionally does not patch Wild Skies internals",
-      "rider seating still uses procedural offsets rather than dedicated seated sprites",
-      "tall-building safety still uses authored zones plus local terrain height"
+      "rider seating still uses procedural offsets rather than dedicated seated sprites"
     }
   },
   credits = {
     { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork, primary voxel provider, cameras and 3D battle presentation" },
-    { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "original voxel architecture" },
-    { who = "gamecorner-033/PokePCFollowers", for_ = "required Gen 1 overworld Pokemon sprite provider" },
-    { who = "ShaneHudson/gen1recomp-mods", for_ = "Wild Skies public integration seams and airborne ecosystem" }
+    { who = "gamecorner-033/PokePCFollowers", for_ = "required Gen 1 overworld Pokémon/NPC sprite provider" },
+    { who = "ShaneHudson/gen1recomp-mods", for_ = "Wild Skies public integration API and airborne ecosystem" },
+    { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "original voxel architecture" }
   },
   compat = { engine = ">=0.1.69 <2.0.0", modApi = 2 }
 }

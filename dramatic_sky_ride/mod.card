@@ -1,9 +1,11 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with free voxel controls, story-aware FLY progression, discovery safeguards and optional Wild Skies encounters.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork-first support, story-aware FLY progression, discovery safeguards and optional Wild Skies encounters.",
   author = "MFR TechConsult",
-  tags = { "dramatic-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
+  tags = { "battle-art-voxel", "dramatic-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
     changed = {
+      "Battle Art Voxel Fork 1.7.6+ is the primary voxel provider; retired Dramatic Shape remains a legacy fallback",
+      "keyboard flight shortcut is H instead of F to avoid Gen1PC Overworld Encounters' follower-attack binding",
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
       "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
       "SOULBADGE can gate automatic water landings while retaining the existing SURF-user requirement",
@@ -22,6 +24,7 @@ return {
       "incompatible item, machine and field actions dismount before using the native engine path"
     },
     added = {
+      "Battle Art Voxel Fork provider-first selection through its public exports.lib API",
       "optional Wild Skies integration through its documented public exports rather than copied internals",
       "Wild Skies flyers prefer real imported species follower/overworld sprites when available",
       "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
@@ -48,7 +51,8 @@ return {
     }
   },
   credits = {
-    { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "voxel scene, first/third-person cameras and continuous free movement" },
+    { who = "absol89/DramaticShapeVoxelMod", for_ = "primary Battle Art voxel provider, cameras and 3D battle presentation compatibility" },
+    { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "original voxel architecture and legacy provider compatibility" },
     { who = "gamecorner-033/PokePCFollowers", for_ = "Gen 1 follower sprite assets supplied by the user's installation" },
     { who = "ShaneHudson/gen1recomp-mods", for_ = "Wild Skies public integration seams and Free Fly progression/API patterns" }
   },

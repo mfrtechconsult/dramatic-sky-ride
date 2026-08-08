@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Fixed visible Surf in Battle Art Voxel Fork `3RD`: water cells no longer collapse the third-person camera boom as if they were pedestrian obstacles, so the trainer and Surf mount remain visible at normal camera angles.
+- Kept `1ST` as a true first-person view; DSR does not force the trainer or mount into the first-person camera.
+- Updated the recommended Wild Skies baseline to `1.4.1+`.
+- Increased DSR's Wild Skies interception envelope from one cell to two cells, making mid-air encounters substantially easier with Wild Skies' newer three-dimensional roaming flocks.
+- Wild Skies remains optional and independent; DSR continues to use only its public `registerSpriteSource` / `takeFlyer` integration surface.
+
 ## 0.1.1
 
 - Promoted the validated Battle Art compatibility work to stable.

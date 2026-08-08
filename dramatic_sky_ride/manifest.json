@@ -1,17 +1,18 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.1-compat.4",
+  "version": "0.1.1-compat.5",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
   "category": "GAMEPLAY",
   "game_version": "0.0.0-dev || >=0.1.69 <2.0.0",
   "priority": 900,
-  "dependencies": [],
+  "dependencies": [
+    "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0"
+  ],
   "optional_dependencies": [
     "DRAMATIC_SHAPE@>=1.7.0 <2.0.0",
-    "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "PokePCFollowers_VoxelMerge",
     "wild_skies@>=1.3.1 <2.0.0"
   ],
@@ -24,5 +25,5 @@
   ],
   "affects_link": false,
   "experimental": true,
-  "description": "Temporary compatibility build using the shared public voxel API of Dramatic Shape 1.7+ or Battle Art Voxel Fork 1.7.6+, with collision-free controller shortcuts and packaged-source LuaJIT validation."
+  "description": "Temporary compatibility build targeting Battle Art Voxel Fork 1.7.6+ as the primary voxel provider, with legacy Dramatic Shape fallback, collision-safe shortcuts and packaged-source LuaJIT validation."
 }

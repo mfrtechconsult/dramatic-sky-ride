@@ -1,0 +1,83 @@
+name: Publish temporary DSR prerelease
+
+on:
+  push:
+    branches:
+      - temporary/0.1.3-dual-voxel-compat
+    paths:
+      - .tmp-publish-013t3
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out temporary branch
+        uses: actions/checkout@v4
+
+      - name: Validate test build
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y luajit
+          python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+          test "$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json"))["version"])')" = "0.1.3-test.3"
+          : > /tmp/sky_ride.lua
+          while IFS= read -r part; do
+            test -n "$part" || continue
+            cat "dramatic_sky_ride/src/$part" >> /tmp/sky_ride.lua
+          done < dramatic_sky_ride/src/parts.txt
+          luajit -b /tmp/sky_ride.lua /tmp/sky_ride.ljbc
+          luajit -b dramatic_sky_ride/main.lua /tmp/main.ljbc
+          luajit -b dramatic_sky_ride/mod.card /tmp/mod_card.ljbc
+
+      - name: Build launcher-ready ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f dramatic_sky_ride-0.1.3-test.3.zip
+          cd dramatic_sky_ride
+          zip -qr ../dramatic_sky_ride-0.1.3-test.3.zip .
+          cd ..
+          unzip -t dramatic_sky_ride-0.1.3-test.3.zip
+          unzip -p dramatic_sky_ride-0.1.3-test.3.zip manifest.json | python -m json.tool > /dev/null
+          sha256sum dramatic_sky_ride-0.1.3-test.3.zip
+
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v0.1.3-test.3"
+          NOTES=$(cat <<'EOF'
+          ## Dramatic Sky Ride 0.1.3-test.3
+
+          Temporary compatibility prerelease for testing both supported voxel providers before 0.1.3 stable.
+
+          ### Voxel provider — choose one
+          - **Battle Art Voxel Fork 1.7.6+** (`BATTLE_ART_VOXEL_FORK`)
+          - **Dramaless Shape** (`DRAMALESS_SHAPE`)
+
+          ### Required
+          - **PokéPC Followers (W/Voxel Support)** (`PokePCFollowers_VoxelMerge`)
+
+          ### Also included
+          - Global **FLIGHT SPEED** and **GROUND SPEED** options (50–200%).
+          - Removed the Ground Ride `JUMP` notice.
+          - Removed the `Visible Surf mount active.` message.
+          - Keeps the Surf 3RD camera fix and Wild Skies 1.4.1+ integration.
+          - With Dramaless: **H = Flight**, **J = Ground Ride** because Dramaless reserves G for V-GRID. Controller X/Y are unchanged.
+
+          This is an experimental test build. Stable `main` remains on 0.1.2.
+          EOF
+          )
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dramatic_sky_ride-0.1.3-test.3.zip --clobber
+            gh release edit "$TAG" --prerelease --title "Dramatic Sky Ride 0.1.3-test.3" --notes "$NOTES" --target temporary/0.1.3-dual-voxel-compat
+          else
+            gh release create "$TAG" dramatic_sky_ride-0.1.3-test.3.zip --prerelease --title "Dramatic Sky Ride 0.1.3-test.3" --notes "$NOTES" --target temporary/0.1.3-dual-voxel-compat
+          fi

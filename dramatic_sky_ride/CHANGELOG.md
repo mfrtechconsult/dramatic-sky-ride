@@ -2,16 +2,16 @@
 
 ## 0.1.1
 
-- Promoted the validated Battle Art compatibility work to stable.
-- `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0` is now the primary required voxel provider.
-- `PokePCFollowers_VoxelMerge` is now required as the overworld Pokémon/NPC sprite provider used by mount rendering.
-- The retired `DRAMATIC_SHAPE` provider is no longer a supported manifest dependency; a best-effort runtime fallback remains for old manual installs.
-- DSR now selects Battle Art Voxel Fork first through its public `exports.lib` API and does not patch Battle Art sprite/battle internals.
-- Added Battle Art staged-battle lifecycle protection so Ground Ride entities are removed before the battle-world snapshot and restored cleanly afterward.
-- Moved the keyboard Flight shortcut from `F` to `H` because Gen1PC Overworld Encounters reserves `F`/`V` for follower attacks.
+- Promoted Battle Art Voxel Fork 1.7.6+ to the required voxel provider for Dramatic Sky Ride.
+- Added PokéPC Followers (W/Voxel Support) as a required dependency because DSR uses its overworld Pokémon/NPC sprites for mounts.
+- Kept Wild Skies optional but strongly recommended for the intended airborne encounter experience.
+- Uses Battle Art Voxel Fork through its public `exports.lib` API without patching Battle Art internals.
+- Preserves clean Ground Ride removal/restoration around Battle Art staged 3D battles.
+- Moved the keyboard Flight shortcut from `F` to `H` to avoid Gen1PC Overworld Encounters' `F/V` follower-attack binding.
 - Ground Ride remains `G`; controller shortcuts are `X` for Flight and `Y` for Ground Ride.
-- Wild Skies remains optional but is strongly recommended; DSR uses its public API for visible airborne Pokémon and exact species/level aerial encounters.
-- Release packaging is validated by reconstructing the exact packaged `sky_ride.lua` and compiling it with LuaJIT before publication.
+- Keeps 1ST/3RD camera altitude, visible Surf, FLY/story/discovery progression and Wild Skies aerial battle restoration.
+- Unknown/custom maps remain permissive by default.
+- Stable release ZIP is reconstructed and compiled with LuaJIT after packaging before publication.
 
 ## 0.1.0
 

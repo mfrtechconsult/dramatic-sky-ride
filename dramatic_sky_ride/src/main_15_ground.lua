@@ -232,7 +232,7 @@ end, 85)
 local groundKeypressed = Game.keypressed
 function Game:keypressed(key, ...)
   if key == "g" and useGroundShortcut(self) then return end
-  if key == "f" and ground.active then stopGroundRide(self, "switch_to_flight") end
+  if key == "h" and ground.active then stopGroundRide(self, "switch_to_flight") end
   return groundKeypressed(self, key, ...)
 end
 

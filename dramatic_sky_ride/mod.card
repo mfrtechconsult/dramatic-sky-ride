@@ -1,5 +1,5 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork, required overworld Pokemon sprites, story-aware progression and optional Wild Skies encounters.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork, required overworld Pokemon sprites, story-aware progression and strongly recommended Wild Skies encounters.",
   author = "MFR TechConsult",
   tags = { "battle-art-voxel", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
@@ -7,6 +7,8 @@ return {
       "Battle Art Voxel Fork 1.7.6+ is the primary required voxel provider",
       "PokePC Followers (W/Voxel Support) is required as the overworld Pokemon/NPC sprite provider",
       "keyboard flight shortcut is H instead of F to avoid Gen1PC Overworld Encounters' follower-attack binding",
+      "Wild Skies 1.4.1+ is strongly recommended and aerial interceptions use a forgiving two-cell envelope",
+      "water is ignored only for Battle Art's 3RD camera boom while surfing, keeping the trainer and Surf mount visible without changing 1ST",
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
       "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
       "SOULBADGE can gate automatic water landings while retaining the existing SURF-user requirement",
@@ -14,16 +16,15 @@ return {
       "canonical vanilla routes/cities must be reached normally before first airborne entry, while unknown custom maps stay open by default",
       "1ST and 3RD use one continuous analog movement solve per frame",
       "looking up/down in 1ST or 3RD can directly raise/lower requested flight altitude",
-      "the camera smoothly follows the actual flight course after manual look input stops",
       "water cells become valid landing spots when progression rules and a party SURF user allow it",
       "landing on water automatically continues in the native surfing state",
-      "SURF cannot be started manually while airborne; water landing is the only flight-to-Surf transition",
       "Ground Ride remembers the preferred mount and restores it safely after battles and party changes",
       "flight altitude and rider rendering survive wild and trainer battles"
     },
     added = {
       "Battle Art Voxel Fork provider-first selection through its public exports.lib API",
       "Battle Art staged-battle lifecycle protection for Ground Ride mount entities",
+      "Surf-specific Battle Art 3RD camera collision compatibility over water",
       "optional but strongly recommended Wild Skies integration through its documented public exports",
       "Wild Skies flyers prefer real species follower/overworld sprites when available",
       "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
@@ -35,7 +36,7 @@ return {
       "Pokedex-proportional visual sizing for all mounts with per-species controls"
     },
     known = {
-      "Wild Skies' public takeFlyer result exposes species/level but not flyer altitude, so interception is cell-radius based",
+      "Wild Skies' public takeFlyer result exposes species/level but not flyer altitude, so interception remains cell-radius based",
       "Wild Skies keeps its own dexScale after sprite resolution; DSR intentionally does not patch Wild Skies internals",
       "rider seating still uses procedural offsets rather than dedicated seated sprites",
       "tall-building safety still uses authored zones plus local terrain height"

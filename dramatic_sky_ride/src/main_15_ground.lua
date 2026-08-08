@@ -1,3 +1,4 @@
+
 -- Ground Ride ---------------------------------------------------------------
 -- A separate family of terrestrial mounts. Normal world collisions and
 -- scripts remain active; only official ledge definitions gain a safe reverse
@@ -14,8 +15,16 @@ local GROUND_ELIGIBLE = {
 local GROUND_BY_DEX = {}
 for species, cfg in pairs(GROUND_ELIGIBLE) do GROUND_BY_DEX[cfg.dex] = species end
 
-local ground = { active = false, species = nil, mon = nil, sprite = nil,
-  riderSprite = nil, riderEntity = nil, suspended = nil, resumeAfterBattle = nil }
+local ground = {
+  active = false,
+  species = nil,
+  mon = nil,
+  sprite = nil,
+  riderSprite = nil,
+  riderEntity = nil,
+  suspended = nil,
+  resumeAfterBattle = nil,
+}
 local lastGroundMountIndex = nil
 
 local function groundSpecies(game, mon)
@@ -72,7 +81,10 @@ end
 local function removeGroundRiderEntity(ow)
   local entity = ground.riderEntity
   if not entity then return end
-  if ow then removeFromList(ow.entities, entity); removeFromList(ow.npcs, entity) end
+  if ow then
+    removeFromList(ow.entities, entity)
+    removeFromList(ow.npcs, entity)
+  end
   ground.riderEntity = nil
 end
 
@@ -83,7 +95,8 @@ local function groundRiderPose(entity)
     return entity.sprite, entity.px or 0, entity.py or 0, entity.facing or "down", 0, false, false
   end
   local cfg = GROUND_ELIGIBLE[ground.species] or { lift = 6.5 }
-  entity.cellX, entity.cellY, entity.px, entity.py, entity.facing = p.cellX, p.cellY, p.px, p.py, p.facing
+  entity.cellX, entity.cellY = p.cellX, p.cellY
+  entity.px, entity.py, entity.facing = p.px, p.py, p.facing
   local phase = math.floor((p.animClock or 0) / 16) % 2
   return ground.riderSprite, p.px, p.py - cfg.lift, p.facing, phase, false, false
 end
@@ -95,7 +108,8 @@ end
 
 local function ensureGroundRiderEntity(ow)
   if not (ground.active and ow and ow.player and ground.riderSprite) or isFirstPerson() then
-    removeGroundRiderEntity(ow); return nil
+    removeGroundRiderEntity(ow)
+    return nil
   end
   local e = ground.riderEntity
   if not e then
@@ -113,8 +127,9 @@ function Player:pose()
   local sprite, px, py, facing, phase, flip, hopping = groundPlayerPose(self)
   local ow = Game.overworld
   if ground.active and ow and ow.player == self then
+    local visual = ground.sprite or sprite
     local walkPhase = math.floor((self.animClock or 0) / 16) % 2
-    return ground.sprite or sprite, self.px, self.py, facing, walkPhase, flip, hopping
+    return visual, self.px, self.py, facing, walkPhase, flip, hopping
   end
   return sprite, px, py, facing, phase, flip, hopping
 end
@@ -143,7 +158,8 @@ local function startGroundRide(game, mon)
   local sprite, reason = buildGroundMountSprite(species)
   if not sprite then
     mod.log:error("unable to build ground mount %s: %s", tostring(species), tostring(reason))
-    say(game, "PokePC follower\nsprites are missing."); return false
+    say(game, "PokePC follower\nsprites are missing.")
+    return false
   end
   if game.save then game.save.onBike = false end
   ground.active, ground.species, ground.mon, ground.sprite = true, species, mon, sprite
@@ -151,6 +167,7 @@ local function startGroundRide(game, mon)
   ground.suspended = suspendFollowers(ow)
   ensureGroundRiderEntity(ow)
   feedback("takeoff")
+  log("ground ride started on %s at %s (%d,%d)", species, ow.map.id, ow.player.cellX, ow.player.cellY)
   return true
 end
 
@@ -161,6 +178,7 @@ local function preferredGroundMount(game)
   for i, mon in ipairs(party) do
     if healthy(mon) and groundSpecies(game, mon) then lastGroundMountIndex = i; return mon end
   end
+  return nil
 end
 
 local function useGroundShortcut(game)
@@ -171,13 +189,16 @@ local function useGroundShortcut(game)
   if ow.player.surfing then say(game, "Reach land first."); return true end
   local mon = preferredGroundMount(game)
   if not mon then say(game, "No healthy ground\nmount is available."); return true end
-  startGroundRide(game, mon); return true
+  startGroundRide(game, mon)
+  return true
 end
 
+-- Party menu: terrestrial mounts receive RIDE independently from RIDE & FLY.
 mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   local out = next(game, items, mon, ctx)
   if type(out) ~= "table" then out = items end
-  if flight.active or ground.active or (ctx and ctx.battle) or not groundSpecies(game, mon) then return out end
+  if flight.active or ground.active or (ctx and ctx.battle) then return out end
+  if not groundSpecies(game, mon) then return out end
   table.insert(out, 1, { label = Strings("RIDE"), onSelect = function(selected, liveGame)
     if liveGame and liveGame.stack then liveGame.stack:pop() end
     for i, partyMon in ipairs(liveGame.save.party or {}) do
@@ -188,6 +209,9 @@ mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   return out
 end, 60)
 
+-- Official ledges only. The native direction runs first. When it rejects the
+-- move, Ground Ride recognizes the same authored ledge tile approached from
+-- the opposite direction and reuses the engine's two-cell hop animation.
 local nativeCheckLedgeHop = OverworldState.checkLedgeHop
 function OverworldState:checkLedgeHop(dir)
   if nativeCheckLedgeHop(self, dir) then return true end
@@ -201,8 +225,9 @@ function OverworldState:checkLedgeHop(dir)
   local front = self.map:cellTile(fx, fy)
   local official = false
   for _, ledge in ipairs(Game.data.field.ledges or {}) do
-    if (ledge.tileset or "OVERWORLD") == tileset and ledge.facing == originalDir
-       and ledge.input == originalDir and ledge.ledgeTile == front then official = true; break end
+    if (ledge.tileset or "OVERWORLD") == tileset
+       and ledge.facing == originalDir and ledge.input == originalDir
+       and ledge.ledgeTile == front then official = true; break end
   end
   if not official then return false end
   local lx, ly = Collision.target(fx, fy, dir)
@@ -215,8 +240,8 @@ function OverworldState:checkLedgeHop(dir)
     return true
   end
   if self.map.isWaterCell and self.map:isWaterCell(lx, ly) then return false end
-  if Collision.occupied(self.entities, lx, ly, p) or storyOccupied(self.entities, lx, ly, p)
-     or not self.map:isWalkableCell(lx, ly) then return false end
+  if Collision.occupied(self.entities, lx, ly, p) or storyOccupied(self.entities, lx, ly, p) then return false end
+  if not self.map:isWalkableCell(lx, ly) then return false end
   require("src.core.Sound").play(Game.data, "Ledge")
   p.hopFrames, p.hopTotal = 32, 32
   self:scriptMove(p, dir, 2)
@@ -229,9 +254,13 @@ mod.hooks:wrap("movement.speed", function(next, frames, ctx)
   return value
 end, 85)
 
+-- Wrap the already-installed flight shortcuts. H/X dismount Ground Ride then
+-- continue into the existing flight shortcut; G/Y is exclusively terrestrial.
 local groundKeypressed = Game.keypressed
 function Game:keypressed(key, ...)
-  if key == "g" and useGroundShortcut(self) then return end
+  local provider = mod.exports and mod.exports._dramaticProviderState or nil
+  local groundKey = provider and provider.id == "DRAMALESS_SHAPE" and "j" or "g"
+  if key == groundKey and useGroundShortcut(self) then return end
   if key == "h" and ground.active then stopGroundRide(self, "switch_to_flight") end
   return groundKeypressed(self, key, ...)
 end
@@ -263,6 +292,8 @@ if type(groundPushBattle) == "function" then
   end
 end
 
+-- Preserve the mount through outdoor/cavern map transitions, but remove it
+-- immediately when the destination metadata no longer permits Ground Ride.
 local groundSetMap = OverworldState.setMap
 function OverworldState:setMap(mapId, x, y, facing, opts, ...)
   local result = groundSetMap(self, mapId, x, y, facing, opts, ...)
@@ -277,7 +308,8 @@ local groundUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = groundUpdate(self, dt, ...)
   if ground.active and Game.overworld == self then
-    purgeFollowersDuringFlight(self); ensureGroundRiderEntity(self)
+    purgeFollowersDuringFlight(self)
+    ensureGroundRiderEntity(self)
   elseif ground.resumeAfterBattle and Game.overworld == self
       and Game.stack and Game.stack:top() == self then
     local mon = ground.resumeAfterBattle
@@ -290,7 +322,10 @@ function OverworldState:update(dt, ...)
 end
 
 mod.events:on("battle.started", function()
-  if ground.active then ground.resumeAfterBattle = ground.mon; stopGroundRide(Game, "battle", true) end
+  if ground.active then
+    ground.resumeAfterBattle = ground.mon
+    stopGroundRide(Game, "battle", true)
+  end
 end)
 
 mod.exports.isGroundRiding = function() return ground.active end

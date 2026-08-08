@@ -27,6 +27,12 @@ local seamMomentum = {
 local SEAM_MAX_FRAMES = 180
 local SEAM_RELEASE_MOVING_FRAMES = 3
 
+local function seamSpeedMultiplier(key)
+  local percent = tonumber(optionValue(key, 100)) or 100
+  percent = math.max(50, math.min(200, percent))
+  return percent / 100
+end
+
 local function boostDown()
   local input = Game and Game.input
   if not (input and input.isDown) then return false end
@@ -36,7 +42,8 @@ end
 
 local function flightConnectorFrames(p)
   local boost = flight and tonumber(flight.boost) or 0
-  local multiplier = 1 + (BOOST_MAX_MULTIPLIER - 1) * boost
+  local multiplier = seamSpeedMultiplier("flight_speed")
+    * (1 + (BOOST_MAX_MULTIPLIER - 1) * boost)
   local base = tonumber(p and p.stepFrames) or 16
   -- Match the existing non-FreeMove flight hook's lower bound. In FreeMove
   -- this is still close to the continuous pixels-per-frame equivalent and,
@@ -59,7 +66,7 @@ local function groundConnectorFrames(p)
   local profile = SEAM_GROUND_SPEED[ground and ground.species]
     or SEAM_GROUND_SPEED.TAUROS
   local blend = ground and tonumber(ground.speedBlend) or 0
-  local multiplier = profile.base
+  local multiplier = seamSpeedMultiplier("ground_speed") * profile.base
     * (1 + (profile.gallop - 1) * blend)
   -- Ground Ride's alpha.14 hook first changes the ordinary 16-frame walk
   -- into bicycle-class 8-frame movement; the profile hook then divides by
@@ -73,7 +80,8 @@ local function beginSeamMomentum(self, mapId, opts)
   local p = self and self.player
   if flight and flight.active then
     local amount = tonumber(flight.boost) or 0
-    if amount > 0.01 or flight.boostWasHeld or boostDown() then
+    if amount > 0.01 or flight.boostWasHeld or boostDown()
+       or math.abs(seamSpeedMultiplier("flight_speed") - 1) > 0.001 then
       seamMomentum.active = true
       seamMomentum.mode = "flight"
       seamMomentum.targetMap = mapId
@@ -85,7 +93,8 @@ local function beginSeamMomentum(self, mapId, opts)
     end
   elseif ground and ground.active then
     local amount = tonumber(ground.speedBlend) or 0
-    if amount > 0.01 or ground.gallop or boostDown() then
+    if amount > 0.01 or ground.gallop or boostDown()
+       or math.abs(seamSpeedMultiplier("ground_speed") - 1) > 0.001 then
       seamMomentum.active = true
       seamMomentum.mode = "ground"
       seamMomentum.targetMap = mapId

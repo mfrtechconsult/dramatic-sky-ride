@@ -1,37 +1,25 @@
 # Changelog
 
-## 0.1.2
+## 0.1.3-test.3
 
-- Fixed visible Surf in Battle Art Voxel Fork `3RD`: water cells no longer collapse the third-person camera boom as if they were pedestrian obstacles, so the trainer and Surf mount remain visible at normal camera angles.
-- Kept `1ST` as a true first-person view; DSR does not force the trainer or mount into the first-person camera.
-- Updated the recommended Wild Skies baseline to `1.4.1+`.
-- Increased DSR's Wild Skies interception envelope from one cell to two cells, making mid-air encounters substantially easier with Wild Skies' newer three-dimensional roaming flocks.
-- Wild Skies remains optional and independent; DSR continues to use only its public `registerSpriteSource` / `takeFlyer` integration surface.
+- Added Dramaless Shape (`DRAMALESS_SHAPE`) as an alternative supported voxel provider.
+- Provider integration now reads the selected provider's exported voxel pipeline id (`voxel` or `st_voxel`).
+- Battle Art remains the preferred provider when both are installed.
+- Ground Ride keyboard shortcut automatically moves from `G` to `J` with Dramaless because Dramaless reserves `G` for V-GRID.
+- Keeps the 0.1.3 test speed controls and removal of the `JUMP` / visible-Surf activation notices.
 
-## 0.1.1
+## 0.1.3-test.2
 
-- Promoted the validated Battle Art compatibility work to stable.
-- `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0` is now the primary required voxel provider.
-- `PokePCFollowers_VoxelMerge` is now required as the overworld Pokémon/NPC sprite provider used by mount rendering.
-- The retired `DRAMATIC_SHAPE` provider is no longer a supported manifest dependency; a best-effort runtime fallback remains for old manual installs.
-- DSR now selects Battle Art Voxel Fork first through its public `exports.lib` API and does not patch Battle Art sprite/battle internals.
-- Added Battle Art staged-battle lifecycle protection so Ground Ride entities are removed before the battle-world snapshot and restored cleanly afterward.
-- Moved the keyboard Flight shortcut from `F` to `H` because Gen1PC Overworld Encounters reserves `F`/`V` for follower attacks.
-- Ground Ride remains `G`; controller shortcuts are `X` for Flight and `Y` for Ground Ride.
-- Wild Skies remains optional but is strongly recommended; DSR uses its public API for visible airborne Pokémon and exact species/level aerial encounters.
-- Release packaging is validated by reconstructing the exact packaged `sky_ride.lua` and compiling it with LuaJIT before publication.
+- Added global `FLIGHT SPEED` and `GROUND SPEED` numeric options (50-200%, default 100%).
+- Speed percentages stack with existing Flight boost and Ground Ride species/gallop profiles.
+- Global speed is applied in grid/orbit movement, Battle Art 1ST/3RD FreeMove and seamless connection momentum.
+- Keeps the test.1 cleanup: no `JUMP` notice and no `Visible Surf mount active.` dialog.
 
-## 0.1.0
+## 0.1.3-test.1
 
-- Promoted the validated alpha.16 feature set to the first stable Dramatic Sky Ride release.
-- Removed the experimental manifest flag and restored GitHub/Mod Index update metadata for stable SemVer releases.
-- Added story-aware FLY progression: optional FLY requirement, THUNDERBADGE takeoff gate, SOULBADGE water-landing gate and data-driven story gates.
-- Added `DISCOVERY GATES`: first-time airborne entry into canonical vanilla Kanto routes/cities is blocked until the map has been reached through normal gameplay.
-- Unknown/custom map ids remain allowed by default; custom mods can optionally register discovery gates or mark legitimate visits through DSR's public flight-rules API.
-- Added camera-directed altitude in Dramatic Shape 1ST/3RD modes.
-- Added optional Wild Skies integration through its public API, including real per-species follower/overworld sprites when available and exact visible flyer species/level battles.
-- Kept Wild Skies separate and optional; Free Fly remains a conflicting alternative flight engine.
-- Includes the alpha.16 startup/scope fixes and the Ground Ride sizing crash fix validated during testing.
+- Removed the temporary `JUMP` HUD notice from Ground Ride ledge jumps.
+- Removed the `Visible Surf mount active.` activation dialogue.
+- Jump audio, rumble, animation, landing feedback and Surf behavior are unchanged.
 
 ## 0.1.0-alpha.16.4
 
@@ -39,7 +27,7 @@
 - Progression discovery is stored per save through `mod.save`; walking, Ground Ride, Surf and ordinary/scripted non-flight entries count as legitimate visits, while DSR flight entries do not.
 - Saffron City and unvisited vanilla routes are therefore protected from first-time airborne sequence breaks even when no explicit badge gate catches the seam.
 - Unknown/custom map ids remain allowed by default for map-pack and total-conversion compatibility.
-- Added optional `flightRules.registerDiscoveryGate`, `markMapReached`, `isMapReached` and override helpers so custom integrations can opt in without depending on DSR internals.
+- Added optional `flightRules.registerDiscoveryGate`, `markMapReached` and inspection helpers for custom integrations that want to opt in without depending on DSR internals.
 
 ## 0.1.0-alpha.16.3
 

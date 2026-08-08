@@ -84,7 +84,10 @@
     function dramaticFreeMove.tick(state)
       local oldWalk, oldBike = dramaticFreeMove.WALK, dramaticFreeMove.BIKE
       if flight.active and isFreeCamera() and flight.phase == "cruise" then
-        local multiplier = 1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0)
+        local speedPercent = tonumber(optionValue("flight_speed", 100)) or 100
+        speedPercent = math.max(50, math.min(200, speedPercent))
+        local multiplier = (speedPercent / 100)
+          * (1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0))
         dramaticFreeMove.WALK = (tonumber(oldWalk) or 1) * multiplier
         dramaticFreeMove.BIKE = (tonumber(oldBike) or 2) * multiplier
       end

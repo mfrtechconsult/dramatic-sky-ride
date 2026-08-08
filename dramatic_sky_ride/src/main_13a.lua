@@ -55,9 +55,11 @@ end
 -- shortcuts. Normal game menus are allowed in flight and simply pause the
 -- overworld while they are open. Shortcuts that can teleport, use an item,
 -- or start another world action are blocked until the player lands manually.
+-- H is deliberately used instead of F: Gen1PC Overworld Encounters reserves
+-- F/V for follower attacks and processes them directly from love.keypressed.
 local gameKeypressed = Game.keypressed
 function Game:keypressed(key, ...)
-  if key == "f" and useMountShortcut(self) then return end
+  if key == "h" and useMountShortcut(self) then return end
   if flight.active and (key == "i" or key == "k") then
     if not blockExternalActionUntilManualLanding(self) then return end
   end

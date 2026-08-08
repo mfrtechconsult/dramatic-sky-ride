@@ -1,29 +1,36 @@
-# Dramatic Sky Ride 0.1.1
+# Dramatic Sky Ride 0.1.2
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
 ## Required setup
 
-DSR 0.1.1 targets the current community voxel stack and requires:
+DSR 0.1.2 targets the current community voxel stack and requires:
 
 - **Battle Art Voxel Fork** by absol89 — `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`;
-- **PokéPC Followers (W/Voxel Support)** — `PokePCFollowers_VoxelMerge`, used as the overworld Pokémon/NPC sprite provider.
+- **PokéPC Followers (W/Voxel Support)** — `PokePCFollowers_VoxelMerge`, used as the overworld Pokémon/NPC sprite provider for mounts.
 
 The retired `DRAMATIC_SHAPE` id is no longer a supported installation dependency. A best-effort runtime fallback remains only for older manual installations.
 
-## Recommended setup: Wild Skies
+## Strongly recommended: Wild Skies
 
-**Wild Skies is strongly recommended.** DSR works without it, but Wild Skies turns the sky into an actual encounter space instead of only a traversal system.
+**Wild Skies 1.4.1+ is strongly recommended.** DSR works without it, but the intended flying experience is DSR + Wild Skies: the sky becomes populated with visible Pokémon that can be intercepted in mid-air.
 
-When installed, DSR integrates through Wild Skies' public API:
+DSR integrates only through Wild Skies' public API:
 
 - ambient airborne Pokémon remain owned and simulated by Wild Skies;
 - visible flyers use species-specific overworld art when available;
 - intercepting a flyer starts a battle against that exact visible species and level;
 - DSR restores the mount and airborne state after battle;
-- ordinary ground encounters are suppressed while DSR is airborne.
+- ordinary ground encounters are suppressed while DSR is airborne;
+- 0.1.2 uses a more forgiving two-cell interception envelope so visually close passes are easier to engage.
 
 Wild Skies remains a separate optional mod and is not bundled or patched by DSR.
+
+## What's new in 0.1.2
+
+- **Surf + 3RD camera fixed with Battle Art Voxel Fork.** Water no longer collapses the third-person camera boom as if it were a pedestrian obstacle, so the trainer and Surf mount remain visible at normal camera angles.
+- **1ST remains true first-person.** DSR does not force the trainer or mount into the first-person camera.
+- **Wild Skies interceptions are more forgiving.** The interception radius is now two cells, better matching Wild Skies 1.4.1's moving three-dimensional flocks.
 
 ## Controls
 
@@ -51,7 +58,7 @@ Ground Ride includes species-specific movement, gallop/stamina, dust, guarded le
 
 Supported visible Surf mounts: Blastoise, Tentacruel, Gyarados and Lapras.
 
-Native Surf movement, collision, music and progression remain authoritative. A valid airborne water landing can continue directly into native Surf.
+Native Surf movement, collision, music and progression remain authoritative. A valid airborne water landing can continue directly into native Surf. In Battle Art `3RD`, DSR keeps water from incorrectly collapsing the camera boom; `1ST` keeps the normal first-person behavior.
 
 ## Progression safeguards
 
@@ -61,20 +68,22 @@ DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES
 
 ## Battle Art Voxel Fork integration
 
-Battle Art Voxel Fork is the primary voxel provider for DSR 0.1.1. DSR uses its public `exports.lib` API and does not patch Battle Art's sprite or battle-rendering internals.
+Battle Art Voxel Fork is the primary voxel provider for DSR. DSR uses its public `exports.lib` API and does not patch Battle Art's sprite or battle-rendering internals.
 
-Integration covers voxel overworld rendering, 1ST/3RD cameras, camera-driven altitude, mount billboards, staged 3D battle transitions and clean mount removal/restoration around battles.
+Integration covers voxel overworld rendering, 1ST/3RD cameras, camera-driven altitude, mount billboards, staged 3D battle transitions, Surf third-person camera behavior and clean mount removal/restoration around battles.
 
 ## Installation
 
-Import the release ZIP directly through the Gen1Recomp launcher. The required dependencies should be installed and enabled before DSR.
+Import the release ZIP directly through the Gen1Recomp launcher. Install and enable the required dependencies before DSR.
 
 Manual layout: `mods/dramatic_sky_ride/manifest.json`.
 
 ## Compatibility
 
-- Required: Gen1Recomp `>=0.1.69 <2.0.0`, Battle Art Voxel Fork `>=1.7.6 <2.0.0`, PokéPC Followers (W/Voxel Support).
-- Strongly recommended: Wild Skies `>=1.3.1 <2.0.0`.
+- Required: Gen1Recomp `>=0.1.69 <2.0.0`.
+- Required: Battle Art Voxel Fork `>=1.7.6 <2.0.0`.
+- Required: PokéPC Followers (W/Voxel Support).
+- Strongly recommended: Wild Skies `>=1.4.1 <2.0.0`.
 - `free_fly` remains a conflicting alternative player-flight engine.
 - Custom maps are permissive by default unless they explicitly opt into DSR discovery gates.
 

@@ -45,4 +45,5 @@ main_22_flight_rules.lua
 main_23_camera_altitude.lua
 main_24_wild_skies.lua
 main_25_discovery_gates.lua
+main_26_surf_third_person.lua
 main_14.lua

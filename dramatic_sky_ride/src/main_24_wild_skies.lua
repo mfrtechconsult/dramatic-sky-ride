@@ -2,8 +2,11 @@
 -- alpha.16 optional Wild Skies integration.
 -- Wild Skies remains an independent mod and owns its flyers. DSR only uses
 -- its documented exports: registerSpriteSource() and takeFlyer().
+-- Wild Skies does not expose flyer altitude through takeFlyer(), so DSR uses
+-- a two-cell interception envelope to make visually near passes forgiving.
 
 local WILD_SKIES_SOURCE_ID = "dramatic_sky_ride_followers"
+local WILD_SKIES_INTERCEPT_RADIUS = 2
 local wildSkies = { handle = nil, take = nil, registered = false,
                     cooldown = 0, expectedBattle = 0 }
 
@@ -118,7 +121,7 @@ local function tryWildSkiesIntercept(ow)
   if not take then return end
   local p = ow.player
   if not p then return end
-  local ok, hit = pcall(take, p.cellX, p.cellY, 1)
+  local ok, hit = pcall(take, p.cellX, p.cellY, WILD_SKIES_INTERCEPT_RADIUS)
   if not (ok and hit and hit.species) then return end
 
   wildSkies.cooldown = 2

@@ -117,7 +117,7 @@ jobs:
           from pathlib import Path
           root = Path("sky/dramatic_sky_ride/src")
           parts = [line.strip() for line in (root / "parts.txt").read_text().splitlines() if line.strip()]
-          source = "\n".join((root / part).read_text(encoding="utf-8") for part in parts)
+          source = "".join((root / part).read_text(encoding="utf-8") for part in parts)
           Path("/tmp/dramatic_sky_ride_assembled.lua").write_text(source, encoding="utf-8")
           print(f"assembled {len(parts)} Sky Ride source parts")
           PY

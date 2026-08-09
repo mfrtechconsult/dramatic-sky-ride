@@ -1,10 +1,10 @@
-# Dramatic Sky Ride 0.1.4
+# Dramatic Sky Ride 0.1.5
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
 ## Required setup
 
-DSR 0.1.4 supports either of the current voxel providers below. Install **one** of them:
+DSR 0.1.5 supports either of the current voxel providers below. Install **one** of them:
 
 - **Battle Art Voxel Fork 1.7.6+** by absol89 — `BATTLE_ART_VOXEL_FORK`;
 - **Dramaless Shape 1.6.4+** by artyrambles — `DRAMALESS_SHAPE`.
@@ -32,11 +32,14 @@ DSR integrates only through Wild Skies' public API:
 
 Wild Skies remains a separate optional mod and is not bundled or patched by DSR.
 
-## What's new in 0.1.4
+## What's new in 0.1.5
 
-- **Dramaless Shape 1.6.4 baseline.** DSR now declares `DRAMALESS_SHAPE >=1.6.4 <2.0.0`, avoiding the 1ST/3RD menu softlock and camera-control issues fixed by Dramaless 1.6.4.
-- **Battle Art remains on 1.7.6.** The supported Battle Art release and its `feature/battle-art` branch are still identical at 1.7.6.
-- **No gameplay changes.** Flight, Ground Ride, visible Surf, mount speeds and Wild Skies integration are unchanged from DSR 0.1.3.
+- **Dramaless voxel detection fixed.** Current Dramaless Shape registers the canonical `voxel` render pipeline, and DSR now follows that pipeline instead of assuming `st_voxel`.
+- **False VOXEL-off message fixed.** If the selected provider hint returns level 0, DSR now checks supported fallback pipeline ids before refusing takeoff.
+- **Legacy fallback retained.** `st_voxel` remains a compatibility fallback for older forks only.
+- **Battle Art unchanged.** Battle Art Voxel Fork remains preferred when both providers are installed and continues to use `voxel` exactly as before.
+- **Diagnostics improved.** DSR logs the selected voxel provider, version, pipeline and current level once during provider initialization.
+- **No Flying Music in 0.1.5.** The experimental music work remains outside `main`.
 
 ## Controls
 
@@ -87,7 +90,7 @@ DSR uses the selected provider's public `exports.lib` interface rather than patc
 Supported providers:
 
 - **Battle Art Voxel Fork** (`BATTLE_ART_VOXEL_FORK`) — preferred when both providers are present;
-- **Dramaless Shape** (`DRAMALESS_SHAPE`) — supported alternative using its `st_voxel` pipeline.
+- **Dramaless Shape** (`DRAMALESS_SHAPE`) — supported alternative using the canonical `voxel` pipeline.
 
 Integration covers voxel overworld rendering, 1ST/3RD cameras, camera-driven altitude, mount billboards, free movement, terrain-aware height handling and Surf third-person camera behavior. Battle Art staged 3D battle transitions continue to receive the existing DSR lifecycle protection.
 
@@ -109,7 +112,7 @@ Manual layout: `mods/dramatic_sky_ride/manifest.json`.
 ## Credits
 
 - absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork, voxel provider, cameras and 3D battle presentation.
-- artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and `st_voxel` integration surface.
+- artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and public `exports.lib` integration surface.
 - DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
 - gamecorner-033/PokePCFollowers — required Gen 1 overworld Pokémon sprite provider.
 - ShaneHudson/gen1recomp-mods — Wild Skies public integration API and airborne ecosystem.

@@ -187,7 +187,7 @@ jobs:
   publish-prerelease:
     name: Publish compatibility prerelease
     needs: headless-compat
-    if: github.event_name == 'push' && github.ref_name == 'compat/wilds-of-kanto'
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'compat/wilds-of-kanto'
     runs-on: ubuntu-latest
     permissions:
       contents: write

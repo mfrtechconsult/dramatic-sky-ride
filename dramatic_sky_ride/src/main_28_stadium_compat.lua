@@ -1,4 +1,4 @@
-;(function()
+(function()
 -- -------------------------------------------------------------------------
 -- Pokemon Stadium Overworld Models compatibility API.
 --

@@ -1,4 +1,4 @@
-# Dramatic Sky Ride 0.1.4
+# Dramatic Sky Ride 0.1.5
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
@@ -23,11 +23,13 @@ Battle Art is preferred automatically if both providers are installed.
 
 **Wild Skies 1.4.1+** is strongly recommended. DSR integrates only through Wild Skies' public API, starts aerial battles against the exact visible species and level, and restores the mount and airborne state afterward.
 
-## What's new in 0.1.4
+## What's new in 0.1.5
 
-- Raised the Dramaless Shape baseline to 1.6.4, which fixes the 1ST/3RD menu softlock and camera-control issues present in 1.6.3.
-- Battle Art Voxel Fork remains at 1.7.6.
-- Flight, Ground Ride, visible Surf, speed settings and Wild Skies behavior are unchanged from 0.1.3.
+- Fixed Dramaless Shape voxel detection so DSR follows Dramaless' real `voxel` render pipeline.
+- Fixed the false `Turn VOXEL on before taking off.` rejection that could occur while Dramaless VOXEL was visibly active.
+- Kept a `st_voxel` fallback only for older forks.
+- Battle Art behavior is unchanged and still uses `voxel`.
+- No Flying Music functionality is included in this release.
 
 ## Controls
 

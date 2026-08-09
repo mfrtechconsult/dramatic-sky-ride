@@ -1,63 +1,46 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork or Dramaless Shape, required overworld Pokemon sprites, global mount speed controls and strongly recommended Wild Skies encounters.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with native 2D flight by default, optional voxel/Stadium rendering, Wilds/PokePC sprites and Wild Skies encounters.",
   author = "MFR TechConsult",
-  tags = { "battle-art-voxel", "dramaless-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
+  tags = { "flying", "mount", "ground-ride", "surf", "2d", "voxel", "wild-skies", "wilds-of-kanto" },
   differences = {
     changed = {
-      "Battle Art Voxel Fork 1.7.6+ or Dramaless Shape 1.6.4+ can provide the voxel runtime DSR integrates with",
-      "Battle Art remains preferred automatically if both supported voxel providers are installed",
+      "native flat 2D flight no longer requires a voxel provider",
+      "2D SPRITES is the default FLIGHT RENDERER and remains authoritative unless Stadium 3D is explicitly selected",
+      "STADIUM 3D falls back safely to 2D when Stadium or an active voxel pipeline is unavailable",
+      "Wilds of Kanto or PokePC Followers can provide compatible Pokemon mount sprites",
+      "Battle Art Voxel Fork and Dramaless Shape are optional voxel providers rather than flight requirements",
+      "Battle Art remains preferred automatically if multiple supported voxel providers are active",
       "Dramaless uses J for Ground Ride because it reserves G for V-GRID; controller X/Y remain unchanged",
-      "global FLIGHT SPEED and GROUND SPEED settings scale all mounts from 50% to 200% while retaining species profiles, boost and gallop",
-      "Ground Ride ledge jumps no longer display the temporary JUMP notice",
-      "visible Surf activation no longer displays the Visible Surf mount active dialog",
-      "PokePC Followers (W/Voxel Support) remains required as the overworld Pokemon/NPC sprite provider",
-      "keyboard flight shortcut remains H instead of F to avoid Gen1PC Overworld Encounters' follower-attack binding",
-      "Wild Skies 1.4.1+ is strongly recommended and aerial interceptions use a forgiving two-cell envelope",
-      "water is ignored only for the voxel 3RD camera boom while surfing, keeping the trainer and Surf mount visible without changing 1ST",
-      "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
-      "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
-      "SOULBADGE can gate automatic water landings while retaining the existing SURF-user requirement",
-      "data-driven field.badgeGates remain enforced across connected-map flight so story progression is not bypassed",
-      "canonical vanilla routes/cities must be reached normally before first airborne entry, while unknown custom maps stay open by default",
-      "1ST and 3RD use one continuous analog movement solve per frame",
-      "looking up/down in 1ST or 3RD can directly raise/lower requested flight altitude",
-      "water cells become valid landing spots when progression rules and a party SURF user allow it",
-      "landing on water automatically continues in the native surfing state",
-      "Ground Ride remembers the preferred mount and restores it safely after battles and party changes",
-      "flight altitude and rider rendering survive wild and trainer battles"
+      "global FLIGHT SPEED and GROUND SPEED settings scale all mounts while retaining species profiles, boost and gallop",
+      "canonical flight interoperability uses isFlying(), altitude() and mount() independently of the selected renderer",
+      "Wild Skies 1.4.1+ remains strongly recommended for visible aerial encounters"
     },
     added = {
-      "Dramaless Shape 1.6.4+ provider support through its public exports.lib API and st_voxel pipeline",
-      "Dramaless Shape 1.6.4 baseline avoids the 1ST/3RD menu softlock and camera-control issues fixed upstream",
-      "provider-aware voxel pipeline selection for Battle Art and Dramaless",
-      "global Flight and Ground Ride speed controls in the mod options menu",
-      "speed scaling for grid/orbit movement, 1ST/3RD FreeMove and connected-map continuity",
-      "Battle Art provider-first selection through its public exports.lib API",
-      "Battle Art staged-battle lifecycle protection for Ground Ride mount entities",
-      "Surf-specific 3RD camera collision compatibility over water",
-      "optional but strongly recommended Wild Skies integration through its documented public exports",
-      "Wild Skies flyers prefer real species follower/overworld sprites when available",
-      "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
-      "ground wild-battle starts are suppressed while airborne so only explicit air encounters can begin",
-      "per-save legitimate-map discovery with optional public opt-in/override helpers for custom integrations",
+      "native 2D rider-plus-mount composition with deterministic rider-first mount-second draw order",
+      "2D flight reuse of the existing Pokedex-proportional mount sizing and per-species size controls",
+      "explicit renderer inspection through flightRendering and stadiumCompatibility",
+      "Wilds of Kanto authoritative follower/sprite compatibility",
+      "cooperative self-healing overworld update-hook protection for the Wilds/DSR/Deep Dive stack",
+      "optional Flying Music integration with installed FRLG, HGSS and LGPE music packs without redistributing audio",
       "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite flying mounts",
       "Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax Ground Ride mounts",
-      "visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts",
-      "Pokedex-proportional visual sizing for all mounts with per-species controls"
+      "visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts"
     },
     known = {
-      "Wild Skies' public takeFlyer result exposes species/level but not flyer altitude, so interception remains cell-radius based",
-      "Wild Skies keeps its own dexScale after sprite resolution; DSR intentionally does not patch Wild Skies internals",
-      "rider seating still uses procedural offsets rather than dedicated seated sprites",
-      "tall-building safety still uses authored zones plus local terrain height"
+      "Pokemon Stadium Overworld Models still owns its own renderer and must honor DSR's explicit Stadium opt-in for full cross-mod 2D priority",
+      "Wild Skies takeFlyer exposes species/level but not flyer altitude, so interception remains cell-radius based",
+      "rider seating uses procedural offsets rather than dedicated seated trainer sprites",
+      "tall-building safety uses authored zones plus available terrain-height data"
     }
   },
   credits = {
-    { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork, supported voxel provider, cameras and 3D battle presentation" },
-    { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape supported voxel provider and st_voxel integration surface" },
-    { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "original voxel architecture" },
-    { who = "gamecorner-033/PokePCFollowers", for_ = "required Gen 1 overworld Pokemon sprite provider" },
-    { who = "ShaneHudson/gen1recomp-mods", for_ = "Wild Skies public integration seams and airborne ecosystem" }
+    { who = "ShaneHudson/gen1recomp-mods", for_ = "Free Fly/Wild Skies public interoperability and renderer-independent flight patterns" },
+    { who = "YoDrehDenSwagAuf/overworld-spawn-mod", for_ = "Wilds of Kanto follower and overworld Pokemon ecosystem" },
+    { who = "gamecorner-033/PokePCFollowers", for_ = "compatible Gen 1 follower and overworld Pokemon sprites" },
+    { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork and voxel camera integration" },
+    { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape voxel provider and public integration surface" },
+    { who = "randyadr/3D-Pokemon-Sprites", for_ = "Pokemon Stadium Overworld Models integration target" },
+    { who = "DarioMelo/Gen1Recomp-MusicMods", for_ = "optional FRLG/HGSS/LGPE music providers" }
   },
   compat = { engine = ">=0.1.69 <2.0.0", modApi = 2 }
 }

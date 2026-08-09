@@ -1,0 +1,138 @@
+name: Publish compatibility prerelease
+
+on:
+  push:
+    branches:
+      - compat/wilds-of-kanto
+    paths:
+      - dramatic_sky_ride/manifest.json
+      - dramatic_sky_ride/src/**
+      - dramatic_sky_ride/audio/**
+      - dramatic_sky_ride/README.md
+      - dramatic_sky_ride/CHANGELOG.md
+      - dramatic_sky_ride/RELEASE_NOTES_*.md
+      - dramatic_sky_ride/mod.card
+      - .github/workflows/compat-prerelease.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dsr-compat-prerelease
+  cancel-in-progress: true
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out compatibility branch
+        uses: actions/checkout@v4
+
+      - name: Read and validate prerelease version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          case "$VERSION" in
+            *-rc.*|*-beta.*|*-alpha.*) ;;
+            *) echo "Compatibility workflow refuses to publish a stable version: $VERSION" >&2; exit 1 ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "archive=dramatic-sky-ride-$VERSION.zip" >> "$GITHUB_OUTPUT"
+          echo "notes=dramatic_sky_ride/RELEASE_NOTES_$VERSION.md" >> "$GITHUB_OUTPUT"
+
+      - name: Install LuaJIT
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit
+
+      - name: Validate compatibility source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+
+          if grep -R -n -F 'require("src.link.Json")' dramatic_sky_ride/src \
+             || grep -R -n -F 'Json.decode' dramatic_sky_ride/src; then
+            echo "Compatibility source must not depend on network-gated src.link.Json" >&2
+            exit 1
+          fi
+
+          : > /tmp/dramatic_sky_ride.lua
+          while IFS= read -r part; do
+            test -n "$part" || continue
+            test -f "dramatic_sky_ride/src/$part"
+            cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
+          done < dramatic_sky_ride/src/parts.txt
+
+          luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
+          luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
+          luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
+          test -f "${{ steps.version.outputs.notes }}"
+          echo "Repository runtime concat lines: $(wc -l < /tmp/dramatic_sky_ride.lua)"
+
+      - name: Build launcher-ready archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          (
+            cd dramatic_sky_ride
+            zip -qr "../$ARCHIVE" . \
+              -x "*/__pycache__/*" "*.pyc" "*.pyo" ".DS_Store" "Thumbs.db"
+          )
+          unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'src/main_29_flying_music.lua'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'src/main_28_stadium_compat.lua'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'src/main_27_wilds_compat.lua'
+          unzip -t "$ARCHIVE"
+
+      - name: Validate exact release ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          rm -rf /tmp/dsr-release-check
+          mkdir -p /tmp/dsr-release-check
+          unzip -q "$ARCHIVE" -d /tmp/dsr-release-check
+          python -m json.tool /tmp/dsr-release-check/manifest.json > /dev/null
+
+          : > /tmp/dsr-release-sky-ride.lua
+          while IFS= read -r part; do
+            test -n "$part" || continue
+            cat "/tmp/dsr-release-check/src/$part" >> /tmp/dsr-release-sky-ride.lua
+          done < /tmp/dsr-release-check/src/parts.txt
+
+          luajit -b /tmp/dsr-release-sky-ride.lua /tmp/dsr-release-sky-ride.ljbc
+          luajit -b /tmp/dsr-release-check/main.lua /tmp/dsr-release-main.ljbc
+          luajit -b /tmp/dsr-release-check/mod.card /tmp/dsr-release-card.ljbc
+          sha256sum "$ARCHIVE"
+
+      - name: Create or update compatibility prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          ARCHIVE: ${{ steps.version.outputs.archive }}
+          VERSION: ${{ steps.version.outputs.version }}
+          NOTES: ${{ steps.version.outputs.notes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ARCHIVE" --clobber
+            gh release edit "$TAG" \
+              --title "Dramatic Sky Ride $VERSION" \
+              --notes-file "$NOTES" \
+              --prerelease
+          else
+            gh release create "$TAG" "$ARCHIVE" \
+              --target "$GITHUB_SHA" \
+              --title "Dramatic Sky Ride $VERSION" \
+              --notes-file "$NOTES" \
+              --prerelease
+          fi

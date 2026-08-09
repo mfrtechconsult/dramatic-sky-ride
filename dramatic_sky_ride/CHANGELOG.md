@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4
+
+- Raised the supported Dramaless Shape baseline to `DRAMALESS_SHAPE >=1.6.4 <2.0.0`.
+- Dramaless Shape 1.6.4 keeps the public `exports.lib` API and `st_voxel` pipeline used by DSR while fixing the 1ST/3RD menu softlock and camera-control issues present in 1.6.3.
+- Battle Art Voxel Fork remains supported at `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`; its latest release and `feature/battle-art` branch are still identical at 1.7.6.
+- No flight, Ground Ride, visible Surf or Wild Skies gameplay behavior changed in this compatibility release.
+
 ## 0.1.3
 
 - Added Dramaless Shape (`DRAMALESS_SHAPE`) as a supported alternative voxel provider alongside Battle Art Voxel Fork.

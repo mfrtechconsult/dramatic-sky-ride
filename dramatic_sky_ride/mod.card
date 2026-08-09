@@ -1,14 +1,19 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork, required overworld Pokemon sprites, story-aware progression and strongly recommended Wild Skies encounters.",
+  summary = "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork or Dramaless Shape, required overworld Pokemon sprites, global mount speed controls and strongly recommended Wild Skies encounters.",
   author = "MFR TechConsult",
-  tags = { "battle-art-voxel", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
+  tags = { "battle-art-voxel", "dramaless-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
     changed = {
-      "Battle Art Voxel Fork 1.7.6+ is the primary required voxel provider",
-      "PokePC Followers (W/Voxel Support) is required as the overworld Pokemon/NPC sprite provider",
-      "keyboard flight shortcut is H instead of F to avoid Gen1PC Overworld Encounters' follower-attack binding",
+      "Battle Art Voxel Fork 1.7.6+ or Dramaless Shape can provide the voxel runtime DSR integrates with",
+      "Battle Art remains preferred automatically if both supported voxel providers are installed",
+      "Dramaless uses J for Ground Ride because it reserves G for V-GRID; controller X/Y remain unchanged",
+      "global FLIGHT SPEED and GROUND SPEED settings scale all mounts from 50% to 200% while retaining species profiles, boost and gallop",
+      "Ground Ride ledge jumps no longer display the temporary JUMP notice",
+      "visible Surf activation no longer displays the Visible Surf mount active dialog",
+      "PokePC Followers (W/Voxel Support) remains required as the overworld Pokemon/NPC sprite provider",
+      "keyboard flight shortcut remains H instead of F to avoid Gen1PC Overworld Encounters' follower-attack binding",
       "Wild Skies 1.4.1+ is strongly recommended and aerial interceptions use a forgiving two-cell envelope",
-      "water is ignored only for Battle Art's 3RD camera boom while surfing, keeping the trainer and Surf mount visible without changing 1ST",
+      "water is ignored only for the voxel 3RD camera boom while surfing, keeping the trainer and Surf mount visible without changing 1ST",
       "large, logically rideable Gen 1 flyers gain a RIDE & FLY party action outdoors",
       "FLY can be required for takeoff and THUNDERBADGE can gate flight like the vanilla field move",
       "SOULBADGE can gate automatic water landings while retaining the existing SURF-user requirement",
@@ -22,9 +27,13 @@ return {
       "flight altitude and rider rendering survive wild and trainer battles"
     },
     added = {
-      "Battle Art Voxel Fork provider-first selection through its public exports.lib API",
+      "Dramaless Shape provider support through its public exports.lib API and st_voxel pipeline",
+      "provider-aware voxel pipeline selection for Battle Art and Dramaless",
+      "global Flight and Ground Ride speed controls in the mod options menu",
+      "speed scaling for grid/orbit movement, 1ST/3RD FreeMove and connected-map continuity",
+      "Battle Art provider-first selection through its public exports.lib API",
       "Battle Art staged-battle lifecycle protection for Ground Ride mount entities",
-      "Surf-specific Battle Art 3RD camera collision compatibility over water",
+      "Surf-specific 3RD camera collision compatibility over water",
       "optional but strongly recommended Wild Skies integration through its documented public exports",
       "Wild Skies flyers prefer real species follower/overworld sprites when available",
       "mid-air interception consumes the exact Wild Skies species and level and restores DSR flight after battle",
@@ -43,7 +52,8 @@ return {
     }
   },
   credits = {
-    { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork, primary voxel provider, cameras and 3D battle presentation" },
+    { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork, supported voxel provider, cameras and 3D battle presentation" },
+    { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape supported voxel provider and st_voxel integration surface" },
     { who = "DramaticShape/DramaticShapeVoxelMod", for_ = "original voxel architecture" },
     { who = "gamecorner-033/PokePCFollowers", for_ = "required Gen 1 overworld Pokemon sprite provider" },
     { who = "ShaneHudson/gen1recomp-mods", for_ = "Wild Skies public integration seams and airborne ecosystem" }

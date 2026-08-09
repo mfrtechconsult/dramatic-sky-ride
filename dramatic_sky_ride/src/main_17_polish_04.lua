@@ -11,7 +11,6 @@ local function activateWaterRide(game, requested)
   playSpeciesCry(species)
   if mountOption("mount_hints", true) and not mountHintsShown.water then
     mountHintsShown.water = true
-    say(game, "Visible Surf mount active.")
   end
   return true
 end

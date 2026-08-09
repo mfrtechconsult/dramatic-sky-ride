@@ -6,7 +6,6 @@ function OverworldState:checkLedgeHop(dir)
   if nativeCheckLedgeHop(self, dir) then
     if ground.active then
       ground.jumpPulse = 0.35
-      groundNotice("JUMP", 0.55)
       rumble(0.14, 0.24, 0.12)
     end
     return true
@@ -33,7 +32,6 @@ function OverworldState:checkLedgeHop(dir)
     require("src.core.Sound").play(Game.data, "Ledge")
     p.hopFrames, p.hopTotal = 32, 32
     ground.jumpPulse = 0.35
-    groundNotice("JUMP", 0.55)
     self:scriptMove(p, dir, 1, function() self:checkEdgeExit(dir) end)
     return true
   end
@@ -45,7 +43,6 @@ function OverworldState:checkLedgeHop(dir)
   require("src.core.Sound").play(Game.data, "Ledge")
   p.hopFrames, p.hopTotal = 32, 32
   ground.jumpPulse = 0.35
-  groundNotice("JUMP", 0.55)
   rumble(0.14, 0.24, 0.12)
   self:scriptMove(p, dir, 2)
   return true
@@ -58,7 +55,8 @@ mod.hooks:wrap("movement.speed", function(next, frames, ctx)
   local value = next(frames, ctx)
   if not ground.active then return value end
   local profile = GROUND_PROFILES[ground.species] or GROUND_PROFILES.TAUROS
-  local multiplier = profile.base * (1 + (profile.gallop - 1) * (ground.speedBlend or 0))
+  local multiplier = mountSpeedMultiplier("ground_speed")
+    * profile.base * (1 + (profile.gallop - 1) * (ground.speedBlend or 0))
   return math.max(3, (tonumber(value) or tonumber(frames) or 8) / multiplier)
 end, 95)
 
@@ -72,7 +70,7 @@ if dramaticFreeMove and not dramaticFreeMove.dramaticGroundRideSpeedHook then
     local oldWalk, oldBike = dramaticFreeMove.WALK, dramaticFreeMove.BIKE
     if ground.active and isFreeCamera() then
       local profile = GROUND_PROFILES[ground.species] or GROUND_PROFILES.TAUROS
-      local multiplier = profile.base
+      local multiplier = mountSpeedMultiplier("ground_speed") * profile.base
         * (1 + (profile.gallop - 1) * (ground.speedBlend or 0))
       local bicycleSpeed = tonumber(oldBike) or 2
       dramaticFreeMove.WALK = bicycleSpeed * multiplier

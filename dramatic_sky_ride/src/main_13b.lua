@@ -14,8 +14,14 @@ end
 
 mod.hooks:wrap("movement.speed", function(next, frames, ctx)
   local value = next(frames, ctx)
-  if flight.active and not isFreeCamera() and flightBoostEnabled() then
-    local multiplier = 1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0)
+  if flight.active and not isFreeCamera() then
+    local speedPercent = tonumber(optionValue("flight_speed", 100)) or 100
+    speedPercent = math.max(50, math.min(200, speedPercent))
+    local multiplier = speedPercent / 100
+    if flightBoostEnabled() then
+      multiplier = multiplier
+        * (1 + (BOOST_MAX_MULTIPLIER - 1) * (flight.boost or 0))
+    end
     return math.max(4, (tonumber(value) or tonumber(frames) or 16) / multiplier)
   end
   return value

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.3
+
+- Added Dramaless Shape (`DRAMALESS_SHAPE`) as a supported alternative voxel provider alongside Battle Art Voxel Fork.
+- Provider integration now uses the selected provider's public `exports.lib` API and exported voxel pipeline id (`voxel` or `st_voxel`).
+- Battle Art Voxel Fork remains preferred when both supported providers are installed.
+- Added global `FLIGHT SPEED` and `GROUND SPEED` options from 50% to 200%, while preserving species-specific profiles, Flight boost and Ground gallop behavior.
+- Applied the global speed multipliers to standard movement, voxel 1ST/3RD FreeMove and seamless connected-map movement paths.
+- When Dramaless is selected, Ground Ride automatically uses `J` because Dramaless reserves `G` for V-GRID; controller `X`/`Y` controls remain unchanged.
+- Removed the temporary Ground Ride `JUMP` notice while keeping jump animation, audio, rumble and landing feedback.
+- Removed the `Visible Surf mount active.` activation dialog without changing visible Surf behavior.
+- Retained the 0.1.2 Surf 3RD camera correction and Wild Skies 1.4.1+ two-cell interception envelope.
+
 ## 0.1.2
 
 - Fixed visible Surf in Battle Art Voxel Fork `3RD`: water cells no longer collapse the third-person camera boom as if they were pedestrian obstacles, so the trainer and Surf mount remain visible at normal camera angles.
@@ -35,7 +47,7 @@
 
 ## 0.1.0-alpha.16.4
 
-- Added `DISCOVERY GATES`: airborne traversal cannot enter canonical vanilla routes/cities until that map has been reached through normal non-DSR-flight gameplay.
+- Added `DISCOVERY GATES`: airborne traversal cannot enter canonical vanilla Kanto routes/cities until that map has been reached through normal non-DSR-flight gameplay.
 - Progression discovery is stored per save through `mod.save`; walking, Ground Ride, Surf and ordinary/scripted non-flight entries count as legitimate visits, while DSR flight entries do not.
 - Saffron City and unvisited vanilla routes are therefore protected from first-time airborne sequence breaks even when no explicit badge gate catches the seam.
 - Unknown/custom map ids remain allowed by default for map-pack and total-conversion compatibility.

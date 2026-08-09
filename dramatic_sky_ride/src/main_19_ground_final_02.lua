@@ -151,8 +151,6 @@ local function startGroundLedgeHop(self, dir, crossesConnection)
   p.hopFrames, p.hopTotal = 32, 32
   ground.jumpWasActive = true
   ground.jumpLandingPending = true
-  ground.notice = "JUMP"
-  ground.noticeTimer = 0.55
   rumble(0.14, 0.24, 0.12)
   if crossesConnection then
     self:scriptMove(p, dir, 1, function() self:checkEdgeExit(dir) end)

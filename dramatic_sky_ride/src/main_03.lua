@@ -113,8 +113,20 @@ local function feedback(kind)
 end
 
 local function voxelLevel()
-  local ok, level = pcall(Pipelines.level, "voxel")
-  return ok and tonumber(level) or 0
+  local state = mod.exports and mod.exports._dramaticProviderState or nil
+  local selected = state and state.voxelPipeline
+  if selected then
+    local ok, level = pcall(Pipelines.level, selected)
+    if ok then return tonumber(level) or 0 end
+  end
+  -- Startup fallback before provider discovery has populated the state.
+  -- Battle Art/upstream use "voxel"; Dramaless exports "st_voxel".
+  for _, pipelineId in ipairs({ "voxel", "st_voxel" }) do
+    local ok, level = pcall(Pipelines.level, pipelineId)
+    level = ok and tonumber(level) or 0
+    if level > 0 then return level end
+  end
+  return 0
 end
 
 local function isFirstPerson()

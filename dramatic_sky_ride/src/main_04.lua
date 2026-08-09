@@ -23,8 +23,9 @@
 end
 
 -- Load only the selected voxel provider's public library. Battle Art Voxel
--- Fork is the primary/current community provider; the retired upstream
--- Dramatic Shape id remains a best-effort fallback for existing installs.
+-- Fork remains the preferred provider. Dramaless Shape is a supported
+-- alternative provider, and the retired upstream Dramatic Shape id remains a
+-- best-effort fallback for existing manual installs.
 -- Provider detection stays inside this already-existing function so the huge
 -- concatenated DSR chunk does not gain more top-level locals.
 local dramaticTileShape = nil
@@ -41,22 +42,31 @@ local function loadDramaticLib()
   if not mod.find then return nil end
 
   local okBattleArt, battleArt = pcall(mod.find, mod, "BATTLE_ART_VOXEL_FORK")
+  local okDramaless, dramaless = pcall(mod.find, mod, "DRAMALESS_SHAPE")
   local okUpstream, upstream = pcall(mod.find, mod, "DRAMATIC_SHAPE")
   battleArt = okBattleArt and battleArt or nil
+  dramaless = okDramaless and dramaless or nil
   upstream = okUpstream and upstream or nil
-  local handle = battleArt or upstream
+  local handle = battleArt or dramaless or upstream
+  local exports = handle and handle.exports or nil
+  local pipelines = exports and exports.pipelines or nil
+  local voxelPipeline = pipelines and pipelines.voxel
+    or (handle and handle.id == "DRAMALESS_SHAPE" and "st_voxel" or "voxel")
 
   mod.exports._dramaticProviderState = {
     upstream = upstream,
     battleArt = battleArt,
-    conflict = upstream ~= nil and battleArt ~= nil,
+    dramaless = dramaless,
+    conflict = ((battleArt and dramaless) or (battleArt and upstream)
+      or (dramaless and upstream)) ~= nil,
     handle = handle,
     id = handle and handle.id or nil,
-    version = handle and handle.version or nil,
-    primary = battleArt ~= nil,
+    version = handle and (handle.version or (exports and exports.version)) or nil,
+    voxelPipeline = voxelPipeline,
+    primary = battleArt ~= nil and handle == battleArt,
   }
 
-  local lib = handle and handle.exports and handle.exports.lib or nil
+  local lib = exports and exports.lib or nil
   if type(lib) ~= "table" or type(lib.require) ~= "function" then return nil end
   dramaticLib = lib
   return lib
@@ -96,7 +106,7 @@ local function loadDramaticTileShape()
   if dramaticTileShapeTried then return dramaticTileShape end
   dramaticTileShapeTried = true
 
-  -- Both supported providers expose their companion API through exports.lib.
+  -- Supported voxel providers expose their companion API through exports.lib.
   -- Prefer that public seam: it works whether the provider was installed
   -- unpacked or imported as a mounted ZIP by Gen1Recomp's Mod Manager.
   local exported = dramaticModule("TileShape")

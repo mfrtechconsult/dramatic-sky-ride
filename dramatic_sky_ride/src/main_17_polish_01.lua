@@ -9,6 +9,12 @@ local function mountOption(key, default)
   return optionValue(key, default)
 end
 
+local function mountSpeedMultiplier(key)
+  local percent = tonumber(mountOption(key, 100)) or 100
+  percent = math.max(50, math.min(200, percent))
+  return percent / 100
+end
+
 local MOUNT_OPTION_SCHEMA = {
     { key = "mount_cries", type = "toggle", label = "MOUNT CRIES", default = true,
       help = "Play the selected Pokemon's cry when mounting or taking off." },
@@ -90,7 +96,9 @@ startGroundRide = function(game, mon)
   playSpeciesCry(ground.species)
   if mountOption("mount_hints", true) and not mountHintsShown.ground then
     mountHintsShown.ground = true
-    groundNotice("G DISMOUNT  B GALLOP", 3.0)
+    local provider = mod.exports and mod.exports._dramaticProviderState or nil
+    local key = provider and provider.id == "DRAMALESS_SHAPE" and "J" or "G"
+    groundNotice(key .. " DISMOUNT  B GALLOP", 3.0)
   end
   return true
 end
@@ -105,7 +113,7 @@ startFlight = function(game, mon)
     playSpeciesCry(flight.species)
     if mountOption("mount_hints", true) and not mountHintsShown.flight then
       mountHintsShown.flight = true
-      notifyHud("F LAND  B BOOST", 3.0)
+      notifyHud("H LAND  B BOOST", 3.0)
     end
   end
   return ok

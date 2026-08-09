@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.3-test.3",
+  "version": "0.1.3",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -24,6 +24,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "experimental": true,
-  "description": "Full test build: Battle Art or Dramaless Shape voxel provider support, global Flight/Ground speed controls, quieter Ground/Surf notices and Wild Skies integration."
+  "description": "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork or Dramaless Shape, required PokePC overworld sprites, global mount speed controls and strongly recommended Wild Skies integration.",
+  "github": "mfrtechconsult/dramatic-sky-ride"
 }

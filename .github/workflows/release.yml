@@ -91,24 +91,32 @@ jobs:
         shell: bash
         run: |
           cat > /tmp/release-notes.md <<'NOTES'
-          ## Dramatic Sky Ride 0.1.2
+          ## Dramatic Sky Ride 0.1.3
 
-          Small compatibility and quality-of-life release focused on Surf camera behavior and Wild Skies encounters.
+          This release adds a second supported voxel provider, global mount speed controls and a quieter ride experience while keeping the Surf and Wild Skies improvements from 0.1.2.
 
-          ### Required mods
-          - **Battle Art Voxel Fork 1.7.6+** (`BATTLE_ART_VOXEL_FORK`) is the required voxel provider.
+          ### Voxel provider — install one
+          - **Battle Art Voxel Fork 1.7.6+** (`BATTLE_ART_VOXEL_FORK`)
+          - **Dramaless Shape** (`DRAMALESS_SHAPE`)
+
+          DSR uses the providers' public `exports.lib` interfaces and selects the correct voxel pipeline (`voxel` or `st_voxel`). If both are installed, Battle Art is preferred.
+
+          ### Required mod
           - **PokéPC Followers (W/Voxel Support)** (`PokePCFollowers_VoxelMerge`) is required for the Pokémon overworld/NPC sprites used by mounts.
 
           ### Wild Skies — strongly recommended
           **Wild Skies 1.4.1+ is strongly recommended.** DSR works without it, but DSR + Wild Skies is the intended airborne setup: visible Pokémon populate the sky and can be intercepted into battles against the exact visible species and level.
 
-          ### 0.1.2 changes
-          - Fixed **Surf in Battle Art 3RD**: water no longer collapses the third-person camera boom, so the trainer and Surf mount remain visible at normal camera angles.
-          - Kept **1ST** as true first-person; DSR does not force the trainer or mount into the camera.
-          - Increased the Wild Skies interception envelope from one cell to **two cells**, making mid-air encounters much easier with Wild Skies 1.4.1's moving three-dimensional flocks.
-          - Wild Skies remains separate and optional; DSR continues to integrate only through its public API.
-
-          Controls remain **H = Flight**, **G = Ground Ride**, **X = Flight** and **Y = Ground Ride** on controller.
+          ### 0.1.3 changes
+          - Added **Dramaless Shape compatibility** as an alternative to Battle Art Voxel Fork.
+          - Added global **FLIGHT SPEED** and **GROUND SPEED** settings from 50% to 200%.
+          - Speed settings preserve species-specific differences and continue to stack with Flight boost and Ground gallop.
+          - Removed the Ground Ride `JUMP` notice while keeping jump animation, audio, rumble and landing feedback.
+          - Removed the `Visible Surf mount active.` activation dialog without changing Surf behavior.
+          - With Battle Art: **H = Flight / G = Ground Ride**.
+          - With Dramaless: **H = Flight / J = Ground Ride**, because Dramaless reserves G for V-GRID.
+          - Controller controls remain **X = Flight / Y = Ground Ride** with either provider.
+          - Keeps the Surf `3RD` camera fix and the more forgiving two-cell Wild Skies interception envelope from 0.1.2.
 
           `free_fly` remains a conflicting alternative flight engine.
 

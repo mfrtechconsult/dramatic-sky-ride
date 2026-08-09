@@ -35,8 +35,7 @@ local function followerAssetForDex(dex)
       local asset = root .. "/assets/sprites/" .. filename
       if fileExists(asset) then
         local raw = love.filesystem.read(root .. "/manifest.json")
-        local decoded = raw and Json.decode(raw) or nil
-        local id = decoded and decoded.id
+        local id = manifestId(raw)
         if id and FOLLOWER_IDS[id] then return asset end
         fallback = fallback or asset
       end

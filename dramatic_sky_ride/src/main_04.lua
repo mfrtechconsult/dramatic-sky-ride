@@ -50,8 +50,10 @@ local function loadDramaticLib()
   local handle = battleArt or dramaless or upstream
   local exports = handle and handle.exports or nil
   local pipelines = exports and exports.pipelines or nil
-  local voxelPipeline = pipelines and pipelines.voxel
-    or (handle and handle.id == "DRAMALESS_SHAPE" and "st_voxel" or "voxel")
+  -- Current Battle Art and Dramaless releases both register the canonical
+  -- "voxel" render pipeline. Respect an explicit provider export if one is
+  -- added later, otherwise use that canonical id for every supported provider.
+  local voxelPipeline = pipelines and pipelines.voxel or "voxel"
 
   mod.exports._dramaticProviderState = {
     upstream = upstream,
@@ -65,6 +67,15 @@ local function loadDramaticLib()
     voxelPipeline = voxelPipeline,
     primary = battleArt ~= nil and handle == battleArt,
   }
+
+  if handle then
+    local okLevel, currentLevel = pcall(Pipelines.level, voxelPipeline)
+    log("Voxel provider: %s %s / pipeline: %s / level: %s",
+      tostring(handle.id),
+      tostring(handle.version or (exports and exports.version) or "unknown"),
+      tostring(voxelPipeline),
+      tostring(okLevel and (tonumber(currentLevel) or 0) or "unavailable"))
+  end
 
   local lib = exports and exports.lib or nil
   if type(lib) ~= "table" or type(lib.require) ~= "function" then return nil end

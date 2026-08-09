@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.6-rc.2 — development
+
+- Added native flat-2D flight. An active voxel pipeline is no longer required to take off.
+- Reused the existing renderer-independent flight state, collision, altitude, progression, encounter and battle logic rather than creating a second 2D flight engine.
+- Added deterministic flat composition: the trainer is drawn first and the mount second so the Pokémon body hides the rider crop line and reads as a seated ride.
+- Removed the separate rider entity from flat 2D while retaining it for voxel rendering, preventing duplicate Red sprites and y-sort-dependent seating.
+- Reused existing Pokédex-proportional mount sizing and per-species size controls in flat 2D.
+- Added `FLIGHT RENDERER` with **2D SPRITES** as the default/preferred choice and **STADIUM 3D** as an explicit opt-in.
+- Stadium 3D becomes effective only when Pokémon Stadium Overworld Models is installed and a voxel pipeline is active; otherwise DSR falls back to 2D without refusing takeoff.
+- Kept the canonical renderer-independent compatibility surface aligned with the Free Fly/Wild Skies ecosystem: `isFlying()`, `altitude()` and `mount()`.
+- Added `flightRendering` inspection and upgraded `stadiumCompatibility` to API 2 with requested/effective renderer state.
+- Kept the existing `currentAltitude()` Stadium alias, but `mountSpecies()` is now gated by effective Stadium 3D opt-in so installing Stadium alone does not select a 3D DSR mount.
+- `currentLift()` remains intentionally unimplemented rather than publishing an approximate value with incompatible semantics.
+- Added a ROM-free no-voxel regression that loads DSR with Wilds/PokéPC and asserts 2D is the default/effective renderer.
+- Compatibility prerelease publication is now manual; normal development pushes continue to run CI without mutating an already published RC/tag.
+
 ## 0.1.6-rc.1 — compatibility preview
 
 - Added Wilds of Kanto (`overworld_wild_spawns`) as a compatible authoritative follower/sprite runtime.

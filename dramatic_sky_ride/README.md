@@ -35,6 +35,13 @@ DSR can obtain compatible overworld Pokémon art from:
 
 When Wilds of Kanto is present it can remain the authoritative follower runtime, avoiding two mods competing for follower lifecycle ownership.
 
+Third-party sprite packs can also dress DSR's **airborne 2D mount** through the same small contract used by Shane's Free Fly / Wild Skies family:
+
+- `registerSpriteSource({ id|mod, resolve(exports, game, species, dex) })`;
+- `unregisterSpriteSource(id)`.
+
+The resolver returns an animated walker-style SpriteRenderer definition (`image`, `frames`, `walker`, `trueColor`). Registered sources take priority over DSR's built-in Wilds/PokéPC adapters and are re-consulted when the source mod changes options. This registry deliberately controls 2D art only; Stadium models remain a separate explicit renderer.
+
 ## Public flight compatibility
 
 The stable renderer-independent state follows the same small shape used by Shane's Free Fly ecosystem:

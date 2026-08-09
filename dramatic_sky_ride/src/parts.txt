@@ -50,3 +50,4 @@ main_14.lua
 main_27_wilds_compat.lua
 main_28_stadium_compat.lua
 main_29_flying_music.lua
+main_30_flat_flight.lua

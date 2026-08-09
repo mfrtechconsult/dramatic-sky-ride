@@ -71,7 +71,8 @@
 
   -- mod.find exposes the active mod handle but not its filesystem root. Scan
   -- the same mods directory as the loader and match by manifest id, so renamed
-  -- install folders still work.
+  -- install folders still work. `manifestId` is the tiny parser from main_01;
+  -- this intentionally avoids importing src.link.Json, which is network-gated.
   local function installedModRoot(id)
     if not activeMod(id) then return nil end
     local fs = love and love.filesystem
@@ -83,11 +84,8 @@
     for _, name in ipairs(names) do
       local root = "mods/" .. tostring(name)
       local okRead, raw = pcall(fs.read, root .. "/manifest.json")
-      if okRead and type(raw) == "string" then
-        local okDecode, manifest = pcall(Json.decode, raw)
-        if okDecode and type(manifest) == "table" and manifest.id == id then
-          return root
-        end
+      if okRead and type(raw) == "string" and manifestId(raw) == id then
+        return root
       end
     end
     return nil

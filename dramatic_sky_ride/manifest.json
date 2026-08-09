@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.6-rc.1",
+  "version": "0.1.6-rc.2",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -27,6 +27,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork or Dramaless Shape, using compatible follower sprites from Wilds of Kanto or PokePC Followers, Pokemon Stadium 3D compatibility, optional music-pack integration, global mount speed controls and Wild Skies integration.",
+  "description": "Ride Gen 1 Pokemon on land, water and in the air with native 2D flight by default, optional voxel and Stadium 3D rendering, Wilds of Kanto or PokePC follower sprites, optional flight music and Wild Skies integration.",
   "github": "mfrtechconsult/dramatic-sky-ride"
 }

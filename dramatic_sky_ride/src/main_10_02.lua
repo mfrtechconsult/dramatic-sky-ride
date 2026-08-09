@@ -1,8 +1,4 @@
   end
-  if not isSupportedVoxelMode() then
-    unsupportedVoxelMessage(game)
-    return false
-  end
   if not isOutdoor(ow) then
     say(game, "You can only take\noff outdoors.")
     return false
@@ -28,6 +24,8 @@
     return false
   end
 
+  -- 2D is a first-class flight renderer. A voxel provider is optional and,
+  -- when enabled, consumes the same flight state through Player:pose().
   -- Taking off from water is the reverse of a water landing: leave the
   -- native surf state first, then let Sky Ride own movement and collision.
   -- This is done only after the mount sprite has loaded successfully, so a

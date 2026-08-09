@@ -4,7 +4,7 @@ return {
   tags = { "battle-art-voxel", "dramaless-shape", "flying", "mount", "ground-ride", "surf", "voxel", "wild-skies" },
   differences = {
     changed = {
-      "Battle Art Voxel Fork 1.7.6+ or Dramaless Shape can provide the voxel runtime DSR integrates with",
+      "Battle Art Voxel Fork 1.7.6+ or Dramaless Shape 1.6.4+ can provide the voxel runtime DSR integrates with",
       "Battle Art remains preferred automatically if both supported voxel providers are installed",
       "Dramaless uses J for Ground Ride because it reserves G for V-GRID; controller X/Y remain unchanged",
       "global FLIGHT SPEED and GROUND SPEED settings scale all mounts from 50% to 200% while retaining species profiles, boost and gallop",
@@ -27,7 +27,8 @@ return {
       "flight altitude and rider rendering survive wild and trainer battles"
     },
     added = {
-      "Dramaless Shape provider support through its public exports.lib API and st_voxel pipeline",
+      "Dramaless Shape 1.6.4+ provider support through its public exports.lib API and st_voxel pipeline",
+      "Dramaless Shape 1.6.4 baseline avoids the 1ST/3RD menu softlock and camera-control issues fixed upstream",
       "provider-aware voxel pipeline selection for Battle Art and Dramaless",
       "global Flight and Ground Ride speed controls in the mod options menu",
       "speed scaling for grid/orbit movement, 1ST/3RD FreeMove and connected-map continuity",

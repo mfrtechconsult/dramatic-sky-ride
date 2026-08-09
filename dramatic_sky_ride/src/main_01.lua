@@ -13,7 +13,6 @@
 local mod = ...
 
 local Game = require("src.core.Game")
-local Json = require("src.link.Json")
 local Map = require("src.world.Map")
 local Player = require("src.world.Player")
 local Collision = require("src.world.Collision")
@@ -26,6 +25,14 @@ local Font = require("src.render.Font")
 local OverworldState = require("src.world.OverworldController")
 local PikachuFollower = require("src.world.PikachuFollower")
 local unpackArgs = table.unpack or unpack
+
+-- These compatibility fallbacks only need the top-level manifest id. Avoid
+-- importing src.link.Json for that tiny read: Gen1Recomp correctly treats all
+-- src.link.* modules as network-gated even when used only as a JSON parser.
+local function manifestId(raw)
+  if type(raw) ~= "string" then return nil end
+  return raw:match('"id"%s*:%s*"([^"]+)"')
+end
 
 local VOXEL_FULL_LEVEL = 1
 local FIRST_PERSON_LEVEL = 6

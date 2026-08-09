@@ -110,11 +110,11 @@ end
 -- Some follower runtimes restore OverworldController.update to a previously
 -- captured function after all mods have loaded. Sky Ride's existing update
 -- wrapper is intentionally left unchanged. We instrument its `update`
--- upvalue with a heartbeat; if a real overworld frame runs while flying and
--- that heartbeat is absent, the wrapper is no longer anywhere in the active
--- chain. Only then do we retarget it around the CURRENT handler. We never
--- restore an old global function, so healthy wrappers from Battle Art,
--- Dramaless, Wilds, or unrelated mods remain composed.
+-- upvalue with a heartbeat; if a real LOGIC STEP runs while flying and that
+-- heartbeat is absent, the wrapper is no longer anywhere in the active chain.
+-- Only then do we retarget it around the CURRENT handler. We never restore an
+-- old global function, so healthy wrappers from Battle Art, Dramaless, Wilds,
+-- or unrelated mods remain composed.
 -- -------------------------------------------------------------------------
 local skyRideCoreUpdate = OverworldState.update
 local skyRideUpdateHeartbeat = 0
@@ -167,22 +167,34 @@ local function recoverSkyRideUpdate(reason)
   return true
 end
 
-local gameUpdateBeforeCompat = Game.update
-if skyRideGuardReady and type(gameUpdateBeforeCompat) == "function" then
-  local function gameUpdateCompatGuard(...)
+-- Game.step is the fixed logic boundary. Using Game.update here would be
+-- unsafe because a high-refresh display can render a frame without executing
+-- a fixed step, which would look like a missing heartbeat even when the hook
+-- chain is healthy.
+local gameStepBeforeCompat = Game.step
+if skyRideGuardReady and type(gameStepBeforeCompat) == "function" then
+  local function gameStepCompatGuard(...)
+    local owBefore = Game.overworld
+    local stackBefore = Game.stack
+    local topBefore = stackBefore and stackBefore.top and stackBefore:top() or nil
+    local expectedOverworldTick = owBefore ~= nil
+      and (not stackBefore or topBefore == owBefore)
     local before = skyRideUpdateHeartbeat
-    local a, b, c, d, e = gameUpdateBeforeCompat(...)
 
-    local ow = Game.overworld
-    local stack = Game.stack
-    local top = stack and stack.top and stack:top() or nil
-    local overworldRunning = ow ~= nil and (not stack or top == ow)
-    if flight.active and overworldRunning and skyRideUpdateHeartbeat == before then
-      recoverSkyRideUpdate("active-flight heartbeat")
+    local a, b, c, d, e = gameStepBeforeCompat(...)
+
+    local owAfter = Game.overworld
+    local stackAfter = Game.stack
+    local topAfter = stackAfter and stackAfter.top and stackAfter:top() or nil
+    local stillInOverworld = owAfter ~= nil
+      and (not stackAfter or topAfter == owAfter)
+    if flight.active and expectedOverworldTick and stillInOverworld
+        and skyRideUpdateHeartbeat == before then
+      recoverSkyRideUpdate("active-flight logic heartbeat")
     end
     return a, b, c, d, e
   end
-  Game.update = gameUpdateCompatGuard
+  Game.step = gameStepCompatGuard
 end
 
 mod.exports.wildsCompatibility = {

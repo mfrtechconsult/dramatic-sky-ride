@@ -192,9 +192,19 @@ local function recoverSkyRideUpdate(reason)
   end
   OverworldState.update = skyRideRootUpdate
   skyRideHookRecoveries = skyRideHookRecoveries + 1
-  log("Flight update hook was displaced; full DSR chain reattached (%s)",
+  log("Mount update hook was displaced; full DSR chain reattached (%s)",
       tostring(reason or "heartbeat"))
   return true
+end
+
+local function skyRideRuntimeActive()
+  if flight.active or (ground and ground.active) then return true end
+  local isWater = mod.exports and mod.exports.isWaterRiding
+  if type(isWater) == "function" then
+    local ok, active = pcall(isWater)
+    if ok and active == true then return true end
+  end
+  return false
 end
 
 -- Game.step is the fixed logic boundary. Using Game.update here would be
@@ -218,9 +228,9 @@ if skyRideGuardReady and type(gameStepBeforeCompat) == "function" then
     local topAfter = stackAfter and stackAfter.top and stackAfter:top() or nil
     local stillInOverworld = owAfter ~= nil
       and (not stackAfter or topAfter == owAfter)
-    if flight.active and expectedOverworldTick and stillInOverworld
+    if skyRideRuntimeActive() and expectedOverworldTick and stillInOverworld
         and skyRideUpdateHeartbeat == before then
-      recoverSkyRideUpdate("active-flight logic heartbeat")
+      recoverSkyRideUpdate("active-mount logic heartbeat")
     end
     return a, b, c, d, e
   end

@@ -24,7 +24,7 @@
   if not sprite then
     mod.log:error("unable to build %s mount sprite: %s",
                   tostring(species or mon.species), tostring(reason))
-    say(game, "PokePC follower\nsprites are missing.")
+    say(game, "Follower sprites\nare missing.")
     return false
   end
 

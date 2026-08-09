@@ -99,6 +99,9 @@ jobs:
           assert sky["dependencies"] == []
           assert "overworld_wild_spawns" in sky["optional_dependencies"]
           assert "PokePCFollowers_VoxelMerge" in sky["optional_dependencies"]
+          assert "Music_FRLG" in sky["optional_dependencies"]
+          assert "Music_HGSS" in sky["optional_dependencies"]
+          assert "Music_LGPE" in sky["optional_dependencies"]
 
           assert deep["dependencies"] == []
           assert "overworld_wild_spawns" in deep["optional_dependencies"]
@@ -180,3 +183,102 @@ jobs:
           PROVIDER_ID: BATTLE_ART_VOXEL_FORK
           STACK_TARGET: kanto
         run: luajit ../sky/tests/wilds_loader_stack.lua
+
+  publish-prerelease:
+    name: Publish compatibility prerelease
+    needs: headless-compat
+    if: github.event_name == 'push' && github.ref_name == 'compat/wilds-of-kanto'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v4
+
+      - name: Read RC version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          case "$VERSION" in
+            *-rc.*|*-beta.*|*-alpha.*) ;;
+            *) echo "Refusing to publish non-prerelease version from compatibility branch: $VERSION" >&2; exit 1 ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "archive=dramatic-sky-ride-$VERSION.zip" >> "$GITHUB_OUTPUT"
+          echo "notes=dramatic_sky_ride/RELEASE_NOTES_$VERSION.md" >> "$GITHUB_OUTPUT"
+
+      - name: Install LuaJIT
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit
+
+      - name: Build launcher-ready ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          NOTES="${{ steps.version.outputs.notes }}"
+          test -f "$NOTES"
+
+          (
+            cd dramatic_sky_ride
+            zip -qr "../$ARCHIVE" . \
+              -x "*/__pycache__/*" "*.pyc" "*.pyo" ".DS_Store" "Thumbs.db"
+          )
+
+          unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'src/main_27_wilds_compat.lua'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'src/main_28_stadium_compat.lua'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'src/main_29_flying_music.lua'
+          unzip -Z1 "$ARCHIVE" | grep -qx 'audio/flying/tracks.lua'
+          unzip -t "$ARCHIVE"
+
+      - name: Validate exact packaged runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+          rm -rf /tmp/dsr-release-check
+          mkdir -p /tmp/dsr-release-check
+          unzip -q "$ARCHIVE" -d /tmp/dsr-release-check
+          python -m json.tool /tmp/dsr-release-check/manifest.json > /dev/null
+
+          : > /tmp/dsr-release-sky-ride.lua
+          while IFS= read -r part; do
+            test -n "$part" || continue
+            cat "/tmp/dsr-release-check/src/$part" >> /tmp/dsr-release-sky-ride.lua
+          done < /tmp/dsr-release-check/src/parts.txt
+
+          luajit -b /tmp/dsr-release-sky-ride.lua /tmp/dsr-release-sky-ride.ljbc
+          luajit -b /tmp/dsr-release-check/main.lua /tmp/dsr-release-main.ljbc
+          luajit -b /tmp/dsr-release-check/mod.card /tmp/dsr-release-card.ljbc
+          sha256sum "$ARCHIVE"
+
+      - name: Create or update GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          ARCHIVE: ${{ steps.version.outputs.archive }}
+          VERSION: ${{ steps.version.outputs.version }}
+          NOTES: ${{ steps.version.outputs.notes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ARCHIVE" --clobber
+            gh release edit "$TAG" \
+              --title "Dramatic Sky Ride $VERSION" \
+              --notes-file "$NOTES" \
+              --prerelease
+          else
+            gh release create "$TAG" "$ARCHIVE" \
+              --target "$GITHUB_SHA" \
+              --title "Dramatic Sky Ride $VERSION" \
+              --notes-file "$NOTES" \
+              --prerelease
+          fi

@@ -1,44 +1,68 @@
-# Dramatic Sky Ride 0.1.5
+# Dramatic Sky Ride 0.1.6-rc.1
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
-## Required setup
+> **Compatibility preview:** `0.1.6-rc.1` is built from the `compat/wilds-of-kanto` branch so the next ecosystem update can be tested before promotion to `main`.
 
-DSR 0.1.5 supports either of the current voxel providers below. Install **one** of them:
+## Setup
 
-- **Battle Art Voxel Fork 1.7.6+** by absol89 — `BATTLE_ART_VOXEL_FORK`;
-- **Dramaless Shape 1.6.4+** by artyrambles — `DRAMALESS_SHAPE`.
+Install one supported voxel provider:
 
-If both are installed, DSR prefers Battle Art Voxel Fork.
+- **Battle Art Voxel Fork 1.7.6+** — `BATTLE_ART_VOXEL_FORK`;
+- **Dramaless Shape 1.6.4+** — `DRAMALESS_SHAPE`.
 
-Also required:
+Battle Art is preferred automatically if both are installed.
 
-- **PokéPC Followers (W/Voxel Support)** — `PokePCFollowers_VoxelMerge`, used as the overworld Pokémon/NPC sprite provider for mounts.
+For Pokémon overworld/follower sprites, this compatibility branch can work with either:
+
+- **Wilds of Kanto** — `overworld_wild_spawns`;
+- **PokéPC Followers (W/Voxel Support)** — `PokePCFollowers_VoxelMerge`.
 
 The retired `DRAMATIC_SHAPE` id remains only as a best-effort runtime fallback for older manual installations.
 
-## Strongly recommended: Wild Skies
+## Wild Skies
 
-**Wild Skies 1.4.1+ is strongly recommended.** DSR works without it, but the intended flying experience is DSR + Wild Skies: the sky becomes populated with visible Pokémon that can be intercepted in mid-air.
+**Wild Skies 1.4.1+ is strongly recommended.** DSR works without it, but DSR + Wild Skies remains the intended airborne setup: visible Pokémon populate the sky and can be intercepted into battles against the exact visible species and level.
 
-DSR integrates only through Wild Skies' public API:
+DSR integrates through Wild Skies' public API and restores the active mount/airborne state after battle.
 
-- ambient airborne Pokémon remain owned and simulated by Wild Skies;
-- visible flyers use species-specific overworld art when available;
-- intercepting a flyer starts a battle against that exact visible species and level;
-- DSR restores the mount and airborne state after battle;
-- ordinary ground encounters are suppressed while DSR is airborne;
-- the two-cell interception envelope makes visually close passes easier to engage.
+## What's new in 0.1.6-rc.1
 
-Wild Skies remains a separate optional mod and is not bundled or patched by DSR.
+### Wilds of Kanto compatibility
 
-## What's new in 0.1.5
+- Wilds of Kanto can act as an authoritative follower/sprite runtime for DSR.
+- DSR can resolve compatible mount sprites through Wilds without forcing PokéPC Followers as a hard dependency.
+- Added cooperative update-hook protection so DSR, Wilds and compatible overworld mods do not silently replace each other's update wrappers.
+- Added regression coverage for the Wilds + DSR + Deep Dive / Kanto Dive compatibility stacks.
 
-- **Dramaless voxel detection fixed.** Current Dramaless Shape registers the canonical `voxel` render pipeline, and DSR now follows that pipeline instead of assuming `st_voxel`.
-- **False VOXEL-off message fixed.** If the selected provider hint returns level 0, DSR now checks supported fallback pipeline ids before refusing takeoff.
-- **Legacy fallback retained.** `st_voxel` remains a compatibility fallback for older forks only.
-- **Battle Art unchanged.** Battle Art Voxel Fork remains preferred when both providers are installed and continues to use `voxel` exactly as before.
-- **Diagnostics improved.** DSR logs the selected voxel provider, version, pipeline and current level once during provider initialization.
+### Pokémon Stadium Overworld Models compatibility
+
+DSR now exposes a small read-only public flight API for `STADIUM_OVERWORLD_MODELS` and similar integrations:
+
+- `isFlying()`
+- `currentAltitude()`
+- `mountSpecies()`
+- `stadiumCompatibility`
+
+This allows a compatible renderer to identify the active flying Pokémon and position its 3D model at the correct airborne altitude without taking ownership of DSR movement.
+
+`currentLift()` is intentionally not exposed with an approximate value in this preview because Stadium already treats it as optional.
+
+### Flying Music
+
+A new optional **FLYING MUSIC** setting is available. `None` is the default and keeps normal map music unchanged.
+
+When compatible DarioMelo music packs are installed and enabled, DSR reuses their existing OGG files directly and adds their Surf/Bike themes as selectable flight music:
+
+- **Music-FRLG** (`Music_FRLG`): FRLG Surf / Bike;
+- **Music-HGSS** (`Music_HGSS`): HGSS Surf / Bike;
+- **Music-LGPE** (`Music_LGPE`): LGPE Surf / Bike.
+
+DSR does **not** copy or redistribute these audio assets. The source pack remains installed separately and owns its files.
+
+Battle themes, victory cues, jingles and other higher-priority music remain authoritative. Landing restores normal map or Surf music.
+
+A local `audio/flying/tracks.lua` catalog is also available for future redistributable or user-supplied flight tracks.
 
 ## Controls
 
@@ -51,87 +75,54 @@ Supported flying mounts: Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articun
 - `R2/L2` or `Page Up/Page Down`: manual altitude.
 - In voxel `1ST` / `3RD`, looking up/down can control altitude when `CAMERA ALTITUDE` is enabled.
 
-`F` is deliberately not used by DSR because Gen1PC Overworld Encounters reserves `F`/`V` for follower attacks.
-
 ### Ground Ride
 
 Supported Ground Ride mounts: Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax.
 
 - Keyboard with Battle Art: `G` toggles Ground Ride.
 - Keyboard with Dramaless Shape: `J` toggles Ground Ride because Dramaless reserves `G` for V-GRID.
-- Controller: `Y` toggles Ground Ride in free-roam with either provider.
-
-Ground Ride includes species-specific movement, gallop/stamina, dust, guarded ledge traversal, connected-map continuity and battle restoration.
+- Controller: `Y` toggles Ground Ride.
 
 ### Visible Surf
 
 Supported visible Surf mounts: Blastoise, Tentacruel, Gyarados and Lapras.
 
-Native Surf movement, collision, music and progression remain authoritative. A valid airborne water landing can continue directly into native Surf. In voxel `3RD`, DSR keeps water from incorrectly collapsing the third-person camera boom; `1ST` keeps the normal first-person behavior.
-
-## Flying Music
-
-The development branch includes an optional `FLYING MUSIC` setting. `None` is the default and leaves the current map music unchanged.
-
-When one of DarioMelo's compatible Gen1Recomp music packs is installed and enabled, DSR reuses that pack's existing OGG files directly and exposes its Surf and Bike themes as flight choices:
-
-- **Music-FRLG** (`Music_FRLG`): `FRLG - Surf`, `FRLG - Bike`;
-- **Music-HGSS** (`Music_HGSS`): `HGSS - Surf`, `HGSS - Bike`;
-- **Music-LGPE** (`Music_LGPE`): `LGPE - Surf`, `LGPE - Bike`.
-
-DSR does **not** copy or redistribute those audio assets. The source music mod remains installed separately. Battle, victory, jingle and other direct cues retain priority; while still airborne, map-theme restores return to the selected flight track. Landing restores the normal map or Surf music.
-
-A local `audio/flying/tracks.lua` catalog is also available for future redistributable or user-supplied flight tracks.
+Native Surf movement, collision, progression and music remain authoritative unless a Flying Music selection is actively replacing the map cue during DSR flight.
 
 ## Speed settings
 
 - `FLIGHT SPEED`: 50% to 200%, default 100%.
 - `GROUND SPEED`: 50% to 200%, default 100%.
 
-These are global multipliers. Species profiles remain meaningful: a faster Ground Ride species still stays faster than a slower one, and Flight boost / Ground gallop continue to stack with the selected global setting.
+Species profiles, Flight boost and Ground gallop remain meaningful on top of these multipliers.
 
 ## Progression safeguards
 
 DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES` respects data-driven story/badge gates while airborne.
 
-`DISCOVERY GATES` prevent first-time airborne entry into canonical vanilla Kanto routes/cities until those maps have been reached normally. Unknown/custom map IDs remain open by default for map packs and total conversions.
-
-## Voxel provider integration
-
-DSR uses the selected provider's public `exports.lib` interface rather than patching its rendering internals.
-
-Supported providers:
-
-- **Battle Art Voxel Fork** (`BATTLE_ART_VOXEL_FORK`) — preferred when both providers are present;
-- **Dramaless Shape** (`DRAMALESS_SHAPE`) — supported alternative using the canonical `voxel` pipeline.
-
-Integration covers voxel overworld rendering, 1ST/3RD cameras, camera-driven altitude, mount billboards, free movement, terrain-aware height handling and Surf third-person camera behavior. Battle Art staged 3D battle transitions continue to receive the existing DSR lifecycle protection.
-
-## Installation
-
-Import the release ZIP directly through the Gen1Recomp launcher. Install and enable PokéPC Followers plus one supported voxel provider before DSR.
-
-Manual layout: `mods/dramatic_sky_ride/manifest.json`.
+`DISCOVERY GATES` prevent first-time airborne entry into canonical vanilla Kanto routes/cities until those maps have been reached normally. Unknown/custom map IDs remain open by default.
 
 ## Compatibility
 
-- Required: Gen1Recomp `>=0.1.69 <2.0.0`.
-- Required: PokéPC Followers (W/Voxel Support).
+- Gen1Recomp `>=0.1.69 <2.0.0`.
 - Voxel provider: Battle Art Voxel Fork `>=1.7.6 <2.0.0` **or** Dramaless Shape `>=1.6.4 <2.0.0`.
-- Strongly recommended: Wild Skies `>=1.4.1 <2.0.0`.
-- Optional Flying Music providers: DarioMelo's `Music_FRLG`, `Music_HGSS` and `Music_LGPE` packs.
+- Pokémon sprite/follower provider on this branch: Wilds of Kanto or PokéPC Followers.
+- Wild Skies `>=1.4.1 <2.0.0` strongly recommended.
+- Optional Stadium renderer integration: `STADIUM_OVERWORLD_MODELS`.
+- Optional Flying Music providers: `Music_FRLG`, `Music_HGSS`, `Music_LGPE`.
 - `free_fly` remains a conflicting alternative player-flight engine.
-- Custom maps are permissive by default unless they explicitly opt into DSR discovery gates.
 
 ## Credits
 
 - absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork, voxel provider, cameras and 3D battle presentation.
-- artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and public `exports.lib` integration surface.
+- artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and public integration surface.
 - DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
-- gamecorner-033/PokePCFollowers — required Gen 1 overworld Pokémon sprite provider.
+- gamecorner-033/PokePCFollowers — compatible Gen 1 follower/overworld sprite provider.
+- YoDrehDenSwagAuf/overworld-spawn-mod — Wilds of Kanto follower/wild overworld ecosystem.
 - ShaneHudson/gen1recomp-mods — Wild Skies public integration API and airborne ecosystem.
-- **DarioMelo/Gen1Recomp-MusicMods** — FRLG, HGSS and LGPE music packs, OGG intro/loop convention, and optional Surf/Bike audio providers used by Flying Music when those packs are installed.
+- randyadr/3D-Pokemon-Sprites — Pokémon Stadium Overworld Models integration target.
+- DarioMelo/Gen1Recomp-MusicMods — FRLG, HGSS and LGPE music packs and OGG intro/loop convention used by optional Flying Music integration.
 
-## Bug reports
+## Testing
 
-Include Gen1Recomp version, selected voxel provider and version, PokéPC Followers version, Wild Skies version if installed, DarioMelo music pack/version if Flying Music is used, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots/logs when available.
+`0.1.6-rc.1` is a preview build. Please include Gen1Recomp version, voxel provider/version, Wilds or PokéPC setup, Wild Skies version if installed, Stadium version if installed, music pack/version if used, camera mode, mount species and reproduction steps in bug reports.

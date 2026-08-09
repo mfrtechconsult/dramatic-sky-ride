@@ -3,7 +3,7 @@
 -- DSR can discover active DarioMelo music packs and reuse their Surf / Bike
 -- OGG assets directly from the installed mod folder. No third-party audio is
 -- copied into Dramatic Sky Ride.
-;(function()
+(function()
   local Music = require("src.core.Music")
   local FLYING_MUSIC_NONE = "none"
   local FLYING_MUSIC_OPTION = "flying_music"

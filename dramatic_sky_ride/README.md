@@ -39,7 +39,6 @@ Wild Skies remains a separate optional mod and is not bundled or patched by DSR.
 - **Legacy fallback retained.** `st_voxel` remains a compatibility fallback for older forks only.
 - **Battle Art unchanged.** Battle Art Voxel Fork remains preferred when both providers are installed and continues to use `voxel` exactly as before.
 - **Diagnostics improved.** DSR logs the selected voxel provider, version, pipeline and current level once during provider initialization.
-- **No Flying Music in 0.1.5.** The experimental music work remains outside `main`.
 
 ## Controls
 
@@ -69,6 +68,20 @@ Ground Ride includes species-specific movement, gallop/stamina, dust, guarded le
 Supported visible Surf mounts: Blastoise, Tentacruel, Gyarados and Lapras.
 
 Native Surf movement, collision, music and progression remain authoritative. A valid airborne water landing can continue directly into native Surf. In voxel `3RD`, DSR keeps water from incorrectly collapsing the third-person camera boom; `1ST` keeps the normal first-person behavior.
+
+## Flying Music
+
+The development branch includes an optional `FLYING MUSIC` setting. `None` is the default and leaves the current map music unchanged.
+
+When one of DarioMelo's compatible Gen1Recomp music packs is installed and enabled, DSR reuses that pack's existing OGG files directly and exposes its Surf and Bike themes as flight choices:
+
+- **Music-FRLG** (`Music_FRLG`): `FRLG - Surf`, `FRLG - Bike`;
+- **Music-HGSS** (`Music_HGSS`): `HGSS - Surf`, `HGSS - Bike`;
+- **Music-LGPE** (`Music_LGPE`): `LGPE - Surf`, `LGPE - Bike`.
+
+DSR does **not** copy or redistribute those audio assets. The source music mod remains installed separately. Battle, victory, jingle and other direct cues retain priority; while still airborne, map-theme restores return to the selected flight track. Landing restores the normal map or Surf music.
+
+A local `audio/flying/tracks.lua` catalog is also available for future redistributable or user-supplied flight tracks.
 
 ## Speed settings
 
@@ -106,6 +119,7 @@ Manual layout: `mods/dramatic_sky_ride/manifest.json`.
 - Required: PokéPC Followers (W/Voxel Support).
 - Voxel provider: Battle Art Voxel Fork `>=1.7.6 <2.0.0` **or** Dramaless Shape `>=1.6.4 <2.0.0`.
 - Strongly recommended: Wild Skies `>=1.4.1 <2.0.0`.
+- Optional Flying Music providers: DarioMelo's `Music_FRLG`, `Music_HGSS` and `Music_LGPE` packs.
 - `free_fly` remains a conflicting alternative player-flight engine.
 - Custom maps are permissive by default unless they explicitly opt into DSR discovery gates.
 
@@ -116,7 +130,8 @@ Manual layout: `mods/dramatic_sky_ride/manifest.json`.
 - DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
 - gamecorner-033/PokePCFollowers — required Gen 1 overworld Pokémon sprite provider.
 - ShaneHudson/gen1recomp-mods — Wild Skies public integration API and airborne ecosystem.
+- **DarioMelo/Gen1Recomp-MusicMods** — FRLG, HGSS and LGPE music packs, OGG intro/loop convention, and optional Surf/Bike audio providers used by Flying Music when those packs are installed.
 
 ## Bug reports
 
-Include Gen1Recomp version, selected voxel provider and version, PokéPC Followers version, Wild Skies version if installed, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots/logs when available.
+Include Gen1Recomp version, selected voxel provider and version, PokéPC Followers version, Wild Skies version if installed, DarioMelo music pack/version if Flying Music is used, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots/logs when available.

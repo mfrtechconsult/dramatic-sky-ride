@@ -22,36 +22,51 @@ local function compatExports(id)
   return ok and handle and handle.exports or nil
 end
 
+local function usableProviderMount(id, ex, species, style)
+  local opts = {
+    species = species,
+    surface = "land",
+    role = "mount",
+    game = Game,
+  }
+  if style then opts.style = style end
+
+  local okDef, provided = pcall(ex.resolveFollowerSprite, opts)
+  local frames = provided and tonumber(provided.frames) or 0
+  if not (okDef and provided and provided.image and frames >= 6) then return nil end
+
+  local okImage, image = pcall(Assets.image, provided.image)
+  if not (okImage and image) then return nil end
+  setNearest(image)
+  local width, height = image:getDimensions()
+  if width < 16 or height < 96 then return nil end
+
+  local def = {
+    id = "SKY_RIDE_" .. species,
+    image = provided.image,
+    frames = 6,
+    walker = true,
+    trueColor = provided.trueColor ~= false,
+    skyRideSpriteProvider = provided.providerId or id,
+  }
+  local sprite = SpriteRenderer.new(def, "sky_ride_" .. species)
+  sprite.image = image
+  return sprite, provided.providerId or id
+end
+
 local function buildProviderMountSprite(species)
   for _, id in ipairs(SPRITE_PROVIDER_IDS) do
     local ex = compatExports(id)
     if ex and type(ex.resolveFollowerSprite) == "function" then
-      local okDef, provided = pcall(ex.resolveFollowerSprite, {
-        species = species,
-        surface = "land",
-        role = "mount",
-        game = Game,
-      })
-      local frames = provided and tonumber(provided.frames) or 0
-      if okDef and provided and provided.image and frames >= 6 then
-        local okImage, image = pcall(Assets.image, provided.image)
-        if okImage and image then
-          setNearest(image)
-          local width, height = image:getDimensions()
-          if width >= 16 and height >= 96 then
-            local def = {
-              id = "SKY_RIDE_" .. species,
-              image = provided.image,
-              frames = 6,
-              walker = true,
-              trueColor = provided.trueColor ~= false,
-              skyRideSpriteProvider = provided.providerId or id,
-            }
-            local sprite = SpriteRenderer.new(def, "sky_ride_" .. species)
-            sprite.image = image
-            return sprite, nil, provided.providerId or id
-          end
-        end
+      -- Prefer the provider's active style. Wilds' Pokédex style can be a
+      -- static front sprite rather than a 6-frame walker; in that one case,
+      -- retry Wilds' built-in follower/GSC style so Wilds-only installs still
+      -- have a rideable mount without requiring PokéPC.
+      local sprite, provider = usableProviderMount(id, ex, species, nil)
+      if sprite then return sprite, nil, provider end
+      if id == WILDS_MOD_ID then
+        sprite, provider = usableProviderMount(id, ex, species, "followers")
+        if sprite then return sprite, nil, provider end
       end
     end
   end

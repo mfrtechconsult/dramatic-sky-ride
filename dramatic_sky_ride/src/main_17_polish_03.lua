@@ -82,8 +82,8 @@ local function genericFollowerPath(cfg)
     local asset = root .. "/assets/sprites/" .. filename
     if fileExists(asset) then
       local raw = love.filesystem.read(root .. "/manifest.json")
-      local decoded = raw and Json.decode(raw) or nil
-      if decoded and FOLLOWER_IDS[decoded.id] then return asset end
+      local id = manifestId(raw)
+      if id and FOLLOWER_IDS[id] then return asset end
       fallback = fallback or asset
     end
   end
@@ -231,4 +231,3 @@ local function clearWaterRide(ow)
   water.active, water.species, water.mon = false, nil, nil
   water.sprite, water.riderSprite = nil, nil
 end
-

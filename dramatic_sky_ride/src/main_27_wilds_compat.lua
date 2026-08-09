@@ -1,4 +1,5 @@
 
+;(function()
 -- -------------------------------------------------------------------------
 -- Capability-based follower / sprite compatibility.
 --
@@ -204,3 +205,4 @@ mod.exports.wildsCompatibility = {
   hookRecoveries = function() return skyRideHookRecoveries end,
   updateHeartbeat = function() return skyRideUpdateHeartbeat end,
 }
+end)();

@@ -1,13 +1,13 @@
-# Dramatic Sky Ride 0.1.3
+# Dramatic Sky Ride 0.1.4
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
 ## Required setup
 
-DSR 0.1.3 supports either of the current voxel providers below. Install **one** of them:
+DSR 0.1.4 supports either of the current voxel providers below. Install **one** of them:
 
 - **Battle Art Voxel Fork 1.7.6+** by absol89 — `BATTLE_ART_VOXEL_FORK`;
-- **Dramaless Shape** by artyrambles — `DRAMALESS_SHAPE`.
+- **Dramaless Shape 1.6.4+** by artyrambles — `DRAMALESS_SHAPE`.
 
 If both are installed, DSR prefers Battle Art Voxel Fork.
 
@@ -32,13 +32,11 @@ DSR integrates only through Wild Skies' public API:
 
 Wild Skies remains a separate optional mod and is not bundled or patched by DSR.
 
-## What's new in 0.1.3
+## What's new in 0.1.4
 
-- **Dramaless Shape support.** DSR now detects Battle Art Voxel Fork or Dramaless Shape through their public `exports.lib` API and uses the selected provider's exported voxel pipeline (`voxel` or `st_voxel`).
-- **Global mount speed controls.** `FLIGHT SPEED` and `GROUND SPEED` can be adjusted from 50% to 200% without removing species-specific differences, boost or gallop behavior.
-- **Quieter Ground Ride and Surf.** The temporary `JUMP` notice and `Visible Surf mount active.` dialog are removed while their gameplay effects remain unchanged.
-- **Dramaless keyboard compatibility.** Dramaless reserves `G` for V-GRID, so DSR automatically uses `J` for Ground Ride when Dramaless is the selected provider.
-- The Surf `3RD` camera fix and Wild Skies 1.4.1+ interception improvements from 0.1.2 remain included.
+- **Dramaless Shape 1.6.4 baseline.** DSR now declares `DRAMALESS_SHAPE >=1.6.4 <2.0.0`, avoiding the 1ST/3RD menu softlock and camera-control issues fixed by Dramaless 1.6.4.
+- **Battle Art remains on 1.7.6.** The supported Battle Art release and its `feature/battle-art` branch are still identical at 1.7.6.
+- **No gameplay changes.** Flight, Ground Ride, visible Surf, mount speeds and Wild Skies integration are unchanged from DSR 0.1.3.
 
 ## Controls
 
@@ -103,7 +101,7 @@ Manual layout: `mods/dramatic_sky_ride/manifest.json`.
 
 - Required: Gen1Recomp `>=0.1.69 <2.0.0`.
 - Required: PokéPC Followers (W/Voxel Support).
-- Voxel provider: Battle Art Voxel Fork `>=1.7.6 <2.0.0` **or** Dramaless Shape.
+- Voxel provider: Battle Art Voxel Fork `>=1.7.6 <2.0.0` **or** Dramaless Shape `>=1.6.4 <2.0.0`.
 - Strongly recommended: Wild Skies `>=1.4.1 <2.0.0`.
 - `free_fly` remains a conflicting alternative player-flight engine.
 - Custom maps are permissive by default unless they explicitly opt into DSR discovery gates.

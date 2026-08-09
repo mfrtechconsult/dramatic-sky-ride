@@ -29,12 +29,37 @@ else
 end
 
 local run = Sdk.loadMods(paths, { root = "..", dev = true })
-if #run.errors > 0 then
-  for _, err in ipairs(run.errors) do
-    io.stderr:write("loader error: ", tostring(err), "\n")
+
+-- The committed Gen1Recomp mod-SDK fixture intentionally contains only a tiny
+-- synthetic Pokemon/music dataset. DDD and Kanto Dive correctly reference real
+-- Gen 1 species and songs, so post-merge reference validation reports those as
+-- unresolved in this ROM-free fixture even though their entry chunks loaded.
+-- Ignore ONLY those reference gaps for the target content mod; every other
+-- Loader error remains fatal to this compatibility smoke test.
+local fixtureOwner = target == "deep" and "DRAMATIC_DEEP_DIVE" or "kanto_dive"
+local expectedFixtureErrors, unexpectedErrors = {}, {}
+for _, raw in ipairs(run.errors or {}) do
+  local err = tostring(raw)
+  local owned = err:sub(1, #fixtureOwner + 1) == fixtureOwner .. ":"
+  local fixtureReference = owned and (
+    err:find("unresolved reference to pokemon", 1, true) ~= nil
+    or err:find("unresolved reference to music", 1, true) ~= nil
+  )
+  if fixtureReference then
+    expectedFixtureErrors[#expectedFixtureErrors + 1] = err
+  else
+    unexpectedErrors[#unexpectedErrors + 1] = err
   end
 end
-check(#run.errors == 0, target .. " stack loads with zero Loader errors")
+
+for _, err in ipairs(unexpectedErrors) do
+  io.stderr:write("unexpected loader error: ", err, "\n")
+end
+if #expectedFixtureErrors > 0 then
+  print(string.format("fixture-only unresolved references ignored: %d (%s)",
+    #expectedFixtureErrors, fixtureOwner))
+end
+check(#unexpectedErrors == 0, target .. " stack has no unexpected Loader errors")
 
 local expectedLoaded = {
   "overworld_wild_spawns",

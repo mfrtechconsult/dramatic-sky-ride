@@ -90,8 +90,69 @@ local function genericFollowerPath(cfg)
   return fallback
 end
 
+local function publicWaterMountSprite(species)
+  if not mod.find then return nil end
+  local providerIds = {
+    "overworld_wild_spawns",
+    "PokePCFollowers_VoxelMerge",
+    "pokepcfollowers",
+    "FOLLOWERS_EX",
+    "followers_ex",
+  }
+  for _, providerId in ipairs(providerIds) do
+    local okFind, handle = pcall(mod.find, mod, providerId)
+    local exports = okFind and handle and handle.exports or nil
+    if exports and type(exports.resolveFollowerSprite) == "function" then
+      local requests = {
+        { surface = "water" },
+      }
+      if providerId == "overworld_wild_spawns" then
+        requests[#requests + 1] = { surface = "land", style = "followers" }
+      end
+      for _, request in ipairs(requests) do
+        local okDef, provided = pcall(exports.resolveFollowerSprite, {
+          species = species,
+          surface = request.surface,
+          style = request.style,
+          role = "surf_mount",
+          game = Game,
+        })
+        local frames = provided and tonumber(provided.frames) or 0
+        if okDef and provided and provided.image and frames >= 6 then
+          local okImage, image = pcall(Assets.image, provided.image)
+          if okImage and image then
+            setNearest(image)
+            local w, h = image:getDimensions()
+            if w >= 16 and h >= 96 then
+              local def = {
+                id = "WATER_RIDE_" .. species,
+                image = provided.image,
+                frames = 6,
+                walker = true,
+                trueColor = provided.trueColor ~= false,
+                skyRideSpriteProvider = provided.providerId or providerId,
+              }
+              local sprite = SpriteRenderer.new(def, "water_ride_" .. species)
+              sprite.image = image
+              return sprite
+            end
+          end
+        end
+      end
+    end
+  end
+  return nil
+end
+
 local function buildWaterSprite(species)
   if waterSpriteCache[species] then return waterSpriteCache[species] end
+
+  local provided = publicWaterMountSprite(species)
+  if provided then
+    waterSpriteCache[species] = provided
+    return provided
+  end
+
   local cfg = WATER_ELIGIBLE[species]
   local path = genericFollowerPath(cfg)
   if not path then return nil end

@@ -29,6 +29,20 @@ local sky = run.loader.exports.DRAMATIC_SKY_RIDE or {}
 check(type(sky.isFlying) == "function", "canonical isFlying export is available")
 check(type(sky.altitude) == "function", "canonical altitude export is available")
 check(type(sky.mount) == "function", "canonical mount export is available")
+check(type(sky.registerSpriteSource) == "function"
+    and type(sky.unregisterSpriteSource) == "function",
+  "Shane-compatible airborne sprite-source exports are available")
+
+local accepted = sky.registerSpriteSource({
+  id = "fixture_air_art",
+  resolve = function() return nil end,
+})
+check(accepted == true, "external airborne sprite source can register")
+local sources = sky.airborneSpriteSources and sky.airborneSpriteSources() or {}
+check(sources[1] == "fixture_air_art", "registered airborne source is discoverable")
+check(sky.unregisterSpriteSource("fixture_air_art") == true,
+  "external airborne sprite source can unregister")
+
 check(type(sky.flightRendering) == "table", "flight renderer capability is exported")
 check(sky.flightRendering.requested() == "2d", "2D sprites are requested by default")
 check(sky.flightRendering.effective() == "2d", "2D sprites are effective without VOXEL")

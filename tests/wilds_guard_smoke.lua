@@ -9,7 +9,14 @@ local function check(value, message)
 end
 
 local function loadInEnv(path, env)
-  local chunk, err = loadfile(path)
+  local file = assert(io.open(path, "rb"))
+  local source = file:read("*a")
+  file:close()
+  -- DSR source parts are concatenation fragments. Some deliberately begin
+  -- with `;` so they are safe after the previous part but are not standalone
+  -- Lua chunks. Prefix one harmless statement to reproduce the real loader.
+  local compiler = loadstring or load
+  local chunk, err = compiler("do end" .. source, "@" .. path)
   assert(chunk, err)
   setfenv(chunk, setmetatable(env, { __index = _G }))
   return chunk()

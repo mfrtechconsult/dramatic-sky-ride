@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.6-rc.1 — compatibility preview
+
+- Added Wilds of Kanto (`overworld_wild_spawns`) as a compatible authoritative follower/sprite runtime.
+- Removed the hard manifest dependency on PokéPC Followers for this compatibility branch; Wilds of Kanto or PokéPC Followers can provide compatible Pokémon overworld sprites.
+- Added cooperative overworld update-hook protection so DSR, Wilds and compatible companion mods can coexist without silently replacing each other's wrapper chains.
+- Added compatibility regression coverage for Wilds + DSR + Dramatic Deep Dive / Kanto Dive with both Dramaless Shape and Battle Art Voxel Fork.
+- Added a read-only Pokémon Stadium Overworld Models compatibility API: `isFlying()`, `currentAltitude()`, `mountSpecies()` and `stadiumCompatibility`.
+- Added optional `FLYING MUSIC` support with `None` as the default.
+- Added automatic reuse of installed DarioMelo `Music_FRLG`, `Music_HGSS` and `Music_LGPE` Surf/Bike OGG assets without copying or redistributing third-party music.
+- Added an extensible `audio/flying/tracks.lua` catalog for future redistributable or user-supplied flight tracks.
+- Preserved battle, victory, jingle and direct music priority; landing restores normal map/Surf music.
+- Kept the Flying Music manifest scan independent of network-gated `src.link.Json` by reusing DSR's lightweight manifest-id parser.
+- Retained the 0.1.5 canonical Dramaless `voxel` pipeline fix and legacy `st_voxel` fallback.
+- Added a dedicated compatibility prerelease workflow that rebuilds and LuaJIT-validates the exact launcher-ready ZIP before publishing it as a GitHub prerelease.
+
 ## 0.1.5
 
 - Fixed Dramaless Shape voxel detection: current Dramaless releases register the canonical `voxel` pipeline, not `st_voxel`.
@@ -55,7 +70,7 @@
 - Removed the experimental manifest flag and restored GitHub/Mod Index update metadata for stable SemVer releases.
 - Added story-aware FLY progression: optional FLY requirement, THUNDERBADGE takeoff gate, SOULBADGE water-landing gate and data-driven story gates.
 - Added `DISCOVERY GATES`: first-time airborne entry into canonical vanilla Kanto routes/cities is blocked until the map has been reached through normal gameplay.
-- Unknown/custom map ids remain allowed by default; custom mods can optionally register discovery gates or mark legitimate visits through DSR's public flight-rules API.
+- Unknown/custom map ids remain allowed by default for map-pack and total-conversion compatibility.
 - Added camera-directed altitude in Dramatic Shape 1ST/3RD modes.
 - Added optional Wild Skies integration through its public API, including real per-species follower/overworld sprites when available and exact visible flyer species/level battles.
 - Kept Wild Skies separate and optional; Free Fly remains a conflicting alternative flight engine.

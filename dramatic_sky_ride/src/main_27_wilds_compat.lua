@@ -108,6 +108,10 @@ end
 -- deepest DSR -> external boundary, heartbeat that one edge, and on recovery
 -- retarget only that edge around the CURRENT external handler before restoring
 -- the complete DSR root. No stale external function is ever restored.
+--
+-- Deep Dive can sit above this chain. expose composeAround() so its own guard
+-- can rebuild DDD -> DSR -> current in one operation instead of either guard
+-- restoring a sibling chain at the other's expense.
 -- -------------------------------------------------------------------------
 local skyRideRootUpdate = OverworldState.update
 local skyRideUpdateHeartbeat = 0
@@ -177,23 +181,37 @@ end
 
 if skyRideGuardReady then bindExternal(initialExternal) end
 
+local function recordRecovery(reason)
+  skyRideHookRecoveries = skyRideHookRecoveries + 1
+  log("Mount update hook was displaced; full DSR chain reattached (%s)",
+      tostring(reason or "heartbeat"))
+end
+
+-- Rebase the DSR chain around an external handler without changing the global
+-- OverworldState.update. This is the cooperative primitive used by Deep Dive.
+local function composeSkyRideAround(current, reason, countRecovery)
+  if not skyRideGuardReady or type(current) ~= "function" then return nil end
+  if current == skyRideRootUpdate then return skyRideRootUpdate end
+
+  if dsrFunctionSet[current] then
+    if countRecovery ~= false then recordRecovery(reason or "intermediate DSR wrapper") end
+    return skyRideRootUpdate
+  end
+
+  if not bindExternal(current) then return nil end
+  if countRecovery ~= false then recordRecovery(reason or "cooperative composition") end
+  return skyRideRootUpdate
+end
+
 local function recoverSkyRideUpdate(reason)
   if not skyRideGuardReady then return false end
   local current = OverworldState.update
   if current == skyRideRootUpdate then return true end
   if type(current) ~= "function" then return false end
 
-  -- If another mod merely restored one of DSR's own intermediate wrappers,
-  -- its external boundary is still valid. Restore the full DSR root without
-  -- feeding an intermediate DSR function back into the base (which would
-  -- create a cycle).
-  if not dsrFunctionSet[current] then
-    if not bindExternal(current) then return false end
-  end
-  OverworldState.update = skyRideRootUpdate
-  skyRideHookRecoveries = skyRideHookRecoveries + 1
-  log("Mount update hook was displaced; full DSR chain reattached (%s)",
-      tostring(reason or "heartbeat"))
+  local composed = composeSkyRideAround(current, reason, true)
+  if not composed then return false end
+  OverworldState.update = composed
   return true
 end
 
@@ -247,6 +265,11 @@ mod.exports.wildsCompatibility = {
   wildsId = WILDS_MOD_ID,
   spriteProviders = SPRITE_PROVIDER_IDS,
   ensureUpdateHook = recoverSkyRideUpdate,
+  composeAround = function(current, reason)
+    return composeSkyRideAround(current, reason or "cooperative recovery", true)
+  end,
+  rootUpdate = function() return skyRideRootUpdate end,
+  ownsUpdate = function(fn) return dsrFunctionSet[fn] == true end,
   hookGuardReady = function() return skyRideGuardReady end,
   hookRecoveries = function() return skyRideHookRecoveries end,
   updateHeartbeat = function() return skyRideUpdateHeartbeat end,

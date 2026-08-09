@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - compat/wilds-of-kanto
     paths:
       - dramatic_sky_ride/manifest.json
       - dramatic_sky_ride/src/**

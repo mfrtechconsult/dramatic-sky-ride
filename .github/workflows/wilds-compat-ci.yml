@@ -113,6 +113,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if grep -R -n -F 'require("src.link.Json")' sky/dramatic_sky_ride/src \
+             || grep -R -n -F 'Json.decode' sky/dramatic_sky_ride/src; then
+            echo "Sky Ride still depends on the network-gated link JSON module" >&2
+            exit 1
+          fi
+
           python3 - <<'PY'
           from pathlib import Path
           root = Path("sky/dramatic_sky_ride/src")

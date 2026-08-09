@@ -47,3 +47,4 @@ main_24_wild_skies.lua
 main_25_discovery_gates.lua
 main_26_surf_third_person.lua
 main_14.lua
+main_27_wilds_compat.lua

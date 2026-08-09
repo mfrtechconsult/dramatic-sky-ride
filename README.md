@@ -1,25 +1,30 @@
-# Dramatic Sky Ride 0.1.6-rc.1
+# Dramatic Sky Ride 0.1.6-rc.2 — development
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
-> **Compatibility preview:** `0.1.6-rc.1` is published from the `compat/wilds-of-kanto` development branch for ecosystem testing before the changes are promoted to `main`.
+> `0.1.6-rc.2` is the current development state of `compat/wilds-of-kanto`. The previously published `v0.1.6-rc.1` remains unchanged; rc.2 is not published automatically.
 
-## Download
+## Flight rendering
 
-Use the launcher-ready ZIP attached to the `v0.1.6-rc.1` GitHub prerelease.
+**Native 2D sprites are now the default and preferred flight renderer. A voxel mod is no longer required to take off.**
 
-Do not use GitHub's automatic source-code ZIP as the mod package.
+The `FLIGHT RENDERER` option controls only the visual presentation of the flying mount:
 
-## Voxel provider
+- **2D SPRITES** — default. Works in the normal flat overworld and remains the default billboard representation when a voxel provider is enabled.
+- **STADIUM 3D** — explicit opt-in. Used only when Pokémon Stadium Overworld Models is installed and a voxel pipeline is active. Otherwise DSR safely falls back to 2D.
 
-Install one supported voxel provider:
+The same flight state, movement, collision, altitude, progression and Wild Skies logic is used in every renderer.
+
+## Optional voxel providers
+
+For voxel cameras/world rendering, install one of:
 
 - **Battle Art Voxel Fork** `>=1.7.6 <2.0.0`;
 - **Dramaless Shape** `>=1.6.4 <2.0.0`.
 
-Battle Art is preferred automatically if both providers are installed.
+Battle Art is preferred automatically if both are installed. Neither is required for native 2D flight.
 
-## Pokémon sprite / follower provider
+## Pokémon sprite / follower providers
 
 This compatibility branch can use either:
 
@@ -30,21 +35,20 @@ Wilds of Kanto can act as the authoritative follower runtime so DSR does not nee
 
 ## Recommended airborne ecosystem
 
-**Wild Skies 1.4.1+** remains strongly recommended. DSR integrates through Wild Skies' public API, starts aerial battles against the exact visible species and level, and restores the mount and airborne state afterward.
+**Wild Skies 1.4.1+** remains strongly recommended. DSR uses its public API for visible airborne Pokémon and battles against the exact intercepted species and level.
 
-## What's new in 0.1.6-rc.1
+## Current compatibility work
 
-- Added **Wilds of Kanto compatibility**, including compatible sprite-provider discovery and cooperative overworld update-hook protection.
-- Added a public **Pokémon Stadium Overworld Models compatibility API** exposing flight state, altitude and active mount species.
-- Added optional **FLYING MUSIC** support.
-- Detects installed DarioMelo `Music_FRLG`, `Music_HGSS` and `Music_LGPE` packs and exposes their Surf/Bike themes as flight choices without redistributing their audio.
-- Added an extensible local flight-music catalog for future redistributable or user-supplied tracks.
-- Added compatibility regression tests for the Wilds/DSR/Deep Dive/Kanto Dive stack.
-- Retains the Dramaless canonical `voxel` pipeline fix introduced in 0.1.5.
+- Native flat-2D flight with trainer + mount composition and existing Pokédex-proportional mount sizing.
+- Wilds of Kanto sprite/follower compatibility and cooperative overworld update-hook protection.
+- Shane-style public flight state: `isFlying()`, `altitude()` and `mount()`.
+- Optional Pokémon Stadium Overworld Models integration, gated behind the explicit `STADIUM 3D` renderer setting.
+- Optional Flying Music using installed `Music_FRLG`, `Music_HGSS` and `Music_LGPE` Surf/Bike tracks without redistributing their audio.
+- Compatibility regression coverage for DSR + Wilds + Deep Dive/Kanto Dive with Battle Art and Dramaless.
 
 ## Controls
 
-| Action | Battle Art | Dramaless | Controller |
+| Action | Flat 2D / Battle Art | Dramaless | Controller |
 |---|---|---|---|
 | Flight | `H` | `H` | `X` |
 | Ground Ride | `G` | `J` | `Y` |
@@ -55,11 +59,12 @@ Wilds of Kanto can act as the authoritative follower runtime so DSR does not nee
 ## Compatibility
 
 - Gen1Recomp `>=0.1.69 <2.0.0`.
-- Battle Art Voxel Fork `>=1.7.6 <2.0.0` or Dramaless Shape `>=1.6.4 <2.0.0`.
-- Wilds of Kanto or PokéPC Followers can provide compatible Pokémon overworld sprites on this branch.
+- No voxel provider required for 2D flight.
+- Optional: Battle Art Voxel Fork or Dramaless Shape for voxel rendering.
+- Wilds of Kanto or PokéPC Followers can provide compatible Pokémon overworld sprites.
 - Wild Skies `>=1.4.1 <2.0.0` strongly recommended.
 - Optional music providers: `Music_FRLG`, `Music_HGSS`, `Music_LGPE`.
-- Optional Pokémon Stadium Overworld Models integration through DSR's read-only flight API.
+- Optional Pokémon Stadium Overworld Models integration.
 - `free_fly` conflicts as an alternative player-flight engine.
 
 ## License

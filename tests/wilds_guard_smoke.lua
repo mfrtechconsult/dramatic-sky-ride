@@ -165,7 +165,7 @@ do
   function deepMod.log:warn() end
   function deepMod.find(_, id)
     if id == "DRAMATIC_SKY_RIDE" then
-      return { id = id, version = "0.1.5", exports = h.mod.exports }
+      return { id = id, version = "0.1.6-rc.2", exports = h.mod.exports }
     end
   end
   local controller = { active = true }
@@ -225,3 +225,8 @@ end
 end
 
 print("wilds cooperative guard smoke: PASS")
+
+-- Keep one explicit no-provider load in the same CI entry point. This catches
+-- accidental reintroduction of a voxel hard requirement while the matrix below
+-- continues to exercise Battle Art and Dramaless stacks.
+dofile("../sky/tests/flat_2d_loader.lua")

@@ -117,14 +117,18 @@ local function voxelLevel()
   local selected = state and state.voxelPipeline
   if selected then
     local ok, level = pcall(Pipelines.level, selected)
-    if ok then return tonumber(level) or 0 end
-  end
-  -- Startup fallback before provider discovery has populated the state.
-  -- Battle Art/upstream use "voxel"; Dramaless exports "st_voxel".
-  for _, pipelineId in ipairs({ "voxel", "st_voxel" }) do
-    local ok, level = pcall(Pipelines.level, pipelineId)
     level = ok and tonumber(level) or 0
     if level > 0 then return level end
+  end
+  -- Compatibility fallback. Current Battle Art and Dramaless both register
+  -- "voxel"; keep "st_voxel" for older forks without letting a stale or
+  -- incorrect provider hint report OFF while another supported pipeline is on.
+  for _, pipelineId in ipairs({ "voxel", "st_voxel" }) do
+    if pipelineId ~= selected then
+      local ok, level = pcall(Pipelines.level, pipelineId)
+      level = ok and tonumber(level) or 0
+      if level > 0 then return level end
+    end
   end
   return 0
 end

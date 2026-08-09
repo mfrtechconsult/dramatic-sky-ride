@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5
+
+- Fixed Dramaless Shape voxel detection: current Dramaless releases register the canonical `voxel` pipeline, not `st_voxel`.
+- A stale or incorrect provider pipeline hint no longer makes DSR report `Turn VOXEL on before taking off.` while a supported voxel pipeline is visibly active.
+- Added a compatibility fallback that checks `voxel` first and retains `st_voxel` only for older forks.
+- Added a one-time provider/pipeline/level diagnostic log to simplify future compatibility reports.
+- Battle Art Voxel Fork remains preferred when both providers are installed and continues to use its existing `voxel` pipeline unchanged.
+- No Flight, Ground Ride, visible Surf, Wild Skies or music functionality was added or changed in this bugfix release.
+
 ## 0.1.4
 
 - Raised the supported Dramaless Shape baseline to `DRAMALESS_SHAPE >=1.6.4 <2.0.0`.

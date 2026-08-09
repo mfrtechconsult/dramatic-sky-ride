@@ -14,7 +14,10 @@
     "overworld_wild_spawns",
     "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
-    "wild_skies@>=1.4.1 <2.0.0"
+    "wild_skies@>=1.4.1 <2.0.0",
+    "Music_FRLG",
+    "Music_HGSS",
+    "Music_LGPE"
   ],
   "conflicts": [
     "free_fly"
@@ -24,6 +27,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork or Dramaless Shape, using compatible follower sprites from Wilds of Kanto or PokePC Followers, global mount speed controls and strongly recommended Wild Skies integration.",
+  "description": "Ride Gen 1 Pokemon on land, water and in the air with Battle Art Voxel Fork or Dramaless Shape, using compatible follower sprites from Wilds of Kanto or PokePC Followers, optional music-pack integration, global mount speed controls and strongly recommended Wild Skies integration.",
   "github": "mfrtechconsult/dramatic-sky-ride"
 }

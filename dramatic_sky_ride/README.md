@@ -1,15 +1,21 @@
-# Dramatic Sky Ride 0.1.2
+# Dramatic Sky Ride 0.1.3
 
 Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
 
 ## Required setup
 
-DSR 0.1.2 targets the current community voxel stack and requires:
+DSR 0.1.3 supports either of the current voxel providers below. Install **one** of them:
 
-- **Battle Art Voxel Fork** by absol89 — `BATTLE_ART_VOXEL_FORK >=1.7.6 <2.0.0`;
+- **Battle Art Voxel Fork 1.7.6+** by absol89 — `BATTLE_ART_VOXEL_FORK`;
+- **Dramaless Shape** by artyrambles — `DRAMALESS_SHAPE`.
+
+If both are installed, DSR prefers Battle Art Voxel Fork.
+
+Also required:
+
 - **PokéPC Followers (W/Voxel Support)** — `PokePCFollowers_VoxelMerge`, used as the overworld Pokémon/NPC sprite provider for mounts.
 
-The retired `DRAMATIC_SHAPE` id is no longer a supported installation dependency. A best-effort runtime fallback remains only for older manual installations.
+The retired `DRAMATIC_SHAPE` id remains only as a best-effort runtime fallback for older manual installations.
 
 ## Strongly recommended: Wild Skies
 
@@ -22,15 +28,17 @@ DSR integrates only through Wild Skies' public API:
 - intercepting a flyer starts a battle against that exact visible species and level;
 - DSR restores the mount and airborne state after battle;
 - ordinary ground encounters are suppressed while DSR is airborne;
-- 0.1.2 uses a more forgiving two-cell interception envelope so visually close passes are easier to engage.
+- the two-cell interception envelope makes visually close passes easier to engage.
 
 Wild Skies remains a separate optional mod and is not bundled or patched by DSR.
 
-## What's new in 0.1.2
+## What's new in 0.1.3
 
-- **Surf + 3RD camera fixed with Battle Art Voxel Fork.** Water no longer collapses the third-person camera boom as if it were a pedestrian obstacle, so the trainer and Surf mount remain visible at normal camera angles.
-- **1ST remains true first-person.** DSR does not force the trainer or mount into the first-person camera.
-- **Wild Skies interceptions are more forgiving.** The interception radius is now two cells, better matching Wild Skies 1.4.1's moving three-dimensional flocks.
+- **Dramaless Shape support.** DSR now detects Battle Art Voxel Fork or Dramaless Shape through their public `exports.lib` API and uses the selected provider's exported voxel pipeline (`voxel` or `st_voxel`).
+- **Global mount speed controls.** `FLIGHT SPEED` and `GROUND SPEED` can be adjusted from 50% to 200% without removing species-specific differences, boost or gallop behavior.
+- **Quieter Ground Ride and Surf.** The temporary `JUMP` notice and `Visible Surf mount active.` dialog are removed while their gameplay effects remain unchanged.
+- **Dramaless keyboard compatibility.** Dramaless reserves `G` for V-GRID, so DSR automatically uses `J` for Ground Ride when Dramaless is the selected provider.
+- The Surf `3RD` camera fix and Wild Skies 1.4.1+ interception improvements from 0.1.2 remain included.
 
 ## Controls
 
@@ -49,8 +57,9 @@ Supported flying mounts: Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articun
 
 Supported Ground Ride mounts: Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax.
 
-- Keyboard: `G` toggles Ground Ride.
-- Controller: `Y` toggles Ground Ride in free-roam.
+- Keyboard with Battle Art: `G` toggles Ground Ride.
+- Keyboard with Dramaless Shape: `J` toggles Ground Ride because Dramaless reserves `G` for V-GRID.
+- Controller: `Y` toggles Ground Ride in free-roam with either provider.
 
 Ground Ride includes species-specific movement, gallop/stamina, dust, guarded ledge traversal, connected-map continuity and battle restoration.
 
@@ -58,7 +67,14 @@ Ground Ride includes species-specific movement, gallop/stamina, dust, guarded le
 
 Supported visible Surf mounts: Blastoise, Tentacruel, Gyarados and Lapras.
 
-Native Surf movement, collision, music and progression remain authoritative. A valid airborne water landing can continue directly into native Surf. In Battle Art `3RD`, DSR keeps water from incorrectly collapsing the camera boom; `1ST` keeps the normal first-person behavior.
+Native Surf movement, collision, music and progression remain authoritative. A valid airborne water landing can continue directly into native Surf. In voxel `3RD`, DSR keeps water from incorrectly collapsing the third-person camera boom; `1ST` keeps the normal first-person behavior.
+
+## Speed settings
+
+- `FLIGHT SPEED`: 50% to 200%, default 100%.
+- `GROUND SPEED`: 50% to 200%, default 100%.
+
+These are global multipliers. Species profiles remain meaningful: a faster Ground Ride species still stays faster than a slower one, and Flight boost / Ground gallop continue to stack with the selected global setting.
 
 ## Progression safeguards
 
@@ -66,34 +82,40 @@ DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES
 
 `DISCOVERY GATES` prevent first-time airborne entry into canonical vanilla Kanto routes/cities until those maps have been reached normally. Unknown/custom map IDs remain open by default for map packs and total conversions.
 
-## Battle Art Voxel Fork integration
+## Voxel provider integration
 
-Battle Art Voxel Fork is the primary voxel provider for DSR. DSR uses its public `exports.lib` API and does not patch Battle Art's sprite or battle-rendering internals.
+DSR uses the selected provider's public `exports.lib` interface rather than patching its rendering internals.
 
-Integration covers voxel overworld rendering, 1ST/3RD cameras, camera-driven altitude, mount billboards, staged 3D battle transitions, Surf third-person camera behavior and clean mount removal/restoration around battles.
+Supported providers:
+
+- **Battle Art Voxel Fork** (`BATTLE_ART_VOXEL_FORK`) — preferred when both providers are present;
+- **Dramaless Shape** (`DRAMALESS_SHAPE`) — supported alternative using its `st_voxel` pipeline.
+
+Integration covers voxel overworld rendering, 1ST/3RD cameras, camera-driven altitude, mount billboards, free movement, terrain-aware height handling and Surf third-person camera behavior. Battle Art staged 3D battle transitions continue to receive the existing DSR lifecycle protection.
 
 ## Installation
 
-Import the release ZIP directly through the Gen1Recomp launcher. Install and enable the required dependencies before DSR.
+Import the release ZIP directly through the Gen1Recomp launcher. Install and enable PokéPC Followers plus one supported voxel provider before DSR.
 
 Manual layout: `mods/dramatic_sky_ride/manifest.json`.
 
 ## Compatibility
 
 - Required: Gen1Recomp `>=0.1.69 <2.0.0`.
-- Required: Battle Art Voxel Fork `>=1.7.6 <2.0.0`.
 - Required: PokéPC Followers (W/Voxel Support).
+- Voxel provider: Battle Art Voxel Fork `>=1.7.6 <2.0.0` **or** Dramaless Shape.
 - Strongly recommended: Wild Skies `>=1.4.1 <2.0.0`.
 - `free_fly` remains a conflicting alternative player-flight engine.
 - Custom maps are permissive by default unless they explicitly opt into DSR discovery gates.
 
 ## Credits
 
-- absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork, primary voxel provider, cameras and 3D battle presentation.
+- absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork, voxel provider, cameras and 3D battle presentation.
+- artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and `st_voxel` integration surface.
 - DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
 - gamecorner-033/PokePCFollowers — required Gen 1 overworld Pokémon sprite provider.
 - ShaneHudson/gen1recomp-mods — Wild Skies public integration API and airborne ecosystem.
 
 ## Bug reports
 
-Include Gen1Recomp version, Battle Art Voxel Fork version, PokéPC Followers version, Wild Skies version if installed, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots/logs when available.
+Include Gen1Recomp version, selected voxel provider and version, PokéPC Followers version, Wild Skies version if installed, Red/Blue/Yellow version, camera mode, mount, input device, exact reproduction steps and screenshots/logs when available.

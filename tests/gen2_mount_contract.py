@@ -7,6 +7,8 @@ root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dramatic_sky_ride")
 src = root / "src"
 gen2 = (src / "main_33_gen2_mounts.lua").read_text(encoding="utf-8")
 surf = (src / "main_17_polish_03.lua").read_text(encoding="utf-8")
+surf_runtime = (src / "main_17_polish_04.lua").read_text(encoding="utf-8")
+runtime = (src / "main_34_mount_runtime_polish.lua").read_text(encoding="utf-8")
 stadium = (src / "main_28_stadium_compat.lua").read_text(encoding="utf-8")
 parts = [x.strip() for x in (src / "parts.txt").read_text(encoding="utf-8").splitlines() if x.strip()]
 
@@ -53,12 +55,36 @@ require("Map.defIsWaterCell(dest, ts, x, y)" in gen2,
         "Suicune must handle water landings across map connections")
 require("suicuneBattleWaterResume" in gen2,
         "Suicune water battle remount continuity missing")
-require("amphibiousGroundOwnsWaterVisual" in (src / "main_17_polish_04.lua").read_text(encoding="utf-8"),
-        "visible Surf must yield visual ownership to amphibious Suicune")
+require("battleWaterResumePending" in surf_runtime,
+        "visible Surf must stay suppressed during Suicune battle remount")
+require("ground.amphibiousWater == true" in runtime and "p.surfing = false" in runtime,
+        "Suicune seamless map connection must mask native Surf before Ground Ride checks")
+require("ground.amphibiousWater = waterHere" in runtime,
+        "Suicune destination land/water state must be restored after a map seam")
 
-# The Wilds self-healing guard must capture the Gen2 update wrapper too.
-require(parts.index("main_33_gen2_mounts.lua") < parts.index("main_27_wilds_compat.lua"),
-        "Gen2 wrapper must load before the DSR update-chain guard")
+# Mounted follower policy: hidden by default on flight, Ground Ride and Surf.
+require('key = "show_followers_while_mounted"' in runtime and "default = false" in runtime,
+        "mounted followers option must exist and default to hidden")
+require("entity.wildsFollower == true" in runtime and "entity._wildsFollowerSpecies" in runtime,
+        "Wilds follower entities must be recognized by the mounted purge")
+require("purgeFollowersDuringFlight = function" in runtime,
+        "shared follower purge must be rebound to the mounted policy")
+require('callBoolExport("isWaterRiding")' in runtime and "player.surfing == true" in runtime,
+        "mounted follower suppression must cover visible and native Surf")
+require("entityIsCurrentMountFollower" in runtime,
+        "re-enabled mounted followers must still hide the active mount Pokemon")
+
+# Wilds may run a late follower update. Reassert the free-camera body bearing
+# after the full overworld tick so Gen 2 mount sprites follow 1ST/3RD direction.
+require("stabilizeFlightFacing" in runtime and "fp.pointBody" in runtime,
+        "1ST/3RD flight facing must be reasserted after late runtime hooks")
+require("facingFromYaw" in runtime,
+        "camera-facing fallback must remain available for compatible voxel forks")
+
+# The Wilds self-healing guard must capture both Gen2 and final runtime wrappers.
+require(parts.index("main_33_gen2_mounts.lua") < parts.index("main_34_mount_runtime_polish.lua")
+        < parts.index("main_27_wilds_compat.lua"),
+        "Gen2/runtime wrappers must load before the DSR update-chain guard")
 
 # Current Stadium 1 models are Gen1 only unless a provider explicitly advertises more.
 require("supportsSpecies" in stadium and "hasModel" in stadium and "modelAvailable" in stadium,

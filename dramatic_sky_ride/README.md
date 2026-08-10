@@ -31,7 +31,9 @@ Battle Art is preferred automatically if both are installed. The retired upstrea
 DSR can obtain compatible overworld Pokémon art from:
 
 - **Wilds of Kanto** — `overworld_wild_spawns`;
-- **PokéPC Followers (W/Voxel Support)** — `PokePCFollowers_VoxelMerge`.
+- **PokéPC Followers (W/Voxel Support) — mfrtechconsult compatibility fork** — `PokePCFollowers_VoxelMerge`.
+
+The officially tested PokéPC target is `mfrtechconsult/PokePCFollowers`. That fork deliberately retains the original `PokePCFollowers_VoxelMerge` mod id for save/install compatibility and exposes `providerRepository = "mfrtechconsult/PokePCFollowers"` plus the common `resolveFollowerSprite()` provider API. Older PokéPC builds sharing the same id remain a best-effort legacy fallback, but are no longer the reference implementation for DSR testing.
 
 When Wilds of Kanto is present it can remain the authoritative follower runtime, avoiding two mods competing for follower lifecycle ownership.
 
@@ -123,7 +125,8 @@ DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES
 - Gen1Recomp `>=0.1.69 <2.0.0`.
 - No voxel provider required for native 2D flight.
 - Optional voxel providers: Battle Art Voxel Fork `>=1.7.6 <2.0.0` or Dramaless Shape `>=1.6.4 <2.0.0`.
-- Compatible sprite/follower providers: Wilds of Kanto or PokéPC Followers.
+- Compatible sprite/follower providers: Wilds of Kanto or the maintained `mfrtechconsult/PokePCFollowers` fork.
+- Legacy PokéPC builds using the shared mod id remain best-effort fallbacks.
 - Wild Skies `>=1.4.1 <2.0.0` strongly recommended.
 - Optional Stadium renderer: `STADIUM_OVERWORLD_MODELS`, explicit opt-in from DSR options.
 - Optional Flying Music providers: `Music_FRLG`, `Music_HGSS`, `Music_LGPE`.
@@ -134,7 +137,8 @@ DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES
 - absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork, voxel cameras and 3D presentation.
 - artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and public integration surface.
 - DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
-- gamecorner-033/PokePCFollowers — compatible Gen 1 follower/overworld sprite provider.
+- mfrtechconsult/PokePCFollowers — maintained PokéPC compatibility fork used by DSR, including Gen 1/2 sprite-provider support and Pokédex-proportional sizing.
+- gamecorner-033/PokePCFollowers — original PokéPC follower project and upstream foundation.
 - YoDrehDenSwagAuf/overworld-spawn-mod — Wilds of Kanto follower/wild overworld ecosystem.
 - ShaneHudson/gen1recomp-mods — Free Fly/Wild Skies public flight and hook interoperability patterns.
 - randyadr/3D-Pokemon-Sprites — Pokémon Stadium Overworld Models integration target.

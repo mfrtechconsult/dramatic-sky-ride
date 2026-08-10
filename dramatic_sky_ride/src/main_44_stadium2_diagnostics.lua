@@ -22,11 +22,14 @@ local function bool(value)
 end
 
 local function snapshot(species)
-  local native = mod.exports and mod.exports.stadium3DNative or nil
-  local hardening = mod.exports and mod.exports.stadium3DHardening or nil
-  local bridge = mod.exports and mod.exports.stadium3DProviderRig or nil
-  local rendering = mod.exports and mod.exports.flightRendering or nil
-  local compatibility = mod.exports and mod.exports.stadiumCompatibility or nil
+  local ex = mod.exports or {}
+  local native = ex.stadium3DNative
+  local hardening = ex.stadium3DHardening
+  local bridge = ex.stadium3DProviderRig
+  local fallback = ex.stadium3DFallback
+  local rendering = ex.flightRendering
+  local compatibility = ex.stadiumCompatibility
+  local providerState = ex._dramaticProviderState or {}
 
   species = species or safeCall(compatibility and compatibility.activeMountSpecies)
   local cache = safeCall(native and native.cacheStatus) or {}
@@ -41,6 +44,7 @@ local function snapshot(species)
     species = species,
     requested = requested,
     effective = effective,
+    provider = providerState.id or "none",
     cache = cache,
     nativeInstalled = nativeInstalled,
     nativeSupported = supported,
@@ -53,6 +57,10 @@ local function snapshot(species)
       available = bridge and safeCall(bridge.available) == true,
       active = bridge and safeCall(bridge.active) == true,
     },
+    fallback = {
+      installed = fallback and fallback.installed == true,
+      interpolated = fallback and fallback.interpolated == true,
+    },
     model = model,
   }
 end
@@ -61,23 +69,26 @@ local function statusSignature(s)
   local c = s.cache or {}
   return table.concat({
     tostring(s.requested), tostring(s.effective), tostring(s.species),
-    tostring(c.format), tostring(c.count), tostring(c.variants),
+    tostring(s.provider), tostring(c.format), tostring(c.count), tostring(c.variants),
     tostring(c.compatible), tostring(c.operational),
     tostring(s.nativeInstalled), tostring(s.nativeSupported),
     tostring(s.hardening.rotationPatched), tostring(s.hardening.ensurePatched),
     tostring(s.providerRig.available), tostring(s.providerRig.active),
+    tostring(s.fallback.installed), tostring(s.fallback.interpolated),
   }, "|")
 end
 
 local function logSnapshot(s)
   local c = s.cache or {}
-  log("Stadium 2 status: requested=%s effective=%s mount=%s native=%s supported=%s cache=%s/%s/%s compatible=%s operational=%s hardening=%s/%s rig=%s/%s",
+  log("Stadium 2 status: requested=%s effective=%s mount=%s provider=%s native=%s supported=%s cache=%s/%s/%s compatible=%s operational=%s hardening=%s/%s rig=%s/%s fallback=%s/%s",
     tostring(s.requested), tostring(s.effective), tostring(s.species or "none"),
-    bool(s.nativeInstalled), s.nativeSupported == nil and "n/a" or bool(s.nativeSupported),
+    tostring(s.provider), bool(s.nativeInstalled),
+    s.nativeSupported == nil and "n/a" or bool(s.nativeSupported),
     tostring(c.format or "none"), tostring(c.count or 0), tostring(c.variants or 0),
     bool(c.compatible), bool(c.operational),
     bool(s.hardening.rotationPatched), bool(s.hardening.ensurePatched),
-    bool(s.providerRig.available), bool(s.providerRig.active))
+    bool(s.providerRig.available), bool(s.providerRig.active),
+    bool(s.fallback.installed), bool(s.fallback.interpolated))
 
   local model = s.model
   if type(model) == "table" then

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.6
+
+- Added native flat-2D flight; a voxel provider is no longer required to take off.
+- Added Wilds of Kanto as a supported sprite/follower runtime and removed the hard PokéPC dependency.
+- Made `mfrtechconsult/PokePCFollowers` the preferred PokéPC compatibility fork while retaining legacy fallback compatibility.
+- Added Generation II flight, Ground Ride and Visible Surf mounts through National Pokédex data without hard-depending on Crystal 251.
+- Added Suicune-exclusive seamless land/water Ground Ride while preserving normal Surf progression and restrictions.
+- Added Generation II speed/gallop profiles, rider offsets and Pokédex-proportional size controls.
+- Added a public airborne 2D sprite-source registration API.
+- Added optional Flying Music using installed FRLG/HGSS/LGPE packs without redistributing their audio.
+- Added cooperative/self-healing overworld update protection for Wilds and companion-mod stacks.
+- Improved Gen II mount facing in supported 1ST/3RD camera modes and Suicune continuity across map seams and water battles.
+- Followers are hidden by default while mounted; `GROUND FOLLOWERS` is a land Ground Ride-only opt-in and followers remain hidden during Flight and Surf.
+- Added expanded CI for native 2D loading, Wilds, Gen II contracts, Battle Art/Dramaless stacks and launcher-ready release ZIP validation.
+- Known limitation: with `GROUND FOLLOWERS` enabled, the active Ground Ride mount may still appear in the follower trail.
+- Known limitation: with Wilds of Kanto, Suicune may briefly show the ordinary Surf mount during post-battle return.
+- The optional Stadium renderer remains experimental and is not part of the validated 0.1.6 highlights.
+
 ## 0.1.6-rc.2 — development
 
 - Added native flat-2D flight. An active voxel pipeline is no longer required to take off.
@@ -91,38 +109,3 @@
 - Added optional Wild Skies integration through its public API, including real per-species follower/overworld sprites when available and exact visible flyer species/level battles.
 - Kept Wild Skies separate and optional; Free Fly remains a conflicting alternative flight engine.
 - Includes the alpha.16 startup/scope fixes and the Ground Ride sizing crash fix validated during testing.
-
-## 0.1.0-alpha.16.4
-
-- Added `DISCOVERY GATES`: airborne traversal cannot enter canonical vanilla Kanto routes/cities until that map has been reached through normal non-DSR-flight gameplay.
-- Progression discovery is stored per save through `mod.save`; walking, Ground Ride, Surf and ordinary/scripted non-flight entries count as legitimate visits, while DSR flight entries do not.
-- Saffron City and unvisited vanilla routes are therefore protected from first-time airborne sequence breaks even when no explicit badge gate catches the seam.
-- Unknown/custom map ids remain allowed by default for map-pack and total-conversion compatibility.
-- Added optional `flightRules.registerDiscoveryGate`, `markMapReached`, `isMapReached` and override helpers so custom integrations can opt in without depending on DSR internals.
-
-## 0.1.0-alpha.16.3
-
-- Fixed a Ground Ride crash triggered immediately by `G`: the Pokédex sizing wrapper referenced `GROUND_PROFILES`, which is private to the alpha.15 polish scope and therefore resolved as nil.
-- Ground rider seat scaling now uses its own stable lift table instead of another chunk's private locals.
-- Removed invalid global wrappers around the private visible-Surf builder/rider symbols and made Pokédex height lookup fall back to the canonical Pokémon definition.
-- Added a Ground Ride smoke-test requirement before Wild Skies validation.
-
-## 0.1.0-alpha.16.1
-
-- Fixed the alpha.16.0 startup failure caused by exceeding Lua's 200-local-variable limit in the concatenated DSR source.
-- Isolated the alpha.16 flight-rules, camera-altitude and Wild Skies integration modules in nested scopes without changing their gameplay behaviour.
-- Kept Wild Skies optional and Free Fly conflicting.
-
-## 0.1.0-alpha.16.0 — experimental
-
-- Adds story-aware FLY progression: optional FLY requirement, THUNDERBADGE flight gate, SOULBADGE water-landing gate, and data-driven story/badge connection gates.
-- Adds camera-driven altitude in Dramatic Shape 1ST/3RD modes.
-- Adds optional Wild Skies integration through its public API, including exact species/level aerial interceptions.
-- Registers real per-species follower/overworld sprites with Wild Skies when available.
-- Declares Free Fly as a conflicting alternative flight engine.
-
-## 0.1.0-alpha.15.5
-
-- Kept the Mod Index-compatible ZIP layout introduced in alpha.15.4.
-- Disabled manifest-level GitHub auto-update tracking while the mod uses prerelease SemVer tags.
-- No gameplay behavior changed from alpha.15.4.

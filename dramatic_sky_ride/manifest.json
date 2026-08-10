@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.6",
+  "version": "0.1.7-alpha.1",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -15,6 +15,7 @@
     "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
     "wild_skies@>=1.4.1 <2.0.0",
+    "otf-player-switcher",
     "Music_FRLG",
     "Music_HGSS",
     "Music_LGPE"
@@ -27,6 +28,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Ride compatible Gen 1 and Gen 2 Pokemon on land, water and in the air with native 2D flight, optional voxel rendering, Wilds of Kanto or PokePC sprites, optional flight music and Wild Skies integration.",
+  "description": "Ride compatible Gen 1 and Gen 2 Pokemon on land, water and in the air with native 2D flight, optional voxel rendering, Wilds of Kanto or PokePC sprites, optional player-sprite compatibility, flight music and Wild Skies integration.",
   "github": "mfrtechconsult/dramatic-sky-ride"
 }

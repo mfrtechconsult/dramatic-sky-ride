@@ -1,4 +1,4 @@
-;(function()
+(function()
 -- Final mounted-follower visibility policy from in-game validation.
 --
 -- The opt-in follower display is intentionally LAND GROUND RIDE only.

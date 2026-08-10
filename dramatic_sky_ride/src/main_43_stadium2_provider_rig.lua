@@ -125,6 +125,13 @@ local function providerCreateRuntime(model, species, dex, variant, provider)
     variant = variant,
     rig = rig,
     parts = rig.parts,
+    -- Keep the proof-of-concept scratch arrays available as an emergency
+    -- fallback if a provider-specific pose path fails for one species.
+    pivot = {},
+    drawM = {},
+    accX = {},
+    accY = {},
+    accZ = {},
     time = 0,
     frame = -1,
     facing = "down",
@@ -166,9 +173,12 @@ local function providerPoseRuntime(runtime, provider)
   end)
   if not ok then
     warnOnce("pose:" .. tostring(runtime.dex),
-      "Provider StadiumRig failed for Stadium 2 model #%s: %s",
+      "Provider StadiumRig failed for Stadium 2 model #%s: %s; falling back to DSR skinning",
       tostring(runtime.dex), tostring(err))
-    return false
+    runtime.providerRig = false
+    runtime.providerPoseTime = nil
+    return type(rawPoseRuntime) == "function"
+      and rawPoseRuntime(runtime, provider) or false
   end
 
   -- Preserve the diagnostic fields main_41/main_42 expose even though the
@@ -189,9 +199,6 @@ if providerAvailable and type(rawEnsureRuntime) == "function" then
   end
 end
 
--- If the bridge is active, require it as part of native readiness. main_42's
--- nativeReady closure is deliberately patched rather than replaced so all its
--- cache/format/safety checks remain authoritative.
 local hardening = mod.exports and mod.exports.stadium3DHardening or nil
 if hardening then
   hardening.providerRigAvailable = providerAvailable

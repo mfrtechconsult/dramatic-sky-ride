@@ -118,6 +118,7 @@ local skyRideUpdateHeartbeat = 0
 local skyRideHookRecoveries = 0
 
 local DSR_UPDATE_LINK_NAMES = {
+  gen2Update = true,
   wildSkiesUpdate = true,
   storyRuleUpdate = true,
   lot1Update = true,

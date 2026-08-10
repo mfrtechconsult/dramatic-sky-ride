@@ -73,7 +73,7 @@ Charizard is the primary end-to-end validation mount because it exercises:
 - the independent 2D rider entity;
 - DSR altitude and camera placement;
 - Pokédex-proportional mount sizing;
-- Stadium procedural-effect geometry present in generated packs;
+- generated Stadium procedural-effect geometry and texture flipbooks (tail flame);
 - shadows and the normal voxel depth path.
 
 ### Test sequence
@@ -84,13 +84,14 @@ Charizard is the primary end-to-end validation mount because it exercises:
 4. Set `MOUNT RENDERER = STADIUM 3D`.
 5. Mount Charizard.
 6. Test all four facings while stationary.
-7. Fly forward, backward and sideways.
-8. Ascend and descend through several manual altitude levels.
-9. Toggle `SHOW RIDER` off and on.
-10. Test at least one orbit/voxel camera and 3RD camera.
-11. Land, take off again and change maps.
-12. Enter and leave a battle, then verify the mount restores correctly.
-13. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
+7. Confirm the generated tail flame is visible and its texture continuously animates rather than remaining frozen on one frame.
+8. Fly forward, backward and sideways.
+9. Ascend and descend through several manual altitude levels.
+10. Toggle `SHOW RIDER` off and on.
+11. Test at least one orbit/voxel camera and 3RD camera.
+12. Land, take off again and change maps.
+13. Enter and leave a battle, then verify the mount restores correctly.
+14. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
 
 ## What should be visually correct
 
@@ -102,6 +103,8 @@ Charizard is the primary end-to-end validation mount because it exercises:
 - The model must participate in the voxel depth buffer and cast the model-shaped shadow supplied by the voxel provider.
 - Skeletal animation should be interpolated rather than visibly stepping at the Stadium source rate.
 - Animated Stadium material streams such as eye/blink changes should remain synchronized with the skeleton.
+- Generated DSM4 `fxFrames` should animate at the Stadium source rate (30 Hz); Charizard's tail flame is the first visual check.
+- Generated additive fire must not be included in the shadow pass.
 - A missing/invalid Stadium 2 model must fall back instead of making the mount invisible.
 
 ## Runtime diagnostics
@@ -141,8 +144,11 @@ Useful public diagnostic APIs are also exported for compatibility tools:
 - `stadium3DCrystalBootstrap.retry()`
 - `stadium3DProviderRig.active()`
 - `stadium3DFallback.interpolated`
+- `stadium3DEffects.status()`
 - `stadium3DDiagnostics.snapshot(species)`
 - `stadium3DDiagnostics.log(species)`
+
+`stadium3DEffects.status()` should report both the DSM4 effect-frame parser patch and the final pose-runtime decorator as active.
 
 ## Fallback hierarchy
 
@@ -164,11 +170,12 @@ After Charizard is visually correct, test representative shapes instead of immed
 - Pidgeot — bird wing animation and anchoring.
 - Aerodactyl — wide wing span.
 - Dragonair — long body.
+- Moltres — additional generated fire geometry/flipbooks.
 - Lugia or Ho-Oh with Crystal 251 — Gen II coverage.
 
 ### Ground Ride
 
-- Rapidash — quadruped animation.
+- Rapidash — quadruped animation plus generated mane/body fire.
 - Dodrio — tall narrow body.
 - Snorlax — large/wide body and rider placement.
 - Suicune — Gen II ground/water transition path.
@@ -183,6 +190,6 @@ After Charizard is visually correct, test representative shapes instead of immed
 
 - This branch is not yet a stable release.
 - Final rider seat tuning may still need species-specific visual adjustments after real in-game captures.
-- Generated Stadium effects depend on what is present in the DSM4 pack supplied by Crystal 251 and the active voxel provider's rendering capabilities.
+- Procedural fire/gas textures are generated replacements supplied by the Stadium extraction pipeline; DSR reads the generated DSM4 frames and does not bundle source game assets.
 - Battle Art can consume the cache but cannot currently act as Crystal 251's cache-generation provider by itself.
 - Runtime validation still requires Gen1Recomp/LÖVE plus a user-generated Stadium 2 cache; source-level tests cannot reproduce the final GPU/camera presentation by themselves.

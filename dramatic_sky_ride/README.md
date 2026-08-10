@@ -1,45 +1,118 @@
 # Dramatic Sky Ride 0.1.6
 
-Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**.
+Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**, with native 2D flight, optional voxel cameras, Generation II mounts, Wild Skies integration, and compatibility with either Wilds of Kanto or PokéPC Followers.
+
+## Installation and recommended mod stack
+
+### What is actually required
+
+Dramatic Sky Ride itself has **no mandatory third-party mod dependency**.
+
+You need:
+
+1. **[Gen1Recomp](https://github.com/bryanthaboi/gen1recomp)** `>=0.1.69 <2.0.0`;
+2. **Dramatic Sky Ride**.
+
+Native 2D flight works without Battle Art, Dramaless, Wild Skies, Crystal 251, or any music pack.
+
+However, for the intended Pokémon mount artwork and follower integration, you should install **exactly one** compatible Pokémon sprite/follower provider from the next section.
+
+### Choose ONE Pokémon sprite / follower provider
+
+For a normal installation, use **Wilds of Kanto OR PokéPC Followers — not both**.
+
+#### Recommended for the fullest overworld experience: Wilds of Kanto
+
+**[Wilds of Kanto](https://github.com/YoDrehDenSwagAuf/overworld-spawn-mod)** — `overworld_wild_spawns`
+
+Recommended if you want the most complete living-overworld setup:
+
+- visible overworld wild Pokémon;
+- the Wilds follower system;
+- Generation I and Generation II mount sprites for DSR;
+- strong integration with DSR Flight, Ground Ride and Surf;
+- works especially well alongside Wild Skies: Wilds populates the ground while Wild Skies populates the air.
+
+When Wilds is installed, it remains the authoritative follower runtime so DSR does not create a competing follower lifecycle.
+
+#### Alternative: maintained PokéPC Followers fork
+
+**[mfrtechconsult/PokePCFollowers](https://github.com/mfrtechconsult/PokePCFollowers)** — `PokePCFollowers_VoxelMerge`
+
+Recommended if you want a lighter follower-and-mount-sprite setup without Wilds of Kanto's overworld spawn system:
+
+- Generation I and II follower sprites;
+- Pokédex-proportional follower sizing;
+- compatible mount art for Flight, Ground Ride and Surf;
+- direct compatibility target maintained alongside DSR.
+
+The fork deliberately keeps the original PokéPC mod id for save/install compatibility. Older PokéPC builds sharing that id remain best-effort legacy fallbacks, but the maintained `mfrtechconsult/PokePCFollowers` fork is the recommended PokéPC implementation.
+
+> **Do not install Wilds of Kanto and PokéPC Followers together for the normal user setup.** DSR has resilience logic for accidental co-installation, but they are designed here as alternative providers.
+
+## Recommended full experience
+
+The following stack gives the broadest DSR experience while keeping responsibilities clean:
+
+| Purpose | Recommended mod | Requirement level |
+|---|---|---|
+| Game engine | **Gen1Recomp** `>=0.1.69` | Required |
+| Mount sprites + followers + living ground overworld | **Wilds of Kanto** | Strongly recommended; choose this **or** PokéPC |
+| Lighter mount sprites + followers | **mfrtechconsult/PokePCFollowers** | Alternative to Wilds; do **not** use both normally |
+| Visible airborne Pokémon and aerial interceptions | **[Wild Skies](https://github.com/ShaneHudson/gen1recomp-mods)** `>=1.4.1` | Strongly recommended |
+| 3D voxel world / 1ST / 3RD cameras | **Battle Art Voxel Fork** or **Dramaless Shape** | Optional, recommended for the voxel experience |
+| Generation II Pokémon in the actual game | **Crystal 251** or another compatible Gen2 content mod | Required only if you want Gen2 mounts |
+| Flight music | FRLG, HGSS or LGPE music pack | Optional |
+
+### Recommended 2D setup
+
+For the complete 2D-oriented experience:
+
+- Dramatic Sky Ride;
+- **Wilds of Kanto** *or* **mfrtechconsult/PokePCFollowers**;
+- **Wild Skies**;
+- Crystal 251 or another compatible Gen2 content mod if you want Johto mounts;
+- optionally one compatible music pack.
+
+No voxel mod is required.
+
+### Recommended voxel / 1ST / 3RD setup
+
+Start with the recommended setup above, then add **one** voxel provider:
+
+- **[Battle Art Voxel Fork](https://github.com/absol89/DramaticShapeVoxelMod)** `>=1.7.6 <2.0.0`, or
+- **[Dramaless Shape](https://github.com/artyrambles/DRAMALESS_SHAPE)** `>=1.6.4 <2.0.0`.
+
+Both are supported. Battle Art is preferred automatically if both are installed, but a normal setup only needs one.
+
+Dramaless reserves `G` for V-GRID, so Ground Ride uses `J` with Dramaless. Battle Art and flat 2D use `G`.
 
 ## Native 2D flight
 
-A voxel provider is **no longer required to fly**.
+A voxel provider is **not required to fly**.
 
 DSR uses one renderer-independent flight mechanic: movement, collision, altitude, progression, encounters, battles and map transitions share the same flight state in flat 2D and supported voxel cameras.
 
-`2D SPRITES` is the default flight presentation. The flat overworld reuses the existing Pokédex-proportional mount sizing and per-species size options.
+`2D SPRITES` is the default flight presentation. The flat overworld reuses Pokédex-proportional mount sizing and per-species size options.
 
-## Optional voxel providers
+## Wild Skies — strongly recommended
 
-For voxel world/camera rendering, install one supported provider:
+**[Wild Skies](https://github.com/ShaneHudson/gen1recomp-mods) 1.4.1+ is strongly recommended for the full flight experience.**
 
-- **Battle Art Voxel Fork 1.7.6+** — `BATTLE_ART_VOXEL_FORK`;
-- **Dramaless Shape 1.6.4+** — `DRAMALESS_SHAPE`.
+DSR uses its public API for ambient airborne Pokémon and consumes the exact visible species and level when an aerial interception starts a battle.
 
-Battle Art is preferred automatically if both are installed. Neither is required for native 2D flight.
+Wild Skies is complementary to both supported Pokémon providers:
 
-## Pokémon sprite / follower providers
+- **Wilds of Kanto + Wild Skies** gives a populated ground and populated sky;
+- **PokéPC Followers + Wild Skies** gives the lighter follower/mount setup plus airborne encounters.
 
-Normal setups should use one of:
-
-- **Wilds of Kanto** — `overworld_wild_spawns`;
-- **PokéPC Followers — maintained mfrtechconsult compatibility fork** — `PokePCFollowers_VoxelMerge`.
-
-The officially tested PokéPC target is `mfrtechconsult/PokePCFollowers`. It retains the original mod id for save/install compatibility and exposes the common public sprite-provider API used by DSR. Older PokéPC builds sharing the same id remain best-effort legacy fallbacks.
-
-Wilds of Kanto and PokéPC Followers are alternatives for the normal user setup; they are not required together.
-
-Third-party sprite packs can also dress DSR's airborne 2D mount through:
-
-- `registerSpriteSource({ id|mod, resolve(exports, game, species, dex) })`;
-- `unregisterSpriteSource(id)`.
-
-Compatible sources return an animated walker-style sprite definition. Registered sources can override DSR's built-in Wilds/PokéPC sprite lookup without replacing the flight mechanic.
+Wild Skies is optional: DSR flight itself still works without it.
 
 ## Generation II mounts
 
-Generation II support is based on **National Pokédex data**, not a hard dependency on Crystal 251. Crystal 251 or another compatible content mod can provide Pokémon 152–251, while Wilds of Kanto or the maintained PokéPC fork supplies compatible overworld art.
+Generation II support is based on **National Pokédex data**, not a hard dependency on Crystal 251 by mod id.
+
+To actually use a Generation II mount, that Pokémon must exist in the loaded game data and be available to the player. **Crystal 251 or another compatible Gen2 content mod therefore becomes necessary if you want to use the Johto mount roster.** Wilds of Kanto or the maintained PokéPC fork then supplies compatible overworld mount art.
 
 ### Flying
 
@@ -67,7 +140,7 @@ Once normal Surf progression is available, Suicune can run directly from land on
 
 Normal water collision, Surf progression, map connections and map restrictions remain authoritative. Gallop state stays continuous across the shoreline.
 
-The same land/water transition support is applied to the supported 1ST/3RD free-camera movement paths.
+The same land/water transition support is applied to supported 1ST/3RD free-camera movement paths.
 
 ## Followers while mounted
 
@@ -79,7 +152,7 @@ Known limitation in 0.1.6: when `GROUND FOLLOWERS` is enabled, the Pokémon curr
 
 ## Wilds of Kanto compatibility
 
-- Wilds can provide Generation I and II mount sprites without forcing PokéPC Followers as a hard dependency.
+- Wilds can provide Generation I and II mount sprites without requiring PokéPC Followers.
 - DSR uses cooperative/self-healing overworld update protection rather than restoring stale function snapshots.
 - Generation II and Suicune runtime layers are part of the protected update chain.
 - Gen II mount facing is reasserted after late Wilds updates in supported 1ST/3RD camera modes.
@@ -87,15 +160,15 @@ Known limitation in 0.1.6: when `GROUND FOLLOWERS` is enabled, the Pokémon curr
 
 Known Wilds-only visual limitation: after a battle on water, Suicune can briefly show the ordinary Surf mount before the amphibious Ground Ride presentation is restored.
 
-## Wild Skies
-
-**Wild Skies 1.4.1+ is strongly recommended.** DSR uses its public API for ambient airborne Pokémon and consumes the exact visible species/level when an aerial interception starts a battle.
-
-## Flying Music
+## Flying Music — optional
 
 `FLYING MUSIC` defaults to `None`.
 
-If installed, DSR can reuse existing Surf/Bike OGG files from `Music_FRLG`, `Music_HGSS` and `Music_LGPE`. DSR does not copy or redistribute those audio assets. Battle, victory and jingle cues retain priority, and normal map/Surf music is restored after landing.
+DSR can reuse compatible Surf/Bike OGG files from already-installed **FRLG**, **HGSS** or **LGPE** packs from [DarioMelo/Gen1Recomp-MusicMods](https://github.com/DarioMelo/Gen1Recomp-MusicMods).
+
+DSR does not copy or redistribute those audio assets. Battle, victory and jingle cues retain priority, and normal map/Surf music is restored after landing.
+
+A music pack is never required to use Flight.
 
 ## Controls
 
@@ -120,7 +193,7 @@ Native Surf movement, collision and progression remain authoritative. Suicune is
 
 - `FLIGHT SPEED`: 50% to 200%, default 100%.
 - `GROUND SPEED`: 50% to 200%, default 100%.
-- Pokédex-proportional mount sizing remains enabled by default, with per-species overrides including Generation II mounts.
+- Pokédex-proportional mount sizing is enabled by default, with per-species overrides including Generation II mounts.
 - Generation II Ground Ride species receive curated base/gallop speed profiles while retaining the existing stamina/acceleration behavior.
 
 ## Progression safeguards
@@ -129,20 +202,25 @@ DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES
 
 `DISCOVERY GATES` prevent first-time airborne entry into canonical vanilla Kanto routes/cities until those maps have been reached normally. Unknown/custom map IDs remain open by default.
 
-Suicune water running uses the normal SURF field-move progression gate and preserves existing forced-bike and Seafoam restrictions.
+Suicune water running uses normal SURF field-move progression and preserves existing forced-bike and Seafoam restrictions.
 
-## Compatibility
+## Compatibility summary
 
-- Gen1Recomp `>=0.1.69 <2.0.0`.
-- No voxel provider required for native 2D flight.
-- Optional voxel providers: Battle Art Voxel Fork `>=1.7.6 <2.0.0` or Dramaless Shape `>=1.6.4 <2.0.0`.
-- Compatible sprite/follower providers: Wilds of Kanto **or** the maintained `mfrtechconsult/PokePCFollowers` fork.
-- Generation II mounts activate only when their Pokémon records exist in the current game data; Crystal 251 is supported but not required by id.
-- Wild Skies `>=1.4.1 <2.0.0` strongly recommended.
-- Optional Flying Music providers: `Music_FRLG`, `Music_HGSS`, `Music_LGPE`.
-- `free_fly` remains a conflicting alternative player-flight engine.
+- **Required:** Gen1Recomp `>=0.1.69 <2.0.0` + Dramatic Sky Ride.
+- **Normal sprite/follower setup:** Wilds of Kanto **or** maintained `mfrtechconsult/PokePCFollowers` — choose one.
+- **Strongly recommended for Flight:** Wild Skies `>=1.4.1 <2.0.0`.
+- **Optional voxel provider:** Battle Art Voxel Fork `>=1.7.6 <2.0.0` or Dramaless Shape `>=1.6.4 <2.0.0`.
+- **Gen2 mounts:** require those species to be supplied by Crystal 251 or another compatible Gen2 content mod.
+- **Optional Flying Music:** `Music_FRLG`, `Music_HGSS`, or `Music_LGPE`.
+- `free_fly` conflicts because it is an alternative player-flight engine.
 
-The optional Stadium renderer remains present as an experimental compatibility path but is not part of the validated 0.1.6 feature highlights.
+The optional Stadium renderer remains an **experimental compatibility path** and is intentionally not part of the recommended 0.1.6 setup.
+
+## Known limitations
+
+- With `GROUND FOLLOWERS` enabled, the active Ground Ride mount may still appear in the follower trail. Leave the option OFF for the cleanest presentation.
+- With Wilds of Kanto, Suicune may briefly show the ordinary Surf mount during the post-battle return before Suicune is restored.
+- Experimental compatibility paths are not part of the validated core 0.1.6 experience.
 
 ## Credits
 
@@ -151,10 +229,20 @@ The optional Stadium renderer remains present as an experimental compatibility p
 - DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
 - mfrtechconsult/PokePCFollowers — maintained PokéPC compatibility fork used by DSR, including Gen 1/2 sprite-provider support and Pokédex-proportional sizing.
 - gamecorner-033/PokePCFollowers — original PokéPC follower project and upstream foundation.
-- YoDrehDenSwagAuf/overworld-spawn-mod — Wilds of Kanto follower/wild overworld ecosystem and Generation II GSC sprite provider support.
+- YoDrehDenSwagAuf/overworld-spawn-mod — Wilds of Kanto follower/wild overworld ecosystem and Generation II GSC sprite-provider support.
 - ShaneHudson/gen1recomp-mods — Free Fly/Wild Skies public flight and hook interoperability patterns.
 - DarioMelo/Gen1Recomp-MusicMods — optional FRLG/HGSS/LGPE music providers.
 
-## Testing
+## Testing / bug reports
 
-For bug reports include Gen1Recomp version, voxel provider/version if used, Wilds or PokéPC setup, Generation II content provider if used, Wild Skies version, music pack/version if used, mount species, camera mode and exact reproduction steps.
+For bug reports, include:
+
+- Gen1Recomp version;
+- **Wilds of Kanto or PokéPC Followers** setup;
+- voxel provider/version if used;
+- Generation II content provider if used;
+- Wild Skies version if used;
+- music pack/version if used;
+- mount species;
+- camera mode;
+- exact reproduction steps.

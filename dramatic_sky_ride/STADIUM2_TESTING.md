@@ -31,7 +31,37 @@ The expected cache contract is:
 - species: 251
 - variants: 2 (`normal` and `shiny`)
 
-DSR now refuses incomplete or stale native caches. If the cache contract is not satisfied, the renderer falls back safely instead of consuming partial packs.
+DSR refuses incomplete or stale native caches. If the cache contract is not satisfied, the renderer falls back safely instead of consuming partial packs.
+
+## Building the Stadium 2 cache
+
+Crystal 251's current importer is built on top of the full Stadium module family from Dramatic Shape. DSR therefore separates **cache generation** from **cache rendering**.
+
+### Dramaless Shape
+
+This is the easiest experimental setup.
+
+DSR detects Crystal 251 plus Dramaless Shape and, when the DSM cache is missing or stale, attaches Crystal's own Stadium 2 bridge to Dramaless automatically. Crystal remains the owner of the ROM picker, extraction, cache format and generated files.
+
+After the bridge is attached, use Crystal's normal `STADIUM 2 MODELS` / Stadium 2 ROM import flow if it does not start automatically.
+
+### Original Dramatic Shape
+
+Crystal 251 already discovers the original `DRAMATIC_SHAPE` provider itself. DSR does not need to take ownership of that importer path.
+
+### Battle Art Voxel Fork
+
+Battle Art is fully supported for **rendering an existing DSR Stadium 2 cache**, including the interpolated/anchored DSR skeleton fallback.
+
+Battle Art does not currently ship the complete Stadium importer module family Crystal 251 expects. Therefore, if no valid DSM cache exists yet:
+
+1. temporarily run Crystal 251 with Dramaless Shape or the original Dramatic Shape;
+2. import the supported Stadium 2 ROM and let the 251 normal + shiny DSM packs finish building;
+3. close the game after the cache is complete;
+4. switch back to Battle Art Voxel Fork;
+5. keep Crystal 251 and DSR enabled — DSR will read the same persistent `crystal_251/stadium2` cache directly.
+
+The ROM/model data is never copied into the DSR mod package.
 
 ## First validation target: Charizard
 
@@ -49,17 +79,18 @@ Charizard is the primary end-to-end validation mount because it exercises:
 ### Test sequence
 
 1. Start with DSR `MOUNT RENDERER = 2D SPRITES` and verify normal Flight still works.
-2. Enter a supported voxel mode.
-3. Set `MOUNT RENDERER = STADIUM 3D`.
-4. Mount Charizard.
-5. Test all four facings while stationary.
-6. Fly forward, backward and sideways.
-7. Ascend and descend through several manual altitude levels.
-8. Toggle `SHOW RIDER` off and on.
-9. Test at least one orbit/voxel camera and 3RD camera.
-10. Land, take off again and change maps.
-11. Enter and leave a battle, then verify the mount restores correctly.
-12. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
+2. Confirm the Stadium 2 cache is complete.
+3. Enter a supported voxel mode.
+4. Set `MOUNT RENDERER = STADIUM 3D`.
+5. Mount Charizard.
+6. Test all four facings while stationary.
+7. Fly forward, backward and sideways.
+8. Ascend and descend through several manual altitude levels.
+9. Toggle `SHOW RIDER` off and on.
+10. Test at least one orbit/voxel camera and 3RD camera.
+11. Land, take off again and change maps.
+12. Enter and leave a battle, then verify the mount restores correctly.
+13. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
 
 ## What should be visually correct
 
@@ -69,7 +100,8 @@ Charizard is the primary end-to-end validation mount because it exercises:
 - Flight altitude must move the entire 3D model without terrain-induced vertical bobbing.
 - The trainer must remain a separate human-sized sprite and sit consistently relative to the resized mount.
 - The model must participate in the voxel depth buffer and cast the model-shaped shadow supplied by the voxel provider.
-- Animated Stadium material streams such as eye/blink changes should remain synchronized with the skeleton when the provider StadiumRig bridge is active.
+- Skeletal animation should be interpolated rather than visibly stepping at the Stadium source rate.
+- Animated Stadium material streams such as eye/blink changes should remain synchronized with the skeleton.
 - A missing/invalid Stadium 2 model must fall back instead of making the mount invisible.
 
 ## Runtime diagnostics
@@ -84,10 +116,15 @@ The line reports:
 
 - requested and effective renderer;
 - active mount species;
+- active voxel provider;
 - native cache format/count/variant status;
 - whether the native cache is compatible and operational;
-- hardening-patch status;
-- provider StadiumRig availability and activation.
+- rotation, pack-safety and dual-hook hardening status;
+- provider StadiumRig availability and activation;
+- interpolated DSR fallback status;
+- Crystal cache-bootstrap state and reason.
+
+A Battle Art setup without a generated cache should report the bootstrap reason `battle_art_requires_prebuilt_cache`.
 
 When a native model is loaded, DSR also logs:
 
@@ -100,7 +137,10 @@ Useful public diagnostic APIs are also exported for compatibility tools:
 - `stadium3DNative.cacheStatus()`
 - `stadium3DNative.modelInfo(species)`
 - `stadium3DHardening.cacheCompatibility()`
+- `stadium3DCrystalBootstrap.status()`
+- `stadium3DCrystalBootstrap.retry()`
 - `stadium3DProviderRig.active()`
+- `stadium3DFallback.interpolated`
 - `stadium3DDiagnostics.snapshot(species)`
 - `stadium3DDiagnostics.log(species)`
 
@@ -109,7 +149,7 @@ Useful public diagnostic APIs are also exported for compatibility tools:
 The experimental branch is intentionally defensive:
 
 1. Native Stadium 2 model using the voxel provider's StadiumRig when available.
-2. Hardened DSR native DSM4 skinning fallback if the provider rig cannot be used.
+2. Interpolated, anchored and hardened DSR DSM4 skinning fallback when the provider rig cannot be used.
 3. Randy's compatible Stadium 1 provider for supported Gen I species when present.
 4. DSR 2D mount rendering.
 
@@ -144,4 +184,5 @@ After Charizard is visually correct, test representative shapes instead of immed
 - This branch is not yet a stable release.
 - Final rider seat tuning may still need species-specific visual adjustments after real in-game captures.
 - Generated Stadium effects depend on what is present in the DSM4 pack supplied by Crystal 251 and the active voxel provider's rendering capabilities.
+- Battle Art can consume the cache but cannot currently act as Crystal 251's cache-generation provider by itself.
 - Runtime validation still requires Gen1Recomp/LÖVE plus a user-generated Stadium 2 cache; source-level tests cannot reproduce the final GPU/camera presentation by themselves.

@@ -61,3 +61,4 @@ main_37_otf_player_switcher.lua
 main_38_native_pokemmo_mounts.lua
 main_39_flat_building_altitude.lua
 main_40_pokemmo_size_fix.lua
+main_41_stadium2_3d.lua

@@ -66,12 +66,28 @@ jobs:
             exit 1
           fi
 
-          : > /tmp/dramatic_sky_ride.lua
-          while IFS= read -r part; do
-            test -n "$part" || continue
-            test -f "dramatic_sky_ride/src/$part"
-            cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
-          done < dramatic_sky_ride/src/parts.txt
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("dramatic_sky_ride")
+          parts = [p.strip() for p in (root / "src/parts.txt").read_text().splitlines() if p.strip()]
+          chunks = []
+          previous_ends_semicolon = False
+          for part in parts:
+              path = root / "src" / part
+              if not path.is_file():
+                  raise SystemExit(f"missing source part: {path}")
+              text = path.read_text()
+              if previous_ends_semicolon:
+                  i = 0
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+                  if i < len(text) and text[i] == ';':
+                      text = text[:i] + text[i + 1:]
+              chunks.append(text)
+              previous_ends_semicolon = text.rstrip().endswith(';')
+          Path('/tmp/dramatic_sky_ride.lua').write_text(''.join(chunks))
+          PY
           luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
           luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
           luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
@@ -99,11 +115,28 @@ jobs:
           mkdir -p /tmp/dsr-release-check
           unzip -q "$ARCHIVE" -d /tmp/dsr-release-check
           python -m json.tool /tmp/dsr-release-check/manifest.json > /dev/null
-          : > /tmp/dsr-release-sky-ride.lua
-          while IFS= read -r part; do
-            test -n "$part" || continue
-            cat "/tmp/dsr-release-check/src/$part" >> /tmp/dsr-release-sky-ride.lua
-          done < /tmp/dsr-release-check/src/parts.txt
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('/tmp/dsr-release-check')
+          parts = [p.strip() for p in (root / 'src/parts.txt').read_text().splitlines() if p.strip()]
+          chunks = []
+          previous_ends_semicolon = False
+          for part in parts:
+              path = root / 'src' / part
+              if not path.is_file():
+                  raise SystemExit(f"missing packaged source part: {path}")
+              text = path.read_text()
+              if previous_ends_semicolon:
+                  i = 0
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+                  if i < len(text) and text[i] == ';':
+                      text = text[:i] + text[i + 1:]
+              chunks.append(text)
+              previous_ends_semicolon = text.rstrip().endswith(';')
+          Path('/tmp/dsr-release-sky-ride.lua').write_text(''.join(chunks))
+          PY
           luajit -b /tmp/dsr-release-sky-ride.lua /tmp/dsr-release-sky-ride.ljbc
           luajit -b /tmp/dsr-release-check/main.lua /tmp/dsr-release-main.ljbc
           luajit -b /tmp/dsr-release-check/mod.card /tmp/dsr-release-card.ljbc

@@ -52,3 +52,4 @@ main_28_stadium_compat.lua
 main_29_flying_music.lua
 main_30_flat_flight.lua
 main_31_sprite_sources.lua
+main_32_pokepc_fork.lua

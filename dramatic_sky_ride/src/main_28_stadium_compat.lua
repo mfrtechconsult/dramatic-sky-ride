@@ -37,11 +37,49 @@ local function requestedRenderer()
   return value == RENDERER_STADIUM and RENDERER_STADIUM or RENDERER_2D
 end
 
+local function activeMountSpecies()
+  if not flight.active then return nil end
+  return flight.species or (flight.mon and flight.mon.species) or nil
+end
+
+local function speciesDex(species)
+  if not species then return nil end
+  local cfg = ELIGIBLE and ELIGIBLE[species] or nil
+  if cfg and tonumber(cfg.dex) then return tonumber(cfg.dex) end
+  local pokemon = Game.data and Game.data.pokemon or nil
+  local def = pokemon and pokemon[species] or nil
+  return def and tonumber(def.dex) or nil
+end
+
+local function stadiumSupportsSpecies(species)
+  if not species then return true end
+  local handle = stadiumHandle()
+  if not handle then return false end
+  local ex = handle.exports or {}
+
+  -- Future Stadium/3D providers may explicitly advertise broader coverage.
+  -- Prefer that capability when available instead of hard-coding generations.
+  for _, name in ipairs({ "supportsSpecies", "hasModel", "modelAvailable" }) do
+    local fn = ex[name]
+    if type(fn) == "function" then
+      local ok, supported = pcall(fn, species, speciesDex(species))
+      if ok then return supported == true end
+    end
+  end
+
+  -- Current Pokemon Stadium model imports naturally cover Gen 1. Gen 2 keeps
+  -- the normal DSR billboard even when STADIUM 3D was selected, preventing an
+  -- invisible Noctowl/Crobat/Lugia/etc. until a renderer explicitly supports it.
+  local dex = speciesDex(species)
+  return dex ~= nil and dex >= 1 and dex <= 151
+end
+
 local function stadiumRendererAvailable()
-  -- Stadium models are a voxel renderer. If VOXEL is off, keep flight fully
-  -- functional and fall back to the native 2D composition instead of refusing
-  -- takeoff or producing an invisible mount.
+  -- Stadium models are a voxel renderer. If VOXEL is off, or the current mount
+  -- has no model, keep flight fully functional and fall back to the native 2D
+  -- billboard instead of refusing takeoff or producing an invisible mount.
   return stadiumHandle() ~= nil and voxelLevel() > 0
+    and stadiumSupportsSpecies(activeMountSpecies())
 end
 
 local function effectiveRenderer()
@@ -78,10 +116,7 @@ mod.exports.mountSpecies = function()
       return value.species
     end
   end
-  if flight.active then
-    return flight.species or (flight.mon and flight.mon.species) or nil
-  end
-  return nil
+  return activeMountSpecies()
 end
 
 mod.exports.flightRendering = {
@@ -92,10 +127,11 @@ mod.exports.flightRendering = {
 }
 
 mod.exports.stadiumCompatibility = {
-  api = 2,
+  api = 3,
   installed = function() return stadiumHandle() ~= nil end,
   requested = function() return requestedRenderer() == RENDERER_STADIUM end,
   enabled = function() return effectiveRenderer() == RENDERER_STADIUM end,
+  supportsSpecies = stadiumSupportsSpecies,
   effectiveRenderer = effectiveRenderer,
 }
 

@@ -59,6 +59,8 @@ jobs:
           required = [
               'main_41_stadium2_3d.lua',
               'main_42_stadium2_hardening.lua',
+              'main_42b_stadium2_dual_guard.lua',
+              'main_46_crystal_stadium2_bootstrap.lua',
               'main_43_stadium2_provider_rig.lua',
               'main_45_stadium2_interpolated_fallback.lua',
               'main_44_stadium2_diagnostics.lua',
@@ -73,8 +75,8 @@ jobs:
 
           source = '\n'.join((root / 'src' / name).read_text(encoding='utf-8') for name in required)
           for token in ('C2DSM10', 'stadium3DNative', 'stadium3DHardening',
-                        'stadium3DProviderRig', 'stadium3DFallback',
-                        'stadium3DDiagnostics'):
+                        'stadium3DCrystalBootstrap', 'stadium3DProviderRig',
+                        'stadium3DFallback', 'stadium3DDiagnostics'):
               if token not in source:
                   raise SystemExit(f'missing Stadium 2 contract token: {token}')
           PY

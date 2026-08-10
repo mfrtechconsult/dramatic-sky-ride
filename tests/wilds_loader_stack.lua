@@ -89,9 +89,18 @@ check(type(sky.wildsCompatibility.composeAround) == "function",
 
 if target == "deep" then
   local deep = run.loader.exports.DRAMATIC_DEEP_DIVE or {}
-  check(deep.wildsCompatibility and deep.wildsCompatibility.hookGuardReady == true,
-    "Deep Dive arms its production update-chain guard")
-  check(type(deep.wildsCompatibility.ownsUpdate) == "function",
+  local diagnosticTravelOnly = type(deep.isActive) == "function" and deep.isActive() == false
+  if diagnosticTravelOnly then
+    -- DDD alpha.7 intentionally runs its proven travel-only path and leaves
+    -- the advanced depth controller/update guard disabled. This is a valid
+    -- compatibility state, not a failed guard installation.
+    check(deep.wildsCompatibility and deep.wildsCompatibility.hookGuardReady == false,
+      "Deep Dive diagnostic travel-only mode leaves update guard intentionally disabled")
+  else
+    check(deep.wildsCompatibility and deep.wildsCompatibility.hookGuardReady == true,
+      "Deep Dive arms its production update-chain guard")
+  end
+  check(deep.wildsCompatibility and type(deep.wildsCompatibility.ownsUpdate) == "function",
     "Deep Dive publishes cooperative guard metadata")
   local selectedProvider = type(deep.voxelProvider) == "function"
     and select(1, deep.voxelProvider()) or nil

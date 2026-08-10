@@ -47,10 +47,10 @@ main_24_wild_skies.lua
 main_25_discovery_gates.lua
 main_26_surf_third_person.lua
 main_14.lua
+main_33_gen2_mounts.lua
 main_27_wilds_compat.lua
 main_28_stadium_compat.lua
 main_29_flying_music.lua
 main_30_flat_flight.lua
 main_31_sprite_sources.lua
 main_32_pokepc_fork.lua
-main_33_gen2_mounts.lua

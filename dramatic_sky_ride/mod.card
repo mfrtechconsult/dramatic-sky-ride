@@ -5,10 +5,9 @@ return {
   differences = {
     changed = {
       "native flat 2D flight no longer requires a voxel provider",
-      "2D SPRITES is the default FLIGHT RENDERER and remains authoritative unless Stadium 3D is explicitly selected",
-      "STADIUM 3D falls back safely to 2D when Stadium or an active voxel pipeline is unavailable",
       "Wilds of Kanto or the maintained mfrtechconsult/PokePCFollowers fork can provide compatible Pokemon mount sprites",
-      "followers are hidden on every mount by default; MOUNT FOLLOWERS can re-enable other followers while keeping the active mount hidden",
+      "PokéPC Followers is no longer a hard requirement for mount rendering",
+      "followers are hidden while mounted by default; GROUND FOLLOWERS is an optional land Ground Ride-only display setting",
       "Battle Art Voxel Fork and Dramaless Shape are optional voxel providers rather than flight requirements",
       "Battle Art remains preferred automatically if multiple supported voxel providers are active",
       "Dramaless uses J for Ground Ride because it reserves G for V-GRID; controller X/Y remain unchanged",
@@ -17,20 +16,21 @@ return {
       "Wild Skies 1.4.1+ remains strongly recommended for visible aerial encounters"
     },
     added = {
-      "native 2D rider-plus-mount composition with deterministic rider-first mount-second draw order",
-      "2D flight reuse of the existing Pokedex-proportional mount sizing and per-species size controls",
-      "explicit renderer inspection through flightRendering and stadiumCompatibility",
+      "native 2D rider-plus-mount composition with Pokedex-proportional sizing",
       "Wilds of Kanto authoritative follower/sprite compatibility",
-      "cooperative self-healing overworld update-hook protection for the Wilds/DSR/Deep Dive stack",
+      "cooperative self-healing overworld update-hook protection for Wilds/DSR companion-mod stacks",
       "optional Flying Music integration with installed FRLG, HGSS and LGPE music packs without redistributing audio",
       "Gen 2 flight mounts including Noctowl, Crobat, Xatu, Skarmory, Lugia and Ho-Oh when those species exist in the game",
       "Gen 2 Ground Ride mounts including Meganium, Girafarig, Ursaring, Donphan, Stantler, Raikou, Entei, Suicune and Tyranitar",
       "Gen 2 visible Surf mounts including Feraligatr, Mantine, Kingdra and Lugia",
-      "Suicune-exclusive seamless land-to-water Ground Ride while normal Surf progression remains required"
+      "Gen 2 Pokedex-proportional size controls and curated Ground Ride speed/gallop profiles",
+      "Suicune-exclusive seamless land-to-water Ground Ride while normal Surf progression remains required",
+      "public airborne 2D sprite-source registration API for compatible external sprite providers"
     },
     known = {
-      "Pokemon Stadium Overworld Models still owns its own renderer and must honor DSR's explicit Stadium opt-in for full cross-mod 2D priority",
-      "current Stadium imports are Gen 1; unsupported Gen 2 mounts safely remain 2D",
+      "with GROUND FOLLOWERS enabled, the current Ground Ride mount can still appear in the follower trail; the option is OFF by default",
+      "with Wilds of Kanto, Suicune can briefly show the ordinary Surf mount during post-battle return",
+      "the optional Stadium renderer remains experimental and is not part of the validated 0.1.6 highlights",
       "Wild Skies takeFlyer exposes species/level but not flyer altitude, so interception remains cell-radius based",
       "rider seating uses procedural offsets rather than dedicated seated trainer sprites",
       "tall-building safety uses authored zones plus available terrain-height data"
@@ -42,7 +42,6 @@ return {
     { who = "mfrtechconsult/PokePCFollowers", for_ = "maintained Gen 1/2 follower sprite provider and compatibility fork" },
     { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork and voxel camera integration" },
     { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape voxel provider and public integration surface" },
-    { who = "randyadr/3D-Pokemon-Sprites", for_ = "Pokemon Stadium Overworld Models integration target" },
     { who = "DarioMelo/Gen1Recomp-MusicMods", for_ = "optional FRLG/HGSS/LGPE music providers" }
   },
   compat = { engine = ">=0.1.69 <2.0.0", modApi = 2 }

@@ -15,7 +15,20 @@ You need:
 
 Native 2D flight works without Battle Art, Dramaless, Wild Skies, Crystal 251, or any music pack.
 
-However, for the intended Pokémon mount artwork and follower integration, you should install **exactly one** compatible Pokémon sprite/follower provider from the next section.
+### Recommended complete setup
+
+For the experience Dramatic Sky Ride is primarily designed around, use:
+
+1. **Dramatic Sky Ride**;
+2. **Wilds of Kanto** *or* **mfrtechconsult/PokePCFollowers** for Pokémon mount/follower sprites;
+3. **Battle Art Voxel Fork** `>=1.7.6 <2.0.0` for the recommended voxel world and 1ST/3RD camera experience;
+4. **Wild Skies** `>=1.4.1` for visible airborne Pokémon and aerial interceptions.
+
+**Battle Art Voxel Fork is the recommended voxel companion for Dramatic Sky Ride.** It provides the voxel presentation and 1ST/3RD cameras while DSR keeps Flight, Ground Ride, Surf, collision, altitude and progression renderer-independent.
+
+**Dramaless Shape** `>=1.6.4 <2.0.0` is also fully supported as an alternative voxel provider. Install one voxel provider for the voxel experience; native 2D flight needs neither.
+
+If you want Johto mounts, add **Crystal 251 or another compatible Gen2 content mod** so Generation II Pokémon actually exist in the loaded game.
 
 ### Choose ONE Pokémon sprite / follower provider
 
@@ -59,8 +72,9 @@ The following stack gives the broadest DSR experience while keeping responsibili
 | Game engine | **Gen1Recomp** `>=0.1.69` | Required |
 | Mount sprites + followers + living ground overworld | **Wilds of Kanto** | Strongly recommended; choose this **or** PokéPC |
 | Lighter mount sprites + followers | **mfrtechconsult/PokePCFollowers** | Alternative to Wilds; do **not** use both normally |
+| Voxel world / 1ST / 3RD cameras | **Battle Art Voxel Fork** | **Recommended voxel provider** |
+| Alternative voxel provider | **Dramaless Shape** | Supported alternative |
 | Visible airborne Pokémon and aerial interceptions | **[Wild Skies](https://github.com/ShaneHudson/gen1recomp-mods)** `>=1.4.1` | Strongly recommended |
-| 3D voxel world / 1ST / 3RD cameras | **Battle Art Voxel Fork** or **Dramaless Shape** | Optional, recommended for the voxel experience |
 | Generation II Pokémon in the actual game | **Crystal 251** or another compatible Gen2 content mod | Required only if you want Gen2 mounts |
 | Flight music | FRLG, HGSS or LGPE music pack | Optional |
 
@@ -78,14 +92,12 @@ No voxel mod is required.
 
 ### Recommended voxel / 1ST / 3RD setup
 
-Start with the recommended setup above, then add **one** voxel provider:
+Start with the recommended setup above, then use **Battle Art Voxel Fork** as the preferred voxel provider:
 
-- **[Battle Art Voxel Fork](https://github.com/absol89/DramaticShapeVoxelMod)** `>=1.7.6 <2.0.0`, or
-- **[Dramaless Shape](https://github.com/artyrambles/DRAMALESS_SHAPE)** `>=1.6.4 <2.0.0`.
+- **[Battle Art Voxel Fork](https://github.com/absol89/DramaticShapeVoxelMod)** `>=1.7.6 <2.0.0` — recommended;
+- **[Dramaless Shape](https://github.com/artyrambles/DRAMALESS_SHAPE)** `>=1.6.4 <2.0.0` — supported alternative.
 
-Both are supported. Battle Art is preferred automatically if both are installed, but a normal setup only needs one.
-
-Dramaless reserves `G` for V-GRID, so Ground Ride uses `J` with Dramaless. Battle Art and flat 2D use `G`.
+A normal setup only needs one voxel provider. Dramaless reserves `G` for V-GRID, so Ground Ride uses `J` with Dramaless. Battle Art and flat 2D use `G`.
 
 ## Native 2D flight
 
@@ -208,8 +220,9 @@ Suicune water running uses normal SURF field-move progression and preserves exis
 
 - **Required:** Gen1Recomp `>=0.1.69 <2.0.0` + Dramatic Sky Ride.
 - **Normal sprite/follower setup:** Wilds of Kanto **or** maintained `mfrtechconsult/PokePCFollowers` — choose one.
+- **Recommended voxel provider:** Battle Art Voxel Fork `>=1.7.6 <2.0.0`.
+- **Alternative voxel provider:** Dramaless Shape `>=1.6.4 <2.0.0`.
 - **Strongly recommended for Flight:** Wild Skies `>=1.4.1 <2.0.0`.
-- **Optional voxel provider:** Battle Art Voxel Fork `>=1.7.6 <2.0.0` or Dramaless Shape `>=1.6.4 <2.0.0`.
 - **Gen2 mounts:** require those species to be supplied by Crystal 251 or another compatible Gen2 content mod.
 - **Optional Flying Music:** `Music_FRLG`, `Music_HGSS`, or `Music_LGPE`.
 - `free_fly` conflicts because it is an alternative player-flight engine.

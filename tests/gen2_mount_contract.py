@@ -9,6 +9,7 @@ gen2 = (src / "main_33_gen2_mounts.lua").read_text(encoding="utf-8")
 surf = (src / "main_17_polish_03.lua").read_text(encoding="utf-8")
 surf_runtime = (src / "main_17_polish_04.lua").read_text(encoding="utf-8")
 runtime = (src / "main_34_mount_runtime_polish.lua").read_text(encoding="utf-8")
+followup = (src / "main_35_mount_runtime_followup.lua").read_text(encoding="utf-8")
 stadium = (src / "main_28_stadium_compat.lua").read_text(encoding="utf-8")
 parts = [x.strip() for x in (src / "parts.txt").read_text(encoding="utf-8").splitlines() if x.strip()]
 
@@ -50,7 +51,7 @@ require('partyKnows, ow, "SURF"' in gen2,
 require("Game.save.forcedBike" in gen2 and "surfBlockedHere" in gen2,
         "Suicune water running must preserve vanilla Surf restrictions")
 require("setSuicuneWaterState(self, true)" in gen2,
-        "Suicune must arm native water collision before movement")
+        "Suicune must arm native water collision before grid movement")
 require("Map.defIsWaterCell(dest, ts, x, y)" in gen2,
         "Suicune must handle water landings across map connections")
 require("suicuneBattleWaterResume" in gen2,
@@ -62,17 +63,44 @@ require("ground.amphibiousWater == true" in runtime and "p.surfing = false" in r
 require("ground.amphibiousWater = waterHere" in runtime,
         "Suicune destination land/water state must be restored after a map seam")
 
+# FreeMove owns 1ST/3RD locomotion and bypasses Player.tryMove. It therefore
+# needs its own pre-collision water arm for Suicune land -> water transitions.
+require("freeMoveApproachesWater" in followup,
+        "Suicune free-camera water approach probe missing")
+require("dramaticFreeMove._pos" in followup and "dramaticFreeMove.RADIUS" in followup,
+        "Suicune free-camera water probe must use the provider body position/radius")
+require("dramaticFreeMove.dramaticSuicuneWaterHook" in followup,
+        "Suicune FreeMove wrapper must install exactly once")
+require("p.surfing = true" in followup and "ground.amphibiousWater = true" in followup,
+        "Suicune FreeMove must arm native Surf traversal before the water collision check")
+require("suicuneSurfUnlocked" in followup,
+        "Suicune FreeMove must preserve normal Surf progression")
+
 # Mounted follower policy: hidden by default on flight, Ground Ride and Surf.
 require('key = "show_followers_while_mounted"' in runtime and "default = false" in runtime,
         "mounted followers option must exist and default to hidden")
 require("entity.wildsFollower == true" in runtime and "entity._wildsFollowerSpecies" in runtime,
-        "Wilds follower entities must be recognized by the mounted purge")
+        "Wilds follower entities must be recognized by the mounted policy")
 require("purgeFollowersDuringFlight = function" in runtime,
         "shared follower purge must be rebound to the mounted policy")
 require('callBoolExport("isWaterRiding")' in runtime and "player.surfing == true" in runtime,
         "mounted follower suppression must cover visible and native Surf")
 require("entityIsCurrentMountFollower" in runtime,
-        "re-enabled mounted followers must still hide the active mount Pokemon")
+        "re-enabled mounted followers must still identify the active mount Pokemon")
+
+# When mounted followers are enabled, Wilds' trailer list must remain intact.
+# Hiding the current mount via draw override preserves normal follow behaviour
+# and avoids Wilds re-seeding the whole pack at the player's cell every frame.
+require("previousSuspendFollowers" in followup and "mountedFollowerPassthrough" in followup,
+        "enabled mounted followers must bypass destructive follower suspension")
+require("hiddenFollowerDraw" in followup and "hideFollowerDraw" in followup,
+        "active mount follower must be hidden non-destructively")
+require("applyFollowerDrawPolicy" in followup and "isActiveMountFollower" in followup,
+        "mounted follower visibility must preserve other live followers")
+require("previousPurgeFollowers" in followup and "return previousPurgeFollowers" in followup,
+        "default hidden mode must retain the mature destructive suppression path")
+require("syncFollowerMods" in followup,
+        "enabling followers mid-mount must be able to rebuild a previously hidden Wilds pack once")
 
 # Wilds may run a late follower update. Reassert the free-camera body bearing
 # after the full overworld tick so Gen 2 mount sprites follow 1ST/3RD direction.
@@ -81,10 +109,24 @@ require("stabilizeFlightFacing" in runtime and "fp.pointBody" in runtime,
 require("facingFromYaw" in runtime,
         "camera-facing fallback must remain available for compatible voxel forks")
 
-# The Wilds self-healing guard must capture both Gen2 and final runtime wrappers.
+# Battle visual continuity: keep Suicune as the player pose while Ground Ride
+# is temporarily suspended, and extend the visible-Surf suppression window.
+require("suicuneBattleVisual" in followup,
+        "Suicune battle visual snapshot missing")
+require("previousSuicuneBattlePose" in followup and "suicuneBattleVisual.sprite" in followup,
+        "Suicune must override the vanilla Red Surf pose during battle handoff")
+require("gen2.battleWaterResumePending = function" in followup,
+        "generic visible Surf must remain suppressed until Suicune remount succeeds")
+require("previousFollowerPolicyStartGroundRide" in followup and "suicuneBattleVisual = nil" in followup,
+        "successful Suicune remount must retire the battle continuity sprite")
+
+# The Wilds self-healing guard must capture every Overworld update wrapper.
+# main_35 deliberately does not add another OverworldState.update wrapper, but
+# must load before the guard so its start/pose/free-move hooks are final.
 require(parts.index("main_33_gen2_mounts.lua") < parts.index("main_34_mount_runtime_polish.lua")
+        < parts.index("main_35_mount_runtime_followup.lua")
         < parts.index("main_27_wilds_compat.lua"),
-        "Gen2/runtime wrappers must load before the DSR update-chain guard")
+        "Gen2/runtime follow-up must load before the DSR update-chain guard")
 
 # Current Stadium 1 models are Gen1 only unless a provider explicitly advertises more.
 require("supportsSpecies" in stadium and "hasModel" in stadium and "modelAvailable" in stadium,

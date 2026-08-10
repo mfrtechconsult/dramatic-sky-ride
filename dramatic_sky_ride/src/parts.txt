@@ -67,3 +67,4 @@ main_40_pokemmo_size_fix.lua
 main_41_stadium2_3d.lua
 main_42_stadium2_hardening.lua
 main_43_stadium2_provider_rig.lua
+main_44_stadium2_diagnostics.lua

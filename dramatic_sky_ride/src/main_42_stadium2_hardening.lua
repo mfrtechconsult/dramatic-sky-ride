@@ -190,6 +190,7 @@ local function randyHandle()
 end
 
 local function nativeReady()
+  if not rotationPatched or not ensurePatched then return false end
   local compatible = cacheCompatibility()
   if not compatible then return false end
   if type(rawInstalled) == "function" then
@@ -247,6 +248,7 @@ if native then
     status.compatible = compatible
     status.reason = reason
     status.hardened = true
+    status.operational = compatible and rotationPatched and ensurePatched
     return status
   end
 end

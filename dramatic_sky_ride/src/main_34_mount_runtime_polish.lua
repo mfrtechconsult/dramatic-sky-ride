@@ -1,4 +1,4 @@
-;(function()
+(function()
 -- Wilds / multi-provider mounted-runtime polish.
 --
 -- 1) Followers are hidden on every mount by default. Users may opt back in,

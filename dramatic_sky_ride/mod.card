@@ -1,13 +1,14 @@
 return {
-  summary = "Ride Gen 1 Pokemon on land, water and in the air with native 2D flight by default, optional voxel/Stadium rendering, Wilds/PokePC sprites and Wild Skies encounters.",
+  summary = "Ride compatible Gen 1 and Gen 2 Pokemon on land, water and in the air with native 2D flight, Wilds/PokePC sprites and optional voxel rendering.",
   author = "MFR TechConsult",
-  tags = { "flying", "mount", "ground-ride", "surf", "2d", "voxel", "wild-skies", "wilds-of-kanto" },
+  tags = { "flying", "mount", "ground-ride", "surf", "2d", "voxel", "wild-skies", "wilds-of-kanto", "gen2" },
   differences = {
     changed = {
       "native flat 2D flight no longer requires a voxel provider",
       "2D SPRITES is the default FLIGHT RENDERER and remains authoritative unless Stadium 3D is explicitly selected",
       "STADIUM 3D falls back safely to 2D when Stadium or an active voxel pipeline is unavailable",
-      "Wilds of Kanto or PokePC Followers can provide compatible Pokemon mount sprites",
+      "Wilds of Kanto or the maintained mfrtechconsult/PokePCFollowers fork can provide compatible Pokemon mount sprites",
+      "followers are hidden on every mount by default; MOUNT FOLLOWERS can re-enable other followers while keeping the active mount hidden",
       "Battle Art Voxel Fork and Dramaless Shape are optional voxel providers rather than flight requirements",
       "Battle Art remains preferred automatically if multiple supported voxel providers are active",
       "Dramaless uses J for Ground Ride because it reserves G for V-GRID; controller X/Y remain unchanged",
@@ -22,12 +23,14 @@ return {
       "Wilds of Kanto authoritative follower/sprite compatibility",
       "cooperative self-healing overworld update-hook protection for the Wilds/DSR/Deep Dive stack",
       "optional Flying Music integration with installed FRLG, HGSS and LGPE music packs without redistributing audio",
-      "Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite flying mounts",
-      "Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros and Snorlax Ground Ride mounts",
-      "visible Blastoise, Tentacruel, Gyarados and Lapras Surf mounts"
+      "Gen 2 flight mounts including Noctowl, Crobat, Xatu, Skarmory, Lugia and Ho-Oh when those species exist in the game",
+      "Gen 2 Ground Ride mounts including Meganium, Girafarig, Ursaring, Donphan, Stantler, Raikou, Entei, Suicune and Tyranitar",
+      "Gen 2 visible Surf mounts including Feraligatr, Mantine, Kingdra and Lugia",
+      "Suicune-exclusive seamless land-to-water Ground Ride while normal Surf progression remains required"
     },
     known = {
       "Pokemon Stadium Overworld Models still owns its own renderer and must honor DSR's explicit Stadium opt-in for full cross-mod 2D priority",
+      "current Stadium imports are Gen 1; unsupported Gen 2 mounts safely remain 2D",
       "Wild Skies takeFlyer exposes species/level but not flyer altitude, so interception remains cell-radius based",
       "rider seating uses procedural offsets rather than dedicated seated trainer sprites",
       "tall-building safety uses authored zones plus available terrain-height data"
@@ -36,7 +39,7 @@ return {
   credits = {
     { who = "ShaneHudson/gen1recomp-mods", for_ = "Free Fly/Wild Skies public interoperability and renderer-independent flight patterns" },
     { who = "YoDrehDenSwagAuf/overworld-spawn-mod", for_ = "Wilds of Kanto follower and overworld Pokemon ecosystem" },
-    { who = "gamecorner-033/PokePCFollowers", for_ = "compatible Gen 1 follower and overworld Pokemon sprites" },
+    { who = "mfrtechconsult/PokePCFollowers", for_ = "maintained Gen 1/2 follower sprite provider and compatibility fork" },
     { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork and voxel camera integration" },
     { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape voxel provider and public integration surface" },
     { who = "randyadr/3D-Pokemon-Sprites", for_ = "Pokemon Stadium Overworld Models integration target" },

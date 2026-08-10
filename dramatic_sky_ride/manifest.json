@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.1.7",
+  "version": "0.2.0-alpha.1",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -14,6 +14,8 @@
     "overworld_wild_spawns",
     "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
+    "STADIUM_OVERWORLD_MODELS",
+    "CRYSTAL_251",
     "wild_skies@>=1.4.1 <2.0.0",
     "otf-player-switcher",
     "Music_FRLG",
@@ -28,6 +30,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Ride compatible Gen 1 and Gen 2 Pokemon on land, water and in the air with native 2D flight, optional voxel rendering, Wilds of Kanto or PokePC sprites, optional OTF player switching, high-detail PokeMMO mount rendering with corrected sizing, stable flat-flight building clearance, flight music and Wild Skies integration.",
+  "description": "Experimental 0.2 branch: DSR Flight, Ground Ride and Surf with native 2D/PokeMMO rendering plus optional native Pokemon Stadium 2 3D mounts from user-generated DSM packs, Battle Art/Dramaless voxel integration, OTF, Wild Skies and Gen 2 support.",
   "github": "mfrtechconsult/dramatic-sky-ride"
 }

@@ -17,13 +17,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
       - name: Validate Gen2 roster and Suicune amphibious contract
         run: python3 tests/gen2_mount_contract.py dramatic_sky_ride
-      - name: Validate maintained PokéPC fork contract
+
+      - name: Checkout supported sprite providers
         shell: bash
         run: |
           set -euo pipefail
           git clone --depth 1 --branch compat/wilds-of-kanto \
             https://github.com/mfrtechconsult/PokePCFollowers.git /tmp/pokepc
+          git clone --depth 1 \
+            https://github.com/YoDrehDenSwagAuf/overworld-spawn-mod.git /tmp/wilds
+
+      - name: Validate maintained PokéPC fork contract and Gen2 art
+        shell: bash
+        run: |
+          set -euo pipefail
           grep -Fq 'mfrtechconsult/PokePCFollowers' /tmp/pokepc/compat_entry.lua
           grep -Fq 'providerGenerations = { 1, 2 }' /tmp/pokepc/compat_entry.lua
+          python3 - <<'PY'
+          from pathlib import Path
+          dexes = [154,160,164,169,178,203,217,226,227,230,232,234,243,244,245,248,249,250]
+          missing = [d for d in dexes if not Path(f"/tmp/pokepc/assets/sprites/follower_{d:03d}.png").is_file()]
+          assert not missing, f"PokéPC missing Gen2 mount sheets: {missing}"
+          print("maintained PokéPC Gen2 mount art: PASS")
+          PY
+
+      - name: Validate Wilds Gen2 follower mapping
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          mapping = Path('/tmp/wilds/assets/enhanced_overworld/followsprites_mapping/followsprites_mapping.json')
+          data = json.loads(mapping.read_text(encoding='utf-8'))
+          species = data.get('species', {})
+          present = set()
+          for key, row in species.items():
+              try:
+                  present.add(int((row or {}).get('speciesId', key)))
+              except (TypeError, ValueError):
+                  pass
+          dexes = {154,160,164,169,178,203,217,226,227,230,232,234,243,244,245,248,249,250}
+          missing = sorted(dexes - present)
+          assert not missing, f"Wilds missing Gen2 mount mapping: {missing}"
+          print("Wilds Gen2 mount mapping: PASS")
+          PY

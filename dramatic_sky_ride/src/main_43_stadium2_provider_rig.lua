@@ -79,6 +79,37 @@ local function faceYaw(facing)
   return 0
 end
 
+local function makeTexture(slot)
+  if not slot then return nil end
+  if slot.image ~= nil then return slot.image or nil end
+  if not (love and love.image and love.image.newImageData
+      and love.graphics and love.graphics.newImage) then
+    slot.image = false
+    return nil
+  end
+  local ok, image = pcall(function()
+    local data = love.image.newImageData(slot.w, slot.h, "rgba8", slot.rgba)
+    local out = love.graphics.newImage(data)
+    if out.setFilter then out:setFilter("nearest", "nearest") end
+    return out
+  end)
+  slot.image = ok and image or false
+  return slot.image or nil
+end
+
+local function applyEffectTextures(runtime, elapsed)
+  local model = runtime and runtime.model
+  if not (model and model.textures) then return end
+  local tick = math.floor(math.max(0, tonumber(elapsed) or 0) * MODEL_FPS)
+  for _, part in ipairs(runtime.parts or {}) do
+    local frames = part.prim and part.prim.fxFrames
+    if type(frames) == "table" and #frames > 0 then
+      local textureIndex = frames[(tick % #frames) + 1]
+      part.texture = makeTexture(model.textures[textureIndex])
+    end
+  end
+end
+
 local function normaliseModelForRig(model)
   if type(model) ~= "table" then return false end
   for _, prim in ipairs(model.prims or {}) do
@@ -170,6 +201,11 @@ local function providerPoseRuntime(runtime, provider)
     if type(rig.textures) == "function" then
       rig:textures(record and record.aux or nil)
     end
+    -- StadiumRig handles the game's material streams (eyes, etc.). Generated
+    -- effect primitives use their own DSM4 fxFrames flipbook, so apply those
+    -- after the normal material pass. This is what animates Charizard's
+    -- generated tail flame, Ponyta/Rapidash fire and Gastly gas.
+    applyEffectTextures(runtime, elapsed)
   end)
   if not ok then
     warnOnce("pose:" .. tostring(runtime.dex),
@@ -191,11 +227,21 @@ end
 local createPatched = false
 local posePatched = false
 if providerAvailable and type(rawEnsureRuntime) == "function" then
-  createPatched = setUpvalue(rawEnsureRuntime, createIndex, providerCreateRuntime)
-  posePatched = setUpvalue(rawEnsureRuntime, ensurePoseIndex, providerPoseRuntime)
-  if updatePoseIndex then
-    posePatched = setUpvalue(OverworldState.update,
-      updatePoseIndex, providerPoseRuntime) and posePatched
+  -- Patch the pose path first. Only claim/create provider rigs if BOTH pose
+  -- call sites accepted the wrapper; this avoids a half-installed bridge.
+  local poseEnsure = setUpvalue(rawEnsureRuntime, ensurePoseIndex, providerPoseRuntime)
+  local poseUpdate = updatePoseIndex and setUpvalue(OverworldState.update,
+    updatePoseIndex, providerPoseRuntime) or false
+  posePatched = poseEnsure and poseUpdate
+  if posePatched then
+    createPatched = setUpvalue(rawEnsureRuntime, createIndex, providerCreateRuntime)
+  end
+  if posePatched and not createPatched then
+    setUpvalue(rawEnsureRuntime, ensurePoseIndex, rawPoseRuntime)
+    if updatePoseIndex then
+      setUpvalue(OverworldState.update, updatePoseIndex, rawPoseRuntime)
+    end
+    posePatched = false
   end
 end
 
@@ -207,16 +253,17 @@ if hardening then
 end
 
 mod.exports.stadium3DProviderRig = {
-  api = 1,
+  api = 2,
   available = function() return providerAvailable end,
   active = function() return providerAvailable and createPatched and posePatched end,
   createPatched = createPatched,
   posePatched = posePatched,
+  effectFlipbooks = true,
   travelLimit = TRAVEL_LIMIT,
 }
 
 if providerAvailable and createPatched and posePatched then
-  log("Stadium 2 provider rig bridge loaded (interpolated skeleton + anchor + animated textures)")
+  log("Stadium 2 provider rig bridge loaded (interpolated skeleton + anchor + material/effect animation)")
 elseif providerAvailable then
   warnOnce("patch", "StadiumRig is available but DSR could not install the Stadium 2 provider bridge")
 else

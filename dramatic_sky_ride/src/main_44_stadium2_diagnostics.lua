@@ -2,10 +2,9 @@
 -- -------------------------------------------------------------------------
 -- Compact Stadium 2 diagnostics for the experimental branch.
 --
--- The native path depends on three independently optional pieces: a complete
--- Crystal 251 cache, a voxel provider, and a model for the active mount. Log
--- only state transitions so a user report contains the useful reason without
--- flooding the console every frame.
+-- The native path depends on a complete Crystal 251 cache, a voxel provider,
+-- and a safe model for the active mount. Log only state transitions so a user
+-- report contains the useful reason without flooding the console every frame.
 -- -------------------------------------------------------------------------
 
 local lastSignature = nil
@@ -25,6 +24,7 @@ local function snapshot(species)
   local ex = mod.exports or {}
   local native = ex.stadium3DNative
   local hardening = ex.stadium3DHardening
+  local bootstrap = ex.stadium3DCrystalBootstrap
   local bridge = ex.stadium3DProviderRig
   local fallback = ex.stadium3DFallback
   local rendering = ex.flightRendering
@@ -39,6 +39,7 @@ local function snapshot(species)
   local supported = species and safeCall(native and native.supportsSpecies, species) or nil
   local model = species and nativeInstalled
     and safeCall(native and native.modelInfo, species) or nil
+  local bootstrapState = safeCall(bootstrap and bootstrap.status) or {}
 
   return {
     species = species,
@@ -51,8 +52,10 @@ local function snapshot(species)
     hardening = {
       rotationPatched = hardening and hardening.rotationPatched == true,
       ensurePatched = hardening and hardening.ensurePatched == true,
+      dualEnsurePatched = hardening and hardening.dualEnsurePatched == true,
       compatibilityPatched = hardening and hardening.compatibilityPatched == true,
     },
+    bootstrap = bootstrapState,
     providerRig = {
       available = bridge and safeCall(bridge.available) == true,
       active = bridge and safeCall(bridge.active) == true,
@@ -67,28 +70,34 @@ end
 
 local function statusSignature(s)
   local c = s.cache or {}
+  local b = s.bootstrap or {}
   return table.concat({
     tostring(s.requested), tostring(s.effective), tostring(s.species),
     tostring(s.provider), tostring(c.format), tostring(c.count), tostring(c.variants),
     tostring(c.compatible), tostring(c.operational),
     tostring(s.nativeInstalled), tostring(s.nativeSupported),
     tostring(s.hardening.rotationPatched), tostring(s.hardening.ensurePatched),
+    tostring(s.hardening.dualEnsurePatched),
     tostring(s.providerRig.available), tostring(s.providerRig.active),
     tostring(s.fallback.installed), tostring(s.fallback.interpolated),
+    tostring(b.needed), tostring(b.installed), tostring(b.provider), tostring(b.reason),
   }, "|")
 end
 
 local function logSnapshot(s)
   local c = s.cache or {}
-  log("Stadium 2 status: requested=%s effective=%s mount=%s provider=%s native=%s supported=%s cache=%s/%s/%s compatible=%s operational=%s hardening=%s/%s rig=%s/%s fallback=%s/%s",
+  local b = s.bootstrap or {}
+  log("Stadium 2 status: requested=%s effective=%s mount=%s provider=%s native=%s supported=%s cache=%s/%s/%s compatible=%s operational=%s hardening=%s/%s/%s rig=%s/%s fallback=%s/%s bootstrap=%s/%s/%s",
     tostring(s.requested), tostring(s.effective), tostring(s.species or "none"),
     tostring(s.provider), bool(s.nativeInstalled),
     s.nativeSupported == nil and "n/a" or bool(s.nativeSupported),
     tostring(c.format or "none"), tostring(c.count or 0), tostring(c.variants or 0),
     bool(c.compatible), bool(c.operational),
     bool(s.hardening.rotationPatched), bool(s.hardening.ensurePatched),
+    bool(s.hardening.dualEnsurePatched),
     bool(s.providerRig.available), bool(s.providerRig.active),
-    bool(s.fallback.installed), bool(s.fallback.interpolated))
+    bool(s.fallback.installed), bool(s.fallback.interpolated),
+    bool(b.needed), tostring(b.provider or "none"), tostring(b.reason or "none"))
 
   local model = s.model
   if type(model) == "table" then

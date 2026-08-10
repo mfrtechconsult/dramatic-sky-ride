@@ -126,3 +126,22 @@ jobs:
             echo "Runtime source must not depend on network-gated src.link.Json" >&2
             exit 1
           fi
+
+      - name: Build launcher test archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          mkdir -p /tmp/stadium2-artifact
+          ARCHIVE="/tmp/stadium2-artifact/dramatic_sky_ride-${VERSION}-stadium2-test.zip"
+          zip -qr "$ARCHIVE" dramatic_sky_ride
+          unzip -t "$ARCHIVE"
+          echo "Built $ARCHIVE"
+
+      - name: Upload launcher test archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-stadium2-test
+          path: /tmp/stadium2-artifact/*.zip
+          if-no-files-found: error
+          retention-days: 14

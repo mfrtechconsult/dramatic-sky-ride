@@ -66,6 +66,7 @@ main_39_flat_building_altitude.lua
 main_40_pokemmo_size_fix.lua
 main_41_stadium2_3d.lua
 main_42_stadium2_hardening.lua
+main_46_crystal_stadium2_bootstrap.lua
 main_43_stadium2_provider_rig.lua
 main_45_stadium2_interpolated_fallback.lua
 main_44_stadium2_diagnostics.lua

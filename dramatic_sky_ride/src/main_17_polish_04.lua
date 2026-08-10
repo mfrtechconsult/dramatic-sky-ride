@@ -1,8 +1,18 @@
 local function amphibiousGroundOwnsWaterVisual()
   local gen2 = mod.exports and mod.exports.gen2Mounts or nil
-  if not (gen2 and type(gen2.suicuneAmphibiousActive) == "function") then return false end
-  local ok, active = pcall(gen2.suicuneAmphibiousActive)
-  return ok and active == true
+  if not gen2 then return false end
+  if type(gen2.suicuneAmphibiousActive) == "function" then
+    local ok, active = pcall(gen2.suicuneAmphibiousActive)
+    if ok and active == true then return true end
+  end
+  -- During the battle -> overworld handoff Ground Ride is intentionally
+  -- suspended for a few frames. Keep Suicune as the visual owner throughout
+  -- that gap so the generic visible-Surf mount never flashes on screen.
+  if type(gen2.battleWaterResumePending) == "function" then
+    local ok, pending = pcall(gen2.battleWaterResumePending)
+    if ok and pending == true then return true end
+  end
+  return false
 end
 
 local function activateWaterRide(game, requested)

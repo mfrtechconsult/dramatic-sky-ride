@@ -1,4 +1,15 @@
+local function amphibiousGroundOwnsWaterVisual()
+  local gen2 = mod.exports and mod.exports.gen2Mounts or nil
+  if not (gen2 and type(gen2.suicuneAmphibiousActive) == "function") then return false end
+  local ok, active = pcall(gen2.suicuneAmphibiousActive)
+  return ok and active == true
+end
+
 local function activateWaterRide(game, requested)
+  if amphibiousGroundOwnsWaterVisual() then
+    clearWaterRide(game and game.overworld)
+    return false
+  end
   if mountOption("visible_surf_mounts", true) ~= true then return false end
   local ow = game and game.overworld
   local mon = preferredWaterMount(game, requested)
@@ -19,7 +30,8 @@ local waterPlayerPose = Player.pose
 function Player:pose()
   local sprite, px, py, facing, phase, flip, hopping = waterPlayerPose(self)
   local ow = Game.overworld
-  if water.active and self.surfing and ow and ow.player == self and water.sprite then
+  if water.active and self.surfing and ow and ow.player == self and water.sprite
+     and not amphibiousGroundOwnsWaterVisual() then
     return water.sprite, px, py, facing, phase, flip, hopping
   end
   return sprite, px, py, facing, phase, flip, hopping
@@ -28,7 +40,7 @@ end
 local alpha15SetSurfingState = setSurfingState
 setSurfingState = function(ow, enabled, surfMon)
   local result = alpha15SetSurfingState(ow, enabled, surfMon)
-  if enabled then
+  if enabled and not amphibiousGroundOwnsWaterVisual() then
     activateWaterRide(Game, surfMon)
   else
     clearWaterRide(ow)
@@ -40,7 +52,9 @@ local waterUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = waterUpdate(self, dt, ...)
   if Game.overworld == self and self.player then
-    if self.player.surfing and mountOption("visible_surf_mounts", true) then
+    if amphibiousGroundOwnsWaterVisual() then
+      if water.active then clearWaterRide(self) end
+    elseif self.player.surfing and mountOption("visible_surf_mounts", true) then
       if not water.active then activateWaterRide(Game) end
       if water.active then ensureWaterRider(self) end
     elseif water.active then

@@ -29,7 +29,9 @@ Battle Art is preferred automatically if both are installed. Neither is required
 This compatibility branch can use either:
 
 - **Wilds of Kanto** (`overworld_wild_spawns`), or
-- **PokéPC Followers (W/Voxel Support)** (`PokePCFollowers_VoxelMerge`).
+- **PokéPC Followers — maintained mfrtechconsult compatibility fork** (`PokePCFollowers_VoxelMerge`).
+
+The officially tested PokéPC implementation is **mfrtechconsult/PokePCFollowers**. It retains the upstream mod id for compatibility but exposes explicit provider metadata so DSR can identify the maintained fork. Older PokéPC builds with the same id remain best-effort legacy fallbacks.
 
 Wilds of Kanto can act as the authoritative follower runtime so DSR does not need a second mod competing for the same follower lifecycle.
 
@@ -41,6 +43,7 @@ Wilds of Kanto can act as the authoritative follower runtime so DSR does not nee
 
 - Native flat-2D flight with trainer + mount composition and existing Pokédex-proportional mount sizing.
 - Wilds of Kanto sprite/follower compatibility and cooperative overworld update-hook protection.
+- Maintained `mfrtechconsult/PokePCFollowers` fork as the official PokéPC sprite-provider target.
 - Shane-style public flight state: `isFlying()`, `altitude()` and `mount()`.
 - Optional Pokémon Stadium Overworld Models integration, gated behind the explicit `STADIUM 3D` renderer setting.
 - Optional Flying Music using installed `Music_FRLG`, `Music_HGSS` and `Music_LGPE` Surf/Bike tracks without redistributing their audio.
@@ -61,7 +64,7 @@ Wilds of Kanto can act as the authoritative follower runtime so DSR does not nee
 - Gen1Recomp `>=0.1.69 <2.0.0`.
 - No voxel provider required for 2D flight.
 - Optional: Battle Art Voxel Fork or Dramaless Shape for voxel rendering.
-- Wilds of Kanto or PokéPC Followers can provide compatible Pokémon overworld sprites.
+- Wilds of Kanto or the maintained `mfrtechconsult/PokePCFollowers` fork can provide compatible Pokémon overworld sprites.
 - Wild Skies `>=1.4.1 <2.0.0` strongly recommended.
 - Optional music providers: `Music_FRLG`, `Music_HGSS`, `Music_LGPE`.
 - Optional Pokémon Stadium Overworld Models integration.

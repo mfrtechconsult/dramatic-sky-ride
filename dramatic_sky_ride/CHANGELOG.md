@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.7
+
+- Added fully optional OTF Player Switcher compatibility so mounted rider art follows the selected player character during Flight, Ground Ride and Visible Surf.
+- Reserved Page Up/Page Down for DSR altitude control while Flight is active, while OTF retains its shortcuts outside Flight.
+- Added a native high-detail PokeMMO mount path for Wilds of Kanto that reads the original 32/64 px atlas only when Wilds is explicitly using its PokeMMO sprite style.
+- Corrected PokeMMO apparent mount sizing by trimming stable shared transparent padding before applying DSR's Pokédex/user scale.
+- Added canonical Generation II height fallbacks for coherent Johto mount sizing when the active Gen2 content provider does not publish dex height fields.
+- Stabilized flat 2D Flight over tall buildings: automatic safety altitude remains active for gameplay/collision but no longer causes a visible mount/rider jump in the top-down renderer.
+- Added defensive chunk-boundary normalization to the runtime loader and aligned release validation with the exact loader behavior.
+- Kept OTF, Wilds, PokéPC, Battle Art, Dramaless, Wild Skies, music packs and Gen2 content providers optional according to their existing roles.
+- Known limitation: with `GROUND FOLLOWERS` enabled, the active Ground Ride mount may still appear in the follower trail.
+- Known limitation: with Wilds of Kanto, Suicune may briefly show the ordinary Surf mount during post-battle return.
+- The optional Stadium renderer remains experimental and is not part of the validated 0.1.7 highlights.
+
 ## 0.1.6
 
 - Added native flat-2D flight; a voxel provider is no longer required to take off.

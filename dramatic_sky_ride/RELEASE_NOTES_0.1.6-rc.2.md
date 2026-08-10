@@ -19,6 +19,13 @@ Development candidate for the next compatibility preview. This version is **not 
 - Existing Stadium aliases remain for compatibility, but `mountSpecies()` is exposed to the Stadium bridge only while Stadium rendering is effectively enabled.
 - `currentLift()` is still intentionally not approximated.
 
+## PokéPC provider target
+
+- The officially tested PokéPC implementation is now the maintained `mfrtechconsult/PokePCFollowers` compatibility fork.
+- The fork retains the shared `PokePCFollowers_VoxelMerge` mod id for compatibility and exposes explicit provider repository/API metadata.
+- DSR detects that metadata for diagnostics while older PokéPC builds sharing the id remain best-effort legacy fallbacks.
+- CI continues to test against `mfrtechconsult/PokePCFollowers` directly.
+
 ## Existing rc.1 compatibility work retained
 
 - Wilds of Kanto follower/sprite integration and cooperative update-hook recovery.
@@ -31,5 +38,5 @@ Development candidate for the next compatibility preview. This version is **not 
 
 Please test both of these paths independently:
 
-1. Gen1Recomp + a compatible Pokémon sprite provider + DSR with **no voxel mod enabled**.
+1. Gen1Recomp + Wilds of Kanto **or** `mfrtechconsult/PokePCFollowers` + DSR with **no voxel mod enabled**.
 2. DSR with Battle Art or Dramaless enabled, switching `FLIGHT RENDERER` between **2D SPRITES** and **STADIUM 3D** where Stadium models are available.

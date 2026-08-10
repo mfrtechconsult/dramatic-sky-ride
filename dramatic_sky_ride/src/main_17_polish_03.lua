@@ -1,5 +1,6 @@
     if mountOption("ground_dust", true) and ground.gallop
        and (ground.dustDistance or 0) >= 20
+       and not (ground.amphibiousWater == true)
        and self.startDustAnim and not self.dustAnim then
       ground.dustDistance = 0
       pcall(self.startDustAnim, self, self.player.cellX, self.player.cellY)
@@ -47,6 +48,10 @@ local WATER_ELIGIBLE = {
   TENTACRUEL = { dex = 73, label = "TENTACRUEL", lift = 6.0 },
   GYARADOS = { dex = 130, label = "GYARADOS", lift = 7.0 },
   LAPRAS = { dex = 131, label = "LAPRAS", lift = 7.5 },
+  FERALIGATR = { dex = 160, label = "FERALIGATR", lift = 7.3 },
+  MANTINE = { dex = 226, label = "MANTINE", lift = 6.6 },
+  KINGDRA = { dex = 230, label = "KINGDRA", lift = 6.8 },
+  LUGIA = { dex = 249, label = "LUGIA", lift = 8.0 },
 }
 local WATER_BY_DEX = {}
 for species, cfg in pairs(WATER_ELIGIBLE) do WATER_BY_DEX[cfg.dex] = species end

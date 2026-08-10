@@ -50,6 +50,7 @@ main_14.lua
 main_33_gen2_mounts.lua
 main_34_mount_runtime_polish.lua
 main_35_mount_runtime_followup.lua
+main_36_ground_followers_only.lua
 main_27_wilds_compat.lua
 main_28_stadium_compat.lua
 main_29_flying_music.lua

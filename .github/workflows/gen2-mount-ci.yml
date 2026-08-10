@@ -1,0 +1,29 @@
+name: Gen2 mount contracts
+
+on:
+  push:
+    branches:
+      - compat/wilds-of-kanto
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gen2-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate Gen2 roster and Suicune amphibious contract
+        run: python3 tests/gen2_mount_contract.py dramatic_sky_ride
+      - name: Validate maintained PokéPC fork contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch compat/wilds-of-kanto \
+            https://github.com/mfrtechconsult/PokePCFollowers.git /tmp/pokepc
+          grep -Fq 'mfrtechconsult/PokePCFollowers' /tmp/pokepc/compat_entry.lua
+          grep -Fq 'providerGenerations = { 1, 2 }' /tmp/pokepc/compat_entry.lua

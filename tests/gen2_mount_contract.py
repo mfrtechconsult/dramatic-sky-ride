@@ -10,6 +10,7 @@ surf = (src / "main_17_polish_03.lua").read_text(encoding="utf-8")
 surf_runtime = (src / "main_17_polish_04.lua").read_text(encoding="utf-8")
 runtime = (src / "main_34_mount_runtime_polish.lua").read_text(encoding="utf-8")
 followup = (src / "main_35_mount_runtime_followup.lua").read_text(encoding="utf-8")
+ground_followers = (src / "main_36_ground_followers_only.lua").read_text(encoding="utf-8")
 stadium = (src / "main_28_stadium_compat.lua").read_text(encoding="utf-8")
 parts = [x.strip() for x in (src / "parts.txt").read_text(encoding="utf-8").splitlines() if x.strip()]
 
@@ -102,6 +103,22 @@ require("previousPurgeFollowers" in followup and "return previousPurgeFollowers"
 require("syncFollowerMods" in followup,
         "enabling followers mid-mount must be able to rebuild a previously hidden Wilds pack once")
 
+# Final in-game policy: the opt-in display is LAND GROUND RIDE only. Flight,
+# native/visible Surf and Suicune's amphibious water state always hide every
+# follower, non-destructively, so Wilds keeps its normal trail runtime.
+require('row.label = "GROUND FOLLOWERS"' in ground_followers,
+        "mounted follower option must clearly advertise Ground Ride scope")
+require("airOrWaterMounted" in ground_followers and "flight.active == true" in ground_followers,
+        "flight must force followers hidden even when the option is enabled")
+require("waterRideActive()" in ground_followers and "p.surfing == true" in ground_followers,
+        "native and visible Surf must force followers hidden")
+require("ground.amphibiousWater == true" in ground_followers,
+        "Suicune water-running must force followers hidden")
+require("hiddenForAirWater" in ground_followers and "hideAllFollowersNonDestructive" in ground_followers,
+        "air/water follower suppression must keep Wilds runtime entities intact")
+require("landGroundRideActive" in ground_followers,
+        "land Ground Ride must remain the only opt-in follower-visible mounted state")
+
 # Wilds may run a late follower update. Reassert the free-camera body bearing
 # after the full overworld tick so Gen 2 mount sprites follow 1ST/3RD direction.
 require("stabilizeFlightFacing" in runtime and "fp.pointBody" in runtime,
@@ -121,12 +138,11 @@ require("previousFollowerPolicyStartGroundRide" in followup and "suicuneBattleVi
         "successful Suicune remount must retire the battle continuity sprite")
 
 # The Wilds self-healing guard must capture every Overworld update wrapper.
-# main_35 deliberately does not add another OverworldState.update wrapper, but
-# must load before the guard so its start/pose/free-move hooks are final.
 require(parts.index("main_33_gen2_mounts.lua") < parts.index("main_34_mount_runtime_polish.lua")
         < parts.index("main_35_mount_runtime_followup.lua")
+        < parts.index("main_36_ground_followers_only.lua")
         < parts.index("main_27_wilds_compat.lua"),
-        "Gen2/runtime follow-up must load before the DSR update-chain guard")
+        "Gen2/runtime follower policy must load before the DSR update-chain guard")
 
 # Current Stadium 1 models are Gen1 only unless a provider explicitly advertises more.
 require("supportsSpecies" in stadium and "hasModel" in stadium and "modelAvailable" in stadium,

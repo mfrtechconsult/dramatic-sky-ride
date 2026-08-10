@@ -1,5 +1,5 @@
 
-;(function()
+(function()
 -- -------------------------------------------------------------------------
 -- Capability-based follower / sprite compatibility.
 --
@@ -101,17 +101,6 @@ end
 
 -- -------------------------------------------------------------------------
 -- Cooperative update-hook guard.
---
--- DSR intentionally has a stack of update wrappers. Do not protect only the
--- outermost wrapper: doing that and retargeting its immediate child would
--- discard the rest of DSR. Instead walk the known DSR wrapper chain to its
--- deepest DSR -> external boundary, heartbeat that one edge, and on recovery
--- retarget only that edge around the CURRENT external handler before restoring
--- the complete DSR root. No stale external function is ever restored.
---
--- Deep Dive can sit above this chain. expose composeAround() so its own guard
--- can rebuild DDD -> DSR -> current in one operation instead of either guard
--- restoring a sibling chain at the other's expense.
 -- -------------------------------------------------------------------------
 local skyRideRootUpdate = OverworldState.update
 local skyRideUpdateHeartbeat = 0
@@ -155,8 +144,6 @@ local function discoverDsrBoundary(root)
     if not index then break end
     local childIndex = select(1, dsrChildLink(child))
     if not childIndex then
-      -- `current` is the deepest known DSR wrapper; `child` is the external
-      -- handler that existed before DSR's first update wrapper was installed.
       return current, index, child, chain, name
     end
     current = child
@@ -188,17 +175,13 @@ local function recordRecovery(reason)
       tostring(reason or "heartbeat"))
 end
 
--- Rebase the DSR chain around an external handler without changing the global
--- OverworldState.update. This is the cooperative primitive used by Deep Dive.
 local function composeSkyRideAround(current, reason, countRecovery)
   if not skyRideGuardReady or type(current) ~= "function" then return nil end
   if current == skyRideRootUpdate then return skyRideRootUpdate end
-
   if dsrFunctionSet[current] then
     if countRecovery ~= false then recordRecovery(reason or "intermediate DSR wrapper") end
     return skyRideRootUpdate
   end
-
   if not bindExternal(current) then return nil end
   if countRecovery ~= false then recordRecovery(reason or "cooperative composition") end
   return skyRideRootUpdate
@@ -209,7 +192,6 @@ local function recoverSkyRideUpdate(reason)
   local current = OverworldState.update
   if current == skyRideRootUpdate then return true end
   if type(current) ~= "function" then return false end
-
   local composed = composeSkyRideAround(current, reason, true)
   if not composed then return false end
   OverworldState.update = composed
@@ -226,10 +208,6 @@ local function skyRideRuntimeActive()
   return false
 end
 
--- Game.step is the fixed logic boundary. Using Game.update here would be
--- unsafe because a high-refresh display can render a frame without executing
--- a fixed step, which would look like a missing heartbeat even when the hook
--- chain is healthy.
 local gameStepBeforeCompat = Game.step
 if skyRideGuardReady and type(gameStepBeforeCompat) == "function" then
   local function gameStepCompatGuard(...)
@@ -239,9 +217,7 @@ if skyRideGuardReady and type(gameStepBeforeCompat) == "function" then
     local expectedOverworldTick = owBefore ~= nil
       and (not stackBefore or topBefore == owBefore)
     local before = skyRideUpdateHeartbeat
-
     local a, b, c, d, e = gameStepBeforeCompat(...)
-
     local owAfter = Game.overworld
     local stackAfter = Game.stack
     local topAfter = stackAfter and stackAfter.top and stackAfter:top() or nil

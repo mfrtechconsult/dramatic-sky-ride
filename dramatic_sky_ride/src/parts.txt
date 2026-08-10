@@ -57,8 +57,11 @@ main_29_flying_music.lua
 main_30_flat_flight.lua
 main_31_sprite_sources.lua
 main_32_pokepc_fork.lua
+main_36z_luajit_boundary.lua
 main_37_otf_player_switcher.lua
+main_37z_luajit_boundary.lua
 main_38_native_pokemmo_mounts.lua
+main_38z_luajit_boundary.lua
 main_39_flat_building_altitude.lua
 main_40_pokemmo_size_fix.lua
 main_41_stadium2_3d.lua

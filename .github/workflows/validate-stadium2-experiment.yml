@@ -69,6 +69,7 @@ jobs:
               'main_48_stadium2_effect_runtime.lua',
               'main_49_stadium2_live_animation.lua',
               'main_50_stadium2_render_clock.lua',
+              'main_51_stadium2_mount_motion.lua',
               'main_44_stadium2_diagnostics.lua',
           ]
           positions = []
@@ -84,9 +85,23 @@ jobs:
                         'stadium3DEffects', 'stadium3DAnimationCacheGuard',
                         'stadium3DCrystalBootstrap', 'stadium3DProviderRig',
                         'stadium3DFallback', 'stadium3DLiveAnimation',
-                        'stadium3DRenderClock', 'stadium3DDiagnostics'):
+                        'stadium3DRenderClock', 'stadium3DMountMotion',
+                        'stadium3DDiagnostics'):
               if token not in source:
                   raise SystemExit(f'missing Stadium 2 contract token: {token}')
+
+          motion = (root / 'src/main_51_stadium2_mount_motion.lua').read_text(encoding='utf-8')
+          flight = ['CHARIZARD','PIDGEOT','FEAROW','GOLBAT','AERODACTYL','ARTICUNO','ZAPDOS','MOLTRES',
+                    'DRAGONAIR','DRAGONITE','NOCTOWL','CROBAT','XATU','SKARMORY','LUGIA','HO_OH']
+          ground = ['ARCANINE','RAPIDASH','DODRIO','RHYHORN','RHYDON','KANGASKHAN','TAUROS','SNORLAX',
+                    'MEGANIUM','GIRAFARIG','URSARING','DONPHAN','STANTLER','RAIKOU','ENTEI','SUICUNE','TYRANITAR']
+          water = ['BLASTOISE','TENTACRUEL','GYARADOS','LAPRAS','FERALIGATR','MANTINE','KINGDRA','LUGIA']
+          for role, roster in [('Flight', flight), ('Ground', ground), ('Surf', water)]:
+              missing = [name for name in roster if name not in motion]
+              if missing:
+                  raise SystemExit(f'{role} Stadium motion roster missing: {missing}')
+          if 'roleEntries=41' not in motion:
+              raise SystemExit('Stadium mount motion must declare all 41 supported role entries')
           PY
 
       - name: Compile exact runtime concatenation with LuaJIT

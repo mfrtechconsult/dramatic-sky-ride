@@ -43,9 +43,19 @@ Dramaless reserves `G` for V-GRID. Use `J` for Ground Ride in that configuration
 
 ## Wild Skies shows generic-looking Pokemon
 
-Wild Skies can fall back to generic airborne art for species that do not have an appropriate species-specific flying/levitating sheet from an installed sprite source.
+A few generic flyers can be normal: Wild Skies falls back to class art when a species has no appropriate in-air sheet.
 
-This is independent from DSR's mount settings and does not mean the DSR mount renderer is broken.
+If **most or all flyers are generic** while Wilds of Kanto is enabled, update to the current Wilds/Wild Skies/DSR combination first. DSR 0.2.2 no longer inserts its own follower source ahead of Wild Skies when Wilds is active. Wild Skies is allowed to use its native Wilds `levitates` resolver directly.
+
+Recommended diagnostic order:
+
+1. confirm Wilds of Kanto is enabled, not only installed;
+2. confirm Wild Skies is enabled;
+3. restart Gen1Recomp after updating either mod so existing flyer renderers are rebuilt;
+4. check DSR's `wildSkies.spriteIntegrationMode()` diagnostic;
+5. with Wilds enabled, the expected mode is `wild_skies_native_wilds`.
+
+If that mode is correct but every species is still generic, the remaining problem is on the Wild Skies → Wilds sprite path rather than a DSR settings/provider selection.
 
 ## Aerial encounters do not happen
 

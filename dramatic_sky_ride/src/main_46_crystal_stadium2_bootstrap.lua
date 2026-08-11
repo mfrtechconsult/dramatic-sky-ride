@@ -2,17 +2,16 @@
 -- -------------------------------------------------------------------------
 -- Crystal 251 Stadium 2 cache bootstrap.
 --
--- Crystal 251 currently installs its Stadium 2 bridge only against the
--- original DRAMATIC_SHAPE id. DSR also supports DRAMALESS_SHAPE and Battle Art.
--- Dramaless exposes the complete Stadium module family the Crystal bridge
--- expects, so when the DSM cache is missing/outdated DSR can safely hand that
--- provider to Crystal and let Crystal's own importer/build UI do the work.
+-- DSR can render Crystal's DSM4 packs with either Dramaless or Battle Art.
+-- Cache generation, however, needs the full Stadium importer module family.
+-- Dramaless provides that family, while Battle Art intentionally does not.
 --
--- Battle Art intentionally is NOT faked here: it does not ship StadiumBuild,
--- StadiumFragment, StadiumRig and the other importer modules the Crystal bridge
--- consumes. DSR can render an already-generated DSM cache with Battle Art via
--- main_45, but cache generation must be performed once with a full Stadium
--- provider (Dramaless or the original Dramatic Shape).
+-- Crystal's historical Stadium 2 importer also produced valid-looking
+-- C2DSM10 caches containing only a synthetic one-frame bind pose when motion
+-- extraction failed. main_46a detects those legacy caches. If a current
+-- Crystal bridge with the fixed motion decoder is installed, this bootstrap
+-- invalidates only the completion marker and lets Crystal rebuild the DSM
+-- files from the user's ROM through Dramaless.
 -- -------------------------------------------------------------------------
 
 local state = {
@@ -22,6 +21,8 @@ local state = {
   provider = nil,
   needed = nil,
   reason = nil,
+  invalidatedStaticCache = false,
+  bridgeSource = nil,
 }
 local warned = {}
 
@@ -37,12 +38,16 @@ local function safeFind(id)
   return ok and handle or nil
 end
 
-local function cacheCompatible()
+local function cacheStatus()
   local native = mod.exports and mod.exports.stadium3DNative or nil
   local fn = native and native.cacheStatus
-  if type(fn) ~= "function" then return false end
+  if type(fn) ~= "function" then return {} end
   local ok, status = pcall(fn)
-  return ok and type(status) == "table" and status.compatible == true
+  return ok and type(status) == "table" and status or {}
+end
+
+local function cacheCompatible()
+  return cacheStatus().compatible == true
 end
 
 local function crystalHandle()
@@ -50,9 +55,6 @@ local function crystalHandle()
 end
 
 local function fullStadiumProvider()
-  -- Prefer Dramaless: it is the supported modern provider that Crystal does
-  -- not currently discover by itself. The original provider is retained as a
-  -- defensive load-order fallback; Crystal normally installs against it first.
   local handle = safeFind("DRAMALESS_SHAPE") or safeFind("dramaticless_shape")
   if handle then return handle, "DRAMALESS_SHAPE" end
   handle = safeFind("DRAMATIC_SHAPE") or safeFind("dramatic_shape")
@@ -63,16 +65,73 @@ end
 local function providerHasImporterModules(handle)
   local V = handle and handle.exports and handle.exports.lib or nil
   if not (V and type(V.require) == "function") then return false end
-  -- Do not instantiate the whole importer here. StadiumRig is the useful
-  -- discriminator between full Stadium providers and Battle Art's lean voxel
-  -- provider, and the remaining modules are verified by Crystal's own install.
-  local ok, rig = pcall(V.require, "StadiumRig")
-  return ok and type(rig) == "table" and type(rig.new) == "function"
+  local required = { "StadiumRig", "StadiumBuild", "StadiumFragment",
+                     "StadiumInstall", "StadiumRom", "StadiumFx" }
+  for _, name in ipairs(required) do
+    local ok, value = pcall(V.require, name)
+    if not (ok and type(value) == "table") then return false end
+  end
+  return true
+end
+
+-- Crystal only exports crystalStadium2 after its own install() succeeds against
+-- a provider it discovered. With Dramaless-only setups that export can be nil,
+-- even though the bridge module itself is present and is explicitly designed
+-- to accept a provider argument. Load the module directly as the fallback.
+local function crystalBridge(crystal)
+  local exported = crystal and crystal.exports and crystal.exports.crystalStadium2 or nil
+  if type(exported) == "table" and type(exported.install) == "function" then
+    state.bridgeSource = "export"
+    return exported
+  end
+  local ok, bridge = pcall(require, "mods.CRYSTAL_251.lib.stadium2_bridge")
+  if ok and type(bridge) == "table" and type(bridge.install) == "function" then
+    state.bridgeSource = "module"
+    return bridge
+  end
+  state.bridgeSource = nil
+  return nil
+end
+
+local function bridgeHasFixedMotionDecoder(bridge)
+  local test = bridge and bridge._test or nil
+  return type(test) == "table"
+    and type(test.decodeAnimationSources) == "function"
+    and type(test.poseSourcesForRecord) == "function"
+end
+
+local function invalidateLegacyStaticCache(bridge, status)
+  if not (status and status.animationReason == "static_animation_cache") then
+    return true
+  end
+  if not bridgeHasFixedMotionDecoder(bridge) then
+    state.reason = "crystal_251_motion_decoder_too_old"
+    warnOnce("old_crystal_motion_decoder",
+      "Stadium 2 cache is a legacy one-frame cache, but this Crystal 251 build does not expose the fixed Stadium 2 motion decoder. Update Crystal 251 before rebuilding the cache.")
+    return false
+  end
+  local guard = mod.exports and mod.exports.stadium3DAnimationCacheGuard or nil
+  if not (guard and type(guard.invalidateMarker) == "function") then
+    state.reason = "animation_cache_guard_missing"
+    return false
+  end
+  local ok, removed, why = pcall(guard.invalidateMarker)
+  if not ok or removed ~= true then
+    state.reason = "static_cache_invalidation_failed"
+    warnOnce("static_cache_invalidation",
+      "Could not invalidate legacy static Stadium 2 cache marker: %s",
+      tostring(ok and why or removed))
+    return false
+  end
+  state.invalidatedStaticCache = true
+  state.reason = "static_cache_invalidated"
+  return true
 end
 
 local function tryBootstrap(reason)
   state.attempts = state.attempts + 1
-  state.needed = not cacheCompatible()
+  local status = cacheStatus()
+  state.needed = status.compatible ~= true
   if not state.needed then
     state.reason = "cache_ready"
     return true
@@ -85,11 +144,9 @@ local function tryBootstrap(reason)
     return false
   end
 
-  local bridge = crystal.exports and crystal.exports.crystalStadium2 or nil
-  if not (type(bridge) == "table" and type(bridge.install) == "function") then
-    -- Crystal exports this only after its own Crystal ROM content cache exists.
-    -- Let Crystal's normal importer finish first and retry on game.ready.
-    state.reason = "crystal_251_not_ready"
+  local bridge = crystalBridge(crystal)
+  if not bridge then
+    state.reason = "crystal_251_bridge_unavailable"
     return false
   end
 
@@ -112,13 +169,15 @@ local function tryBootstrap(reason)
     return false
   end
 
+  -- Only remove the completion marker once we know both sides required for a
+  -- correct rebuild are present: a Crystal bridge with the fixed decoder and
+  -- a full Stadium provider. Existing DSM files remain until overwritten.
+  if not invalidateLegacyStaticCache(bridge, status) then return false end
+
   local options = {
     count = 251,
     ownerId = tostring(crystal.id or "CRYSTAL_251"),
     ownerName = "Crystal 251",
-    -- Deliberately omit cache: Crystal already called Bridge.configure(cache)
-    -- before exporting this bridge. configure(nil) does not clear its palette
-    -- table, so the original imported Crystal metadata remains authoritative.
   }
   local ok, active = pcall(bridge.install, crystal, nil, provider, options)
   if not ok or not active then
@@ -131,14 +190,13 @@ local function tryBootstrap(reason)
 
   state.installed = true
   state.provider = providerId
-  state.reason = reason or "installed"
-  log("Crystal 251 Stadium 2 cache bootstrap attached to %s", tostring(providerId))
+  state.reason = state.invalidatedStaticCache and "rebuild_attached" or (reason or "installed")
+  log("Crystal 251 Stadium 2 cache bootstrap attached to %s (bridge=%s, rebuild=%s)",
+    tostring(providerId), tostring(state.bridgeSource),
+    tostring(state.invalidatedStaticCache))
   return true
 end
 
--- Provider/Crystal mods have lower priority than DSR in the supported stack,
--- so this normally succeeds immediately. game.ready is a second deterministic
--- seam for unusual launcher/load orders and for Crystal finishing setup.
 tryBootstrap("load")
 if mod.events and mod.events.on then
   mod.events:on("game.ready", function()
@@ -149,10 +207,11 @@ if mod.events and mod.events.on then
 end
 
 mod.exports.stadium3DCrystalBootstrap = {
-  api = 1,
+  api = 2,
   retry = tryBootstrap,
   status = function()
-    state.needed = not cacheCompatible()
+    local status = cacheStatus()
+    state.needed = status.compatible ~= true
     return {
       attempts = state.attempts,
       installed = state.installed,
@@ -160,6 +219,10 @@ mod.exports.stadium3DCrystalBootstrap = {
       provider = state.provider,
       needed = state.needed,
       reason = state.reason,
+      invalidatedStaticCache = state.invalidatedStaticCache,
+      bridgeSource = state.bridgeSource,
+      animationReason = status.animationReason,
+      animationCount = status.animationCount,
     }
   end,
 }

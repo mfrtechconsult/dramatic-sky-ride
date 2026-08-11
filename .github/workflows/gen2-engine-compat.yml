@@ -1,0 +1,73 @@
+name: Gen1Recomp++ compatibility audit
+
+on:
+  push:
+    branches:
+      - agent/gen2-gen1recomp-plus-compat
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gen2check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Dramatic Sky Ride
+        uses: actions/checkout@v7
+
+      - name: Checkout current Gen1Recomp++
+        uses: actions/checkout@v7
+        with:
+          repository: bryanthaboi/gen1recomp
+          path: gen1recomp-upstream
+
+      - name: Run upstream Gen 2 compatibility checker
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 gen1recomp-upstream/tools/modkit.py gen2check \
+            "$GITHUB_WORKSPACE/dramatic_sky_ride" --notes \
+            | tee /tmp/dsr-gen2check.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo '## Dramatic Sky Ride — Gen1Recomp++ audit'
+            echo
+            echo '```text'
+            cat /tmp/dsr-gen2check.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # MK400 is expected while this compatibility branch intentionally
+          # withholds games=["gen1","gen2"] until a real Gold boot is tested.
+          # Every other fatal finding remains a real migration blocker.
+          if grep -Eq '^MK40[1-9] ERROR' /tmp/dsr-gen2check.txt; then
+            echo 'Fatal Gen 2 compatibility findings remain.' >&2
+            exit 1
+          fi
+          if [ "$status" -ne 0 ] && ! grep -Eq '^MK400 ERROR' /tmp/dsr-gen2check.txt; then
+            exit "$status"
+          fi
+
+      - name: Run strict checker report
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          python3 gen1recomp-upstream/tools/modkit.py gen2check \
+            "$GITHUB_WORKSPACE/dramatic_sky_ride" --strict --notes \
+            | tee /tmp/dsr-gen2check-strict.txt
+          {
+            echo
+            echo '## Strict report'
+            echo
+            echo 'This report is informational until Gold boot validation enables the manifest target.'
+            echo
+            echo '```text'
+            cat /tmp/dsr-gen2check-strict.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0

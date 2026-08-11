@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.2.0-alpha.4",
+  "version": "0.2.0-alpha.5",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -15,7 +15,7 @@
     "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
     "STADIUM_OVERWORLD_MODELS",
-    "CRYSTAL_251",
+    "CRYSTAL_251@>=0.9.13 <1.0.0",
     "wild_skies@>=1.4.1 <2.0.0",
     "otf-player-switcher",
     "Music_FRLG",
@@ -30,6 +30,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Experimental 0.2 branch: hardened native Pokemon Stadium 2 3D mounts from Crystal 251 DSM packs, animated procedural effect flipbooks, Dramaless cache bootstrap, interpolated Battle Art fallback, native 2D/PokeMMO rendering, OTF, Wild Skies and Gen 2 support.",
+  "description": "Experimental 0.2 branch: animated Pokemon Stadium 2 3D mounts from Crystal 251 DSM packs, legacy static-cache repair through Dramaless, hardened/interpolated rendering, procedural effect flipbooks, native 2D/PokeMMO rendering, OTF, Wild Skies and Gen 2 support.",
   "github": "mfrtechconsult/dramatic-sky-ride"
 }

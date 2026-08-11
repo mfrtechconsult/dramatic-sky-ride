@@ -19,8 +19,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lua5.4
       - name: Validate manifest JSON
         run: python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+      - name: Validate Gen1 Surf hotfix contract
+        run: python3 tests/gen1_surf_contract.py dramatic_sky_ride
       - name: Validate Gen2 engine compatibility contract
         run: python3 tests/gen2_engine_compat_contract.py dramatic_sky_ride
+      - name: Validate Gen1 Surf transition syntax
+        run: luac -p dramatic_sky_ride/src/main_26b_gen1_surf_runtime.lua
       - name: Validate Gen2 runtime bridge syntax
         run: luac -p dramatic_sky_ride/src/main_21b_gen2_runtime.lua
       - name: Validate Gen2 progression syntax

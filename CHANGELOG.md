@@ -2,7 +2,7 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
-## Unreleased — 0.2.1
+## 0.2.1
 
 ### Settings UX
 

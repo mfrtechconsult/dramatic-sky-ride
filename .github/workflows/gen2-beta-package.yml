@@ -110,13 +110,13 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/dsr-gen2-beta-artifact
           cd /tmp/dsr-gen2-beta
-          zip -qr /tmp/dsr-gen2-beta-artifact/dramatic-sky-ride-0.2.2-gen2-beta.zip dramatic_sky_ride
-          unzip -t /tmp/dsr-gen2-beta-artifact/dramatic-sky-ride-0.2.2-gen2-beta.zip
+          zip -qr /tmp/dsr-gen2-beta-artifact/dramatic-sky-ride-0.2.3-gen2-beta.zip dramatic_sky_ride
+          unzip -t /tmp/dsr-gen2-beta-artifact/dramatic-sky-ride-0.2.3-gen2-beta.zip
 
       - name: Upload Gen2 beta
         uses: actions/upload-artifact@v4
         with:
           name: dramatic-sky-ride-gen2-beta
-          path: /tmp/dsr-gen2-beta-artifact/dramatic-sky-ride-0.2.2-gen2-beta.zip
+          path: /tmp/dsr-gen2-beta-artifact/dramatic-sky-ride-0.2.3-gen2-beta.zip
           if-no-files-found: error
           retention-days: 14

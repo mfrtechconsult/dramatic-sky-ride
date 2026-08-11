@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.3
+
+- Fixed Flight and Visible Surf being bypassed when Wild Skies re-armed its overworld update watchdog around DSR.
+- Preserved the complete update chain across the Gen 1 Surf and Gold Suicune compatibility wrappers.
+- Prevented false recovery when a cooperative outer watchdog still owns the DSR root.
+- Added native Surf-state recovery so Visible Surf can initialize after a displaced update hook.
+- Added regression coverage for cooperative Wilds/Wild Skies update composition.
+- Included the generation-aware Gen 2 compatibility path for continued beta testing without declaring Gen 2 in the standard release manifest.
+- Kept Wilds, voxel renderers, Crystal 251 and every other companion integration optional; native 2D remains the dependency-free fallback.
+
 ## 0.1.7
 
 - Added fully optional OTF Player Switcher compatibility so mounted rider art follows the selected player character during Flight, Ground Ride and Visible Surf.

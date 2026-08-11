@@ -2,6 +2,22 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.3
+
+### Gen 1 runtime stability
+
+- Fixed Flight and Visible Surf being bypassed when Wild Skies re-armed its overworld update watchdog around DSR.
+- Preserved the complete DSR update chain after the new Gen 1 Surf and Gold Suicune compatibility layers were added.
+- Prevented false hook recovery when an outer cooperative wrapper still owns the complete DSR update root.
+- Allowed native Surf state to bootstrap Visible Surf recovery before DSR's private water-mount state exists.
+- Added regression coverage for the complete Gen 1/Gen 2 wrapper chain and cooperative watchdog composition.
+
+### Generation II beta
+
+- Included the generation-aware runtime, progression and Gold Suicune compatibility work for continued beta testing.
+- Kept the standard release manifest conservative: Gen 2 is not declared in the normal package while real Gold testing continues.
+- Kept all companion integrations optional; native 2D remains the dependency-free fallback.
+
 ## 0.2.2
 
 ### Wild Skies / Wilds of Kanto compatibility

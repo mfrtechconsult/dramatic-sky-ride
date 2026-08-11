@@ -1,93 +1,155 @@
 (function()
 -- alpha.16 optional Wild Skies integration.
 -- Wild Skies remains an independent mod and owns its flyers. DSR only uses
--- its documented exports: registerSpriteSource() and takeFlyer().
--- Wild Skies does not expose flyer altitude through takeFlyer(), so DSR uses
--- a two-cell interception envelope to make visually near passes forgiving.
+-- documented Wild Skies exports for sprite-source fallback and flyer consume.
+-- When Wilds of Kanto is enabled, Wild Skies' own native Wilds adapter is
+-- authoritative for airborne species art; DSR does not override it.
 
 local WILD_SKIES_SOURCE_ID = "dramatic_sky_ride_followers"
+local WILDS_MOD_ID = "overworld_wild_spawns"
 local WILD_SKIES_INTERCEPT_RADIUS = 2
+local FALLBACK_PROVIDER_IDS = {
+  "PokePCFollowers_VoxelMerge",
+  "pokepcfollowers",
+  "FOLLOWERS_EX",
+  "followers_ex",
+}
+
 local wildSkies = { handle = nil, take = nil, registered = false,
-                    cooldown = 0, expectedBattle = 0 }
+                    spriteMode = "native", cooldown = 0, expectedBattle = 0 }
+
+local function enabledModHandle(id)
+  if not mod.find then return nil end
+  local ok, handle = pcall(mod.find, mod, id)
+  return ok and handle or nil
+end
 
 local function wildSkiesHandle()
   if wildSkies.handle ~= nil then return wildSkies.handle or nil end
-  if not mod.find then wildSkies.handle = false return nil end
-  local ok, handle = pcall(mod.find, mod, "wild_skies")
-  wildSkies.handle = ok and handle or false
+  wildSkies.handle = enabledModHandle("wild_skies") or false
   return wildSkies.handle or nil
 end
 
--- Generic follower resolver for every Gen 1 species, not just DSR's rideable
--- roster. This lets Pidgey, Spearow, Zubat, etc. use their actual imported
--- follower/overworld art when Wild Skies asks for an in-air sprite.
-local function followerAssetForDex(dex)
-  dex = tonumber(dex)
-  if not dex or not (love and love.filesystem and love.filesystem.getDirectoryItems) then
-    return nil
-  end
-  local filename = string.format("follower_%03d.png", dex)
-  local ok, names = pcall(love.filesystem.getDirectoryItems, "mods")
-  if ok and type(names) == "table" then
-    local fallback = nil
-    for _, name in ipairs(names) do
-      local root = "mods/" .. name
-      local asset = root .. "/assets/sprites/" .. filename
-      if fileExists(asset) then
-        local raw = love.filesystem.read(root .. "/manifest.json")
-        local id = manifestId(raw)
-        if id and FOLLOWER_IDS[id] then return asset end
-        fallback = fallback or asset
-      end
+local function wildsEnabled()
+  return enabledModHandle(WILDS_MOD_ID) ~= nil
+end
+
+local function fallbackProvider()
+  for _, id in ipairs(FALLBACK_PROVIDER_IDS) do
+    local handle = enabledModHandle(id)
+    local exports = handle and handle.exports
+    if exports and type(exports.resolveFollowerSprite) == "function" then
+      return id, exports
     end
-    if fallback then return fallback end
-  end
-  for _, root in ipairs({
-    "mods/pokepcfollowers/assets/sprites/",
-    "mods/PokePCFollowers/assets/sprites/",
-    "mods/PokePCFollowers_VoxelMerge/assets/sprites/",
-  }) do
-    local asset = root .. filename
-    if fileExists(asset) then return asset end
   end
   return nil
 end
 
-local function registerWildSkiesSpriteSource()
+-- DSR's Wild Skies sprite source is deliberately only a fallback for setups
+-- without Wilds of Kanto. It consumes the enabled provider's public export and
+-- never scans the mods directory, so a disabled/stale install cannot influence
+-- Wild Skies rendering.
+local function fallbackAirSprite(game, species, dex)
+  local providerId, exports = fallbackProvider()
+  if not exports then return nil end
+  game = game or Game
+  local ok, provided = pcall(exports.resolveFollowerSprite, {
+    species = species,
+    speciesId = tonumber(dex),
+    surface = "land",
+    role = "wild_skies_airborne_fallback",
+    game = game,
+  })
+  if not (ok and type(provided) == "table"
+      and type(provided.image) == "string") then
+    return nil
+  end
+  local frames = tonumber(provided.frames) or 0
+  if frames < 2 then return nil end
+  return {
+    id = provided.id or ("DSR_WILD_SKIES_" .. tostring(species)),
+    image = provided.image,
+    frames = frames,
+    walker = provided.walker ~= false,
+    trueColor = provided.trueColor ~= false,
+    providerId = provided.providerId or providerId,
+  }
+end
+
+local lastSpriteMode = nil
+local function setSpriteMode(mode)
+  wildSkies.spriteMode = mode
+  if mode ~= lastSpriteMode then
+    lastSpriteMode = mode
+    log("Wild Skies sprite integration: %s", tostring(mode))
+  end
+end
+
+local function configureWildSkiesSpriteSource()
   local handle = wildSkiesHandle()
   local exports = handle and handle.exports
-  local register = exports and exports.registerSpriteSource
-  if type(register) ~= "function" then return false end
+  if not exports then
+    wildSkies.registered = false
+    setSpriteMode("wild_skies_unavailable")
+    return false
+  end
+
+  -- Hot reloads and old DSR builds can leave our source registered. Remove it
+  -- first so Wild Skies' own built-in sources regain their normal priority.
+  if type(exports.unregisterSpriteSource) == "function" then
+    pcall(exports.unregisterSpriteSource, WILD_SKIES_SOURCE_ID)
+  end
+  wildSkies.registered = false
+
+  -- Preferred path: Wild Skies already has a first-class Wilds of Kanto
+  -- adapter that resolves the style-independent levitates registry and strips
+  -- the water splash. Do not duplicate or outrank that integration in DSR.
+  if wildsEnabled() then
+    setSpriteMode("wild_skies_native_wilds")
+    return true
+  end
+
+  -- Without Wilds, retain species-specific art when a compatible follower
+  -- provider is actually enabled. This is intentionally secondary to Wild
+  -- Skies' own source chain and disappears as soon as Wilds becomes available.
+  local providerId = fallbackProvider()
+  if not providerId then
+    setSpriteMode("wild_skies_native_generic")
+    return true
+  end
+
+  local register = exports.registerSpriteSource
+  if type(register) ~= "function" then
+    setSpriteMode("wild_skies_no_sprite_api")
+    return false
+  end
+
   local source = {
     id = WILD_SKIES_SOURCE_ID,
     resolve = function(_, game, species, dex)
-      game = game or Game
-      local def = game and game.data and game.data.pokemon
-        and game.data.pokemon[species]
-      dex = tonumber(dex) or (def and tonumber(def.dex))
-      local path = followerAssetForDex(dex)
-      if not path then return nil end
-      return {
-        id = "DSR_WILD_SKIES_" .. tostring(species),
-        image = path,
-        frames = 6,
-        walker = true,
-        trueColor = true,
-      }
+      return fallbackAirSprite(game, species, dex)
     end,
   }
   local ok, accepted = pcall(register, source)
   wildSkies.registered = ok and accepted ~= false
   if wildSkies.registered then
-    log("Wild Skies sprite source registered")
+    setSpriteMode("dsr_fallback_" .. tostring(providerId))
+  else
+    setSpriteMode("wild_skies_fallback_rejected")
   end
   return wildSkies.registered
 end
 
-registerWildSkiesSpriteSource()
+configureWildSkiesSpriteSource()
+mod.events:on("mods.loaded", function()
+  wildSkies.handle = nil
+  wildSkies.take = nil
+  configureWildSkiesSpriteSource()
+end)
 mod.events:on("game.ready", function()
   wildSkies.handle = nil
-  registerWildSkiesSpriteSource()
+  wildSkies.take = nil
+  configureWildSkiesSpriteSource()
 end)
 
 local function syncWildSkiesAirborneMarker(ow)
@@ -187,6 +249,7 @@ end
 mod.exports.wildSkies = {
   installed = function() return wildSkiesHandle() ~= nil end,
   spriteSourceRegistered = function() return wildSkies.registered == true end,
+  spriteIntegrationMode = function() return wildSkies.spriteMode end,
 }
 
 log("alpha.16 optional Wild Skies integration loaded")

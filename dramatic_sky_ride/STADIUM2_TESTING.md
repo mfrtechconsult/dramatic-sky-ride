@@ -19,7 +19,7 @@ Normal NPCs, followers, wild Pokémon and the trainer are not globally converted
 3. A supported voxel provider:
    - Battle Art Voxel Fork, or
    - Dramaless Shape.
-4. Crystal 251 with its Stadium 2 importer available.
+4. Crystal 251 0.9.13 or newer with its fixed Stadium 2 pose-table decoder.
 5. A legally obtained supported Pokémon Stadium 2 US ROM supplied to Crystal 251 when requested.
 6. A complete Crystal 251 Stadium 2 cache.
 
@@ -31,7 +31,7 @@ The expected cache contract is:
 - species: 251
 - variants: 2 (`normal` and `shiny`)
 
-DSR refuses incomplete or stale native caches. If the cache contract is not satisfied, the renderer falls back safely instead of consuming partial packs.
+DSR refuses incomplete or stale native caches. Alpha.5+ also rejects the historical Charizard one-frame static cache even though that cache used the same `C2DSM10` marker. If safe reconstruction is possible through Crystal 251 + Dramaless, only the completion marker is invalidated and Crystal rebuilds the DSM set from the user's ROM.
 
 ## Building the Stadium 2 cache
 
@@ -41,7 +41,7 @@ Crystal 251's current importer is built on top of the full Stadium module family
 
 This is the easiest experimental setup.
 
-DSR detects Crystal 251 plus Dramaless Shape and, when the DSM cache is missing or stale, attaches Crystal's own Stadium 2 bridge to Dramaless automatically. Crystal remains the owner of the ROM picker, extraction, cache format and generated files.
+DSR detects Crystal 251 plus Dramaless Shape and, when the DSM cache is missing or stale, attaches Crystal's own Stadium 2 bridge to Dramaless automatically. Alpha.5+ can load Crystal's bridge module directly even when Crystal itself did not export `crystalStadium2` because original `DRAMATIC_SHAPE` was absent. Crystal remains the owner of the ROM picker, extraction, cache format and generated files.
 
 After the bridge is attached, use Crystal's normal `STADIUM 2 MODELS` / Stadium 2 ROM import flow if it does not start automatically.
 
@@ -63,9 +63,26 @@ Battle Art does not currently ship the complete Stadium importer module family C
 
 The ROM/model data is never copied into the DSR mod package.
 
+## Live-animation recovery (alpha.6+)
+
+A DSM4 pack can contain several decoded clips while Crystal's provisional overworld context still points to a static one-frame or constant pose. Alpha.6 no longer assumes that `animCount > 1` means the selected idle is alive.
+
+For each mounted species DSR now inspects the packed bone streams themselves:
+
+- if the requested idle changes at least one bone component between frames, it is kept;
+- if the requested idle is static but another Stadium clip has changing bone data, DSR selects a real moving clip for the experimental overworld idle (preferring an authored non-zero loop seam when available);
+- if **no clip contains any changing skeletal track**, DSR logs that the generated DSM itself is still static and does not invent a procedural animation;
+- if `runtime.time` fails to advance through the normal Overworld update path, a monotonic clock advances it only for the stalled frames. A normally advancing game clock is never double-counted.
+
+Useful log messages are:
+
+- `idle clip ... is static; using moving clip ...` — real Stadium motion exists and DSR recovered it;
+- `contains no changing skeletal tracks` — the problem is upstream in the Crystal Stadium 2 extraction/cache, not the renderer;
+- `Stadium 2 live-animation recovery loaded` — both pose seams were patched successfully.
+
 ## First validation target: Charizard
 
-Charizard is the primary end-to-end validation mount because it exercises:
+Charizard remains the primary end-to-end validation mount because it exercises:
 
 - a Gen I Stadium 2 model;
 - a flying mount;
@@ -83,15 +100,16 @@ Charizard is the primary end-to-end validation mount because it exercises:
 3. Enter a supported voxel mode.
 4. Set `MOUNT RENDERER = STADIUM 3D`.
 5. Mount Charizard.
-6. Test all four facings while stationary.
+6. For alpha.6, first verify that the body/wing/tail pose visibly changes while stationary. No cache rebuild is required if alpha.5 already rebuilt it.
 7. Confirm the generated tail flame is visible and its texture continuously animates rather than remaining frozen on one frame.
-8. Fly forward, backward and sideways.
-9. Ascend and descend through several manual altitude levels.
-10. Toggle `SHOW RIDER` off and on.
-11. Test at least one orbit/voxel camera and 3RD camera.
-12. Land, take off again and change maps.
-13. Enter and leave a battle, then verify the mount restores correctly.
-14. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
+8. Test all four facings while stationary.
+9. Fly forward, backward and sideways.
+10. Ascend and descend through several manual altitude levels.
+11. Toggle `SHOW RIDER` off and on.
+12. Test at least one orbit/voxel camera and 3RD camera.
+13. Land, take off again and change maps.
+14. Enter and leave a battle, then verify the mount restores correctly.
+15. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
 
 ## What should be visually correct
 
@@ -111,44 +129,22 @@ Charizard is the primary end-to-end validation mount because it exercises:
 
 When `MOUNT RENDERER = STADIUM 3D`, DSR writes a compact status line only when the relevant state changes.
 
-Look for:
+Look for `Stadium 2 status:` and `Stadium 2 model:`. Alpha.6 additionally exposes `stadium3DLiveAnimation.stats(dex)`, reporting the selected animation, source (`requested_idle`, `moving_loop_recovery`, `moving_clip_recovery`, or `no_moving_tracks`), frame count, moving bone/component counts, runtime time and clock-fallback count.
 
-`Stadium 2 status:`
-
-The line reports:
-
-- requested and effective renderer;
-- active mount species;
-- active voxel provider;
-- native cache format/count/variant status;
-- whether the native cache is compatible and operational;
-- rotation, pack-safety and dual-hook hardening status;
-- provider StadiumRig availability and activation;
-- interpolated DSR fallback status;
-- Crystal cache-bootstrap state and reason.
-
-A Battle Art setup without a generated cache should report the bootstrap reason `battle_art_requires_prebuilt_cache`.
-
-When a native model is loaded, DSR also logs:
-
-`Stadium 2 model:`
-
-with dex number, variant, bone/primitive/texture/animation counts, idle animation and measured model bounds.
-
-Useful public diagnostic APIs are also exported for compatibility tools:
+Useful public diagnostic APIs include:
 
 - `stadium3DNative.cacheStatus()`
 - `stadium3DNative.modelInfo(species)`
 - `stadium3DHardening.cacheCompatibility()`
+- `stadium3DAnimationCacheGuard.inspect()`
 - `stadium3DCrystalBootstrap.status()`
 - `stadium3DCrystalBootstrap.retry()`
 - `stadium3DProviderRig.active()`
 - `stadium3DFallback.interpolated`
 - `stadium3DEffects.status()`
+- `stadium3DLiveAnimation.stats(dex)`
 - `stadium3DDiagnostics.snapshot(species)`
 - `stadium3DDiagnostics.log(species)`
-
-`stadium3DEffects.status()` should report both the DSM4 effect-frame parser patch and the final pose-runtime decorator as active.
 
 ## Fallback hierarchy
 
@@ -189,6 +185,7 @@ After Charizard is visually correct, test representative shapes instead of immed
 ## Experimental limitations
 
 - This branch is not yet a stable release.
+- Alpha.6's moving-clip recovery is intentionally heuristic until Crystal's Stadium 2 context table is fully decoded. It always uses genuine Stadium skeletal data; it does not synthesize movement, but the recovered clip may not yet be the ideal species-specific standby loop.
 - Final rider seat tuning may still need species-specific visual adjustments after real in-game captures.
 - Procedural fire/gas textures are generated replacements supplied by the Stadium extraction pipeline; DSR reads the generated DSM4 frames and does not bundle source game assets.
 - Battle Art can consume the cache but cannot currently act as Crystal 251's cache-generation provider by itself.

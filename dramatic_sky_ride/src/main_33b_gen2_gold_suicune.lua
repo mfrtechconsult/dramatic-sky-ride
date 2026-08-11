@@ -1,4 +1,4 @@
-;(function()
+(function()
 -- Gold-native Suicune traversal bridge.
 --
 -- Gen 1 stores Surf traversal on player.surfing. Gold instead makes the

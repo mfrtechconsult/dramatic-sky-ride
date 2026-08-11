@@ -43,6 +43,9 @@ require("_riderSourceSprite" in rider_source
         "rider crops do not resolve Gold's native sprite under a mount")
 require("nativePlayerSprite = function(player)" in bridge,
         "the Gold bridge does not expose its preserved native player sprite")
+require("player.sprite ~= visual.installedSprite" in bridge
+        and "visual.originalSprite = player.sprite" in bridge,
+        "Surf -> Flight can crop Gold's stale native Surf sheet as its rider")
 require('mod.hooks:wrap("movement.collision"' in bridge,
         "Gold flight does not use the shared collision seam")
 require('ctx.reason ~= "bounds"' in bridge and "return next(true, ctx)" in bridge,

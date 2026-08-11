@@ -39,6 +39,17 @@ Native 2D Flight does not require either renderer.
 
 Visible Surf uses the game's normal Surf movement and progression rules.
 
+### Generation II quick testing
+
+During the Generation II test phase, a temporary scientist NPC in **New Bark
+Town** gives **Ho-Oh, Suicune, Raikou and Gyarados**. Ho-Oh receives Fly, and
+Suicune and Gyarados receive Surf, so every Gen II mount type can be tested
+immediately. Missing gifts are placed in the party first and then in the PC.
+
+For a faster progression-free test, set `SETTINGS VIEW = ADVANCED`, then set
+`BADGE CHECKS = OFF`. This helper NPC and the relaxed badge option are intended
+for testing only.
+
 ## Settings
 
 DSR now includes a simplified settings view:

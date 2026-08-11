@@ -198,5 +198,24 @@ return function(game)
   assert(bridge.visualKind() == "water",
     "ordinary Gold Surf did not install its water mount")
   print("[driver] shoreline exit + ordinary Gold Surf sync passed")
+
+  -- Regression: starting Flight directly from Visible Surf changes Gold's
+  -- player state synchronously. The rider must be cropped from SPRITE_CHRIS,
+  -- never from the obsolete native Surf sheet hidden under Gyarados.
+  game:keypressed("h")
+  wait(75)
+  assert(ex.isFlying(), "H did not switch Visible Surf to Flight")
+  assert(not ex.isWaterRiding(), "Visible Surf remained active under Flight")
+  assert(game.world.playerState == "normal",
+    "Surf -> Flight kept Gold's native Surf state")
+  assert(game.world.player.surfing == false,
+    "Surf -> Flight kept the shared Surf marker")
+  assert(bridge.visualKind() == "flight",
+    "Surf -> Flight did not select the flight visual")
+  local riderId = tostring(bridge.riderSpriteId() or "")
+  assert(not riderId:find("SPRITE_SURF", 1, true),
+    "Surf mount was cropped as the flight rider: " .. riderId)
+  shot("03-water-to-flight.png")
+  print("[driver] Visible Surf -> Flight rider source passed: " .. riderId)
   print("[driver] PASS Gold Ground wall climb + Flight water landing")
 end

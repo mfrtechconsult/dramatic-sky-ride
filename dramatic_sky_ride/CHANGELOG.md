@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5
+
+- Fixed the Gold Visible Surf mount appearing on the back of the Flight mount when taking off directly from water.
+- Refreshed the native Gold rider source synchronously during the Surf-to-Flight state change.
+- Added regression coverage for Gyarados-to-Ho-Oh switching.
+- Documented the temporary New Bark Town test giver and the optional badge-check bypass.
+
 ## 0.2.4
 
 - Declared Generation II support in the standard release manifest.

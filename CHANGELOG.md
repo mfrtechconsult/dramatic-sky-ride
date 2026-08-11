@@ -2,6 +2,14 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.5
+
+### Generation II transition fix
+
+- Fixed Visible Surf's native Gold sprite being reused as the rider when taking off directly from Gyarados or another water mount.
+- Added automated Gold coverage for the complete Visible Surf-to-Flight transition.
+- Documented the temporary New Bark Town test NPC and the `BADGE CHECKS = OFF` rapid-test setting.
+
 ## 0.2.4
 
 ### Generation II support

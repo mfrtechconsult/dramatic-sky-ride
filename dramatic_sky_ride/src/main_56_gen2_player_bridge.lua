@@ -407,8 +407,18 @@ mod.exports.gen2PlayerBridge = {
     return guardedWorld ~= nil and guardState ~= nil
   end,
   nativePlayerSprite = function(player)
-    if player and visual.player == player and visual.originalSprite then
-      return visual.originalSprite, visual.originalSpriteDef
+    if player and visual.player == player then
+      -- applyPlayerState("normal") runs synchronously when Flight starts from
+      -- Surf, before the bridge receives its next update.  Keep the native
+      -- source in step immediately so buildRiderSprite never crops Gold's
+      -- obsolete SPRITE_SURF sheet onto the flying mount.
+      if player.sprite and player.sprite ~= visual.installedSprite then
+        visual.originalSprite = player.sprite
+        visual.originalSpriteDef = player.spriteDef
+      end
+      if visual.originalSprite then
+        return visual.originalSprite, visual.originalSpriteDef
+      end
     end
     return player and player.sprite or nil,
       player and player.spriteDef or nil

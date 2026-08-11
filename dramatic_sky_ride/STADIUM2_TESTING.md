@@ -70,66 +70,67 @@ A DSM4 pack can contain several decoded clips while Crystal's provisional overwo
 For each mounted species DSR now inspects the packed bone streams themselves:
 
 - if the requested idle changes at least one bone component between frames, it is kept;
-- if the requested idle is static but another Stadium clip has changing bone data, DSR selects a real moving clip for the experimental overworld idle (preferring an authored non-zero loop seam when available);
+- if the requested idle is static but another Stadium clip has changing bone data, DSR selects a real moving clip for the experimental overworld idle;
 - if **no clip contains any changing skeletal track**, DSR logs that the generated DSM itself is still static and does not invent a procedural animation;
-- if `runtime.time` fails to advance through the normal Overworld update path, a monotonic clock advances it only for the stalled frames. A normally advancing game clock is never double-counted.
+- alpha.7 drives pose/skin directly from the render path so visible models cannot remain frozen merely because the Overworld update seam did not advance their runtime.
 
-Useful log messages are:
+## Alpha.9 mount-motion audit
 
-- `idle clip ... is static; using moving clip ...` — real Stadium motion exists and DSR recovered it;
-- `contains no changing skeletal tracks` — the problem is upstream in the Crystal Stadium 2 extraction/cache, not the renderer;
-- `Stadium 2 live-animation recovery loaded` — both pose seams were patched successfully.
+Alpha.9 audits the complete 41-role roster and strengthens motion where alpha.8 was too subtle to read visually.
 
-## First validation target: Charizard
+- Flight: 16 supported roles remain covered; subtle profiles such as Dragonair, Xatu, Skarmory, Lugia and Ho-Oh receive moderate readability tuning.
+- Ground Ride: all 17 profiles were reviewed; fast quadrupeds/equines/runner birds receive clearly stronger bob/pitch/turn response, while heavy bipeds remain restrained.
+- Visible Surf: all 8 profiles were reviewed; idle buoyancy and movement/turn response are now visibly stronger.
+- Suicune: Ground Ride remains the lifecycle owner on water, but its amphibious state now has a dedicated Stadium `water` presentation instead of falling through to no motion profile.
+- `stadium3DMountMotion.audit()` reports profile coverage and whether the model/shadow motion matrices are actually attached.
 
-Charizard remains the primary end-to-end validation mount because it exercises:
+The normal roster remains 16 Flight + 17 Ground + 8 Visible Surf. Suicune's extra amphibious-water helper is not a ninth Surf mount.
 
-- a Gen I Stadium 2 model;
-- a flying mount;
-- an animated skeleton;
-- the independent 2D rider entity;
-- DSR altitude and camera placement;
-- Pokédex-proportional mount sizing;
-- generated Stadium procedural-effect geometry and texture flipbooks (tail flame);
-- shadows and the normal voxel depth path.
+## Recommended alpha.9 visual checks
 
-### Test sequence
+### Flight
 
-1. Start with DSR `MOUNT RENDERER = 2D SPRITES` and verify normal Flight still works.
-2. Confirm the Stadium 2 cache is complete.
-3. Enter a supported voxel mode.
-4. Set `MOUNT RENDERER = STADIUM 3D`.
-5. Mount Charizard.
-6. For alpha.6, first verify that the body/wing/tail pose visibly changes while stationary. No cache rebuild is required if alpha.5 already rebuilt it.
-7. Confirm the generated tail flame is visible and its texture continuously animates rather than remaining frozen on one frame.
-8. Test all four facings while stationary.
-9. Fly forward, backward and sideways.
-10. Ascend and descend through several manual altitude levels.
-11. Toggle `SHOW RIDER` off and on.
-12. Test at least one orbit/voxel camera and 3RD camera.
-13. Land, take off again and change maps.
-14. Enter and leave a battle, then verify the mount restores correctly.
-15. If possible, test a shiny Charizard to verify the `shiny` DSM pack is selected.
+- Charizard — established animation baseline.
+- Dragonair — serpentine motion should now be easier to read without bird-like banking.
+- Skarmory — moderate armored-bird response.
+- Lugia — large-flight response.
+
+### Ground Ride
+
+- Rapidash — one of the strongest Ground profiles; moving/galloping must look clearly different from standing still.
+- Dodrio — strong runner-bird body cadence.
+- Tauros — strong bovine response.
+- Raikou — strong fast-quadruped response.
+- Suicune — clear land movement plus dedicated water-running presentation.
+- Snorlax — intentionally restrained.
+- Tyranitar — intentionally restrained.
+
+### Visible Surf
+
+- Tentacruel — strong buoyancy.
+- Gyarados — strong serpentine buoyancy/turn response.
+- Lapras — readable but calmer large-swimmer motion.
+- Mantine — strongest turn roll among Surf profiles.
+- Kingdra — serpentine swimmer response.
+- Lugia — large-swimmer response.
 
 ## What should be visually correct
 
 - The model must remain assembled during animation; limbs must not twist or separate.
-- Charizard must face the same direction as DSR movement/facing.
+- The mount must face the same direction as DSR movement/facing.
 - The model must remain centered on the player's world position.
-- Flight altitude must move the entire 3D model without terrain-induced vertical bobbing.
+- Flight altitude must move the entire 3D model without terrain-induced vertical bobbing from unrelated relief.
 - The trainer must remain a separate human-sized sprite and sit consistently relative to the resized mount.
 - The model must participate in the voxel depth buffer and cast the model-shaped shadow supplied by the voxel provider.
 - Skeletal animation should be interpolated rather than visibly stepping at the Stadium source rate.
 - Animated Stadium material streams such as eye/blink changes should remain synchronized with the skeleton.
-- Generated DSM4 `fxFrames` should animate at the Stadium source rate (30 Hz); Charizard's tail flame is the first visual check.
+- Generated DSM4 `fxFrames` should animate at the Stadium source rate (30 Hz).
 - Generated additive fire must not be included in the shadow pass.
 - A missing/invalid Stadium 2 model must fall back instead of making the mount invisible.
+- Fast Ground mounts should now have a visibly readable moving/galloping presentation; heavy bipeds should remain substantially calmer.
+- Surf mounts should visibly float at rest and react more strongly during travel and turns.
 
 ## Runtime diagnostics
-
-When `MOUNT RENDERER = STADIUM 3D`, DSR writes a compact status line only when the relevant state changes.
-
-Look for `Stadium 2 status:` and `Stadium 2 model:`. Alpha.6 additionally exposes `stadium3DLiveAnimation.stats(dex)`, reporting the selected animation, source (`requested_idle`, `moving_loop_recovery`, `moving_clip_recovery`, or `no_moving_tracks`), frame count, moving bone/component counts, runtime time and clock-fallback count.
 
 Useful public diagnostic APIs include:
 
@@ -143,6 +144,11 @@ Useful public diagnostic APIs include:
 - `stadium3DFallback.interpolated`
 - `stadium3DEffects.status()`
 - `stadium3DLiveAnimation.stats(dex)`
+- `stadium3DRenderClock.stats(dex)`
+- `stadium3DMountMotion.coverage()`
+- `stadium3DMountMotion.profile(role, species, dex)`
+- `stadium3DMountMotion.stats(dex)`
+- `stadium3DMountMotion.audit()`
 - `stadium3DDiagnostics.snapshot(species)`
 - `stadium3DDiagnostics.log(species)`
 
@@ -157,36 +163,11 @@ The experimental branch is intentionally defensive:
 
 A broken native cache or failed safety patch must never be treated as a reason to lose the mount entirely.
 
-## Second validation wave
-
-After Charizard is visually correct, test representative shapes instead of immediately checking all species:
-
-### Flight
-
-- Pidgeot — bird wing animation and anchoring.
-- Aerodactyl — wide wing span.
-- Dragonair — long body.
-- Moltres — additional generated fire geometry/flipbooks.
-- Lugia or Ho-Oh with Crystal 251 — Gen II coverage.
-
-### Ground Ride
-
-- Rapidash — quadruped animation plus generated mane/body fire.
-- Dodrio — tall narrow body.
-- Snorlax — large/wide body and rider placement.
-- Suicune — Gen II ground/water transition path.
-
-### Visible Surf
-
-- Lapras — conventional Surf mount.
-- Gyarados — extreme body proportions.
-- Mantine or Kingdra with Crystal 251 — Gen II Surf coverage.
-
 ## Experimental limitations
 
 - This branch is not yet a stable release.
-- Alpha.6's moving-clip recovery is intentionally heuristic until Crystal's Stadium 2 context table is fully decoded. It always uses genuine Stadium skeletal data; it does not synthesize movement, but the recovered clip may not yet be the ideal species-specific standby loop.
+- Stadium 2 still does not provide a trustworthy shared overworld walk/run/swim/fly clip contract.
+- Ground Ride therefore remains presentation-based rather than a fabricated generic skeletal gait.
+- A future per-species locomotion clip should only be used when the actual Stadium source clip has been visually verified as credible for that species.
 - Final rider seat tuning may still need species-specific visual adjustments after real in-game captures.
-- Procedural fire/gas textures are generated replacements supplied by the Stadium extraction pipeline; DSR reads the generated DSM4 frames and does not bundle source game assets.
 - Battle Art can consume the cache but cannot currently act as Crystal 251's cache-generation provider by itself.
-- Runtime validation still requires Gen1Recomp/LÖVE plus a user-generated Stadium 2 cache; source-level tests cannot reproduce the final GPU/camera presentation by themselves.

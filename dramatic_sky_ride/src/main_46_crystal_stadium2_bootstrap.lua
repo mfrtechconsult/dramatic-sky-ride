@@ -2,16 +2,24 @@
 -- -------------------------------------------------------------------------
 -- Crystal 251 Stadium 2 cache bootstrap.
 --
--- DSR can render Crystal's DSM4 packs with either Dramaless or Battle Art.
--- Cache generation, however, needs the full Stadium importer module family.
--- Dramaless provides that family, while Battle Art intentionally does not.
+-- DSR's native renderer deliberately separates two jobs:
+--   * a voxel provider supplies Voxel3D/ShadowMap/Mat4 for presentation;
+--   * an import host supplies the full Stadium builder module family Crystal
+--     251 needs to turn the user's Stadium 2 ROM into DSM4 packs.
+--
+-- Dramaless/Dramatic Shape are known full import hosts. Battle Art is a valid
+-- renderer but currently does not ship the full Stadium importer family. Some
+-- STADIUM_OVERWORLD_MODELS forks expose their own ROM UI and may proxy a full
+-- compatible host, so selection is capability-based rather than hard-coded to
+-- one mod name. This also lets future/legacy forks work when they preserve the
+-- same public importer module contract.
 --
 -- Crystal's historical Stadium 2 importer also produced valid-looking
 -- C2DSM10 caches containing only a synthetic one-frame bind pose when motion
 -- extraction failed. main_46a detects those legacy caches. If a current
 -- Crystal bridge with the fixed motion decoder is installed, this bootstrap
 -- invalidates only the completion marker and lets Crystal rebuild the DSM
--- files from the user's ROM through Dramaless.
+-- files from the user's ROM through any compatible full import host.
 -- -------------------------------------------------------------------------
 
 local state = {
@@ -19,6 +27,7 @@ local state = {
   installed = false,
   crystal = false,
   provider = nil,
+  importSurface = nil,
   needed = nil,
   reason = nil,
   invalidatedStaticCache = false,
@@ -54,28 +63,66 @@ local function crystalHandle()
   return safeFind("CRYSTAL_251") or safeFind("crystal_251")
 end
 
-local function fullStadiumProvider()
-  local handle = safeFind("DRAMALESS_SHAPE") or safeFind("dramaticless_shape")
-  if handle then return handle, "DRAMALESS_SHAPE" end
-  handle = safeFind("DRAMATIC_SHAPE") or safeFind("dramatic_shape")
-  if handle then return handle, "DRAMATIC_SHAPE" end
-  return nil
-end
+local REQUIRED_IMPORT_MODULES = {
+  "StadiumRig", "StadiumBuild", "StadiumFragment",
+  "StadiumInstall", "StadiumRom", "StadiumFx",
+}
 
 local function providerHasImporterModules(handle)
   local V = handle and handle.exports and handle.exports.lib or nil
   if not (V and type(V.require) == "function") then return false end
-  local required = { "StadiumRig", "StadiumBuild", "StadiumFragment",
-                     "StadiumInstall", "StadiumRom", "StadiumFx" }
-  for _, name in ipairs(required) do
+  for _, name in ipairs(REQUIRED_IMPORT_MODULES) do
     local ok, value = pcall(V.require, name)
     if not (ok and type(value) == "table") then return false end
   end
   return true
 end
 
+-- Do not equate a mod id with importer capability. A fork may preserve the
+-- complete Stadium module family under a different id, while a renderer fork
+-- may intentionally omit it. Known ecosystem handles are therefore probed in a
+-- stable order and accepted only when every module Crystal actually needs is
+-- available.
+local function fullStadiumProvider()
+  local candidates = {
+    { "DRAMALESS_SHAPE", "DRAMALESS_SHAPE" },
+    { "dramaticless_shape", "DRAMALESS_SHAPE" },
+    { "DRAMATIC_SHAPE", "DRAMATIC_SHAPE" },
+    { "dramatic_shape", "DRAMATIC_SHAPE" },
+    { "STADIUM_OVERWORLD_MODELS", "STADIUM_OVERWORLD_MODELS" },
+    { "BATTLE_ART_VOXEL_FORK", "BATTLE_ART_VOXEL_FORK" },
+  }
+  local seen = {}
+  for _, row in ipairs(candidates) do
+    local handle = safeFind(row[1])
+    if handle and not seen[handle] then
+      seen[handle] = true
+      if providerHasImporterModules(handle) then return handle, row[2] end
+    end
+  end
+  return nil
+end
+
+-- STADIUM_OVERWORLD_MODELS exposes a convenient ROM selection surface in
+-- Randy's implementation and compatible forks. It is useful independently of
+-- whether that mod owns the importer itself, so report it separately instead
+-- of misclassifying a menu wrapper as a full builder host.
+local function stadiumImportSurface()
+  local handle = safeFind("STADIUM_OVERWORLD_MODELS")
+  local ex = handle and handle.exports or nil
+  if not ex then return nil end
+  if type(ex.chooseStadiumRom) == "function" then
+    return handle, "STADIUM_OVERWORLD_MODELS"
+  end
+  local menu = ex.romMenu
+  if type(menu) == "table" and type(menu.choose) == "function" then
+    return handle, "STADIUM_OVERWORLD_MODELS"
+  end
+  return nil
+end
+
 -- Crystal only exports crystalStadium2 after its own install() succeeds against
--- a provider it discovered. With Dramaless-only setups that export can be nil,
+-- a provider it discovered. With renderer-only setups that export can be nil,
 -- even though the bridge module itself is present and is explicitly designed
 -- to accept a provider argument. Load the module directly as the fallback.
 local function crystalBridge(crystal)
@@ -150,28 +197,32 @@ local function tryBootstrap(reason)
     return false
   end
 
+  local surface, surfaceId = stadiumImportSurface()
+  state.importSurface = surfaceId
+
   local provider, providerId = fullStadiumProvider()
   state.provider = providerId
   if not provider then
-    state.reason = safeFind("BATTLE_ART_VOXEL_FORK")
-      and "battle_art_requires_prebuilt_cache" or "stadium_import_provider_missing"
-    if state.reason == "battle_art_requires_prebuilt_cache" then
+    local battleArt = safeFind("BATTLE_ART_VOXEL_FORK") ~= nil
+    if surface then
+      state.reason = battleArt and "battle_art_import_surface_without_builder"
+        or "stadium_import_surface_without_builder"
+      warnOnce("surface_without_builder",
+        "%s exposes a Stadium ROM picker, but the active renderer stack does not expose the full Stadium importer module family Crystal 251 needs. DSR can still use an existing Stadium 2 cache, but this picker alone cannot build one.",
+        tostring(surfaceId))
+    elseif battleArt then
+      state.reason = "battle_art_requires_prebuilt_cache"
       warnOnce("battle_art_cache",
-        "Native Stadium 2 cache is not ready. Battle Art can render DSR's DSM mounts but cannot build Crystal 251's Stadium cache; generate it once with Dramaless Shape or Dramatic Shape, then return to Battle Art.")
+        "Native Stadium 2 cache is not ready. Battle Art can render DSR's DSM mounts but does not currently expose the full Crystal 251 Stadium importer module family. A compatible import host or an existing cache is required.")
+    else
+      state.reason = "stadium_import_provider_missing"
     end
-    return false
-  end
-  if not providerHasImporterModules(provider) then
-    state.reason = "provider_missing_stadium_modules"
-    warnOnce("provider_modules:" .. tostring(providerId),
-      "%s was found but does not expose the Stadium importer modules Crystal 251 requires",
-      tostring(providerId))
     return false
   end
 
   -- Only remove the completion marker once we know both sides required for a
   -- correct rebuild are present: a Crystal bridge with the fixed decoder and
-  -- a full Stadium provider. Existing DSM files remain until overwritten.
+  -- a full Stadium import host. Existing DSM files remain until overwritten.
   if not invalidateLegacyStaticCache(bridge, status) then return false end
 
   local options = {
@@ -191,8 +242,8 @@ local function tryBootstrap(reason)
   state.installed = true
   state.provider = providerId
   state.reason = state.invalidatedStaticCache and "rebuild_attached" or (reason or "installed")
-  log("Crystal 251 Stadium 2 cache bootstrap attached to %s (bridge=%s, rebuild=%s)",
-    tostring(providerId), tostring(state.bridgeSource),
+  log("Crystal 251 Stadium 2 cache bootstrap attached to %s (bridge=%s, importSurface=%s, rebuild=%s)",
+    tostring(providerId), tostring(state.bridgeSource), tostring(state.importSurface),
     tostring(state.invalidatedStaticCache))
   return true
 end
@@ -207,7 +258,7 @@ if mod.events and mod.events.on then
 end
 
 mod.exports.stadium3DCrystalBootstrap = {
-  api = 2,
+  api = 3,
   retry = tryBootstrap,
   status = function()
     local status = cacheStatus()
@@ -217,6 +268,7 @@ mod.exports.stadium3DCrystalBootstrap = {
       installed = state.installed,
       crystal = state.crystal,
       provider = state.provider,
+      importSurface = state.importSurface,
       needed = state.needed,
       reason = state.reason,
       invalidatedStaticCache = state.invalidatedStaticCache,

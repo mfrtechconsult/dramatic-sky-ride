@@ -27,6 +27,9 @@ jobs:
           repository: bryanthaboi/gen1recomp
           path: gen1recomp-upstream
 
+      - name: Install LuaJIT for adapter coverage
+        run: sudo apt-get update && sudo apt-get install -y luajit
+
       - name: Run upstream Gen 2 compatibility checker
         shell: bash
         run: |

@@ -31,11 +31,51 @@ The expected cache contract is:
 - species: 251
 - variants: 2 (`normal` and `shiny`)
 
-DSR refuses incomplete or stale native caches. Alpha.5+ also rejects the historical Charizard one-frame static cache even though that cache used the same `C2DSM10` marker. If safe reconstruction is possible through Crystal 251 + Dramaless, only the completion marker is invalidated and Crystal rebuilds the DSM set from the user's ROM.
+DSR refuses incomplete or stale native caches. Alpha.5+ also rejects the historical Charizard one-frame static cache even though that cache used the same `C2DSM10` marker. If safe reconstruction is possible through Crystal 251 + a full Stadium import host, only the completion marker is invalidated and Crystal rebuilds the DSM set from the user's ROM.
+
+## Renderer, import host and ROM UI are separate capabilities
+
+Alpha.10 explicitly separates three jobs that were easy to confuse:
+
+- **voxel renderer** — provides `Voxel3D`, matrices, shadows and the world presentation;
+- **Stadium import host** — provides the full `StadiumRig` / `StadiumBuild` / `StadiumFragment` / `StadiumInstall` / `StadiumRom` / `StadiumFx` module family Crystal 251 needs to build DSM4 packs;
+- **ROM selection surface** — provides a menu/file-picker entry, but does not necessarily contain the builder itself.
+
+A mod may provide one of these without providing the other two.
+
+### Dramaless Shape / Dramatic Shape
+
+These are known full Stadium import hosts. Crystal 251 can attach its Stadium 2 bridge to them and build the complete 251-species cache.
+
+### Battle Art Voxel Fork
+
+Battle Art is a valid **renderer** for DSR's native Stadium 2 mounts, but its current public tree does not contain the full Stadium importer module family. An existing cache therefore works, while cache construction still needs a compatible import host.
+
+### STADIUM_OVERWORLD_MODELS and Crystal-aware forks
+
+Randy's `STADIUM_OVERWORLD_MODELS` and compatible forks may expose a ROM picker and their own overworld Stadium renderer. Alpha.10 treats those capabilities independently:
+
+- DSR capability-probes the installed companion instead of assuming every build is Stadium-1-only;
+- a Crystal-aware fork may therefore report Gen II model availability when its active pack really contains those models;
+- the companion's ROM picker is exposed diagnostically, but a picker alone is not treated as proof that the full Stadium 2 builder exists;
+- when `MOUNT RENDERER = STADIUM 3D` is using DSR's native DSM4 model, the native sentinel stops advertising the generic DSR mount tag to `STADIUM_OVERWORLD_MODELS`, preventing both mods from claiming and rendering the same mount at once;
+- when DSR falls back to the external companion renderer, the ordinary DSR mount contract remains intact.
+
+This allows `STADIUM_OVERWORLD_MODELS` to keep handling wild Pokémon, followers or its own UI while DSR remains the sole owner of the active native Stadium 2 mount.
+
+Public diagnostic API: `stadium3DProviderInterop.status()`.
+
+## What was learned from STADIUM_OVERWORLD_MODELS locomotion
+
+The companion includes a useful overworld locomotion layer that ties its small body bob/pitch presentation to distance travelled. That is a sound technique for reducing visible foot sliding.
+
+However, its preferred moving skeletal slot is `idle_alt`. Crystal 251's current Stadium 2 generic context table maps that slot back to the same decoded `idle` clip. Therefore, for Crystal-generated Stadium 2 DSM4 packs, enabling the companion's `idle_alt` selection does **not** reveal a hidden walk/run animation that DSR is currently missing.
+
+DSR therefore does not copy the companion's clip selection blindly. Per-species Stadium 2 locomotion clips remain a future visual-validation task; distance-synchronised presentation is the reusable idea, not the assumption that `idle_alt` is a distinct gait.
 
 ## Building the Stadium 2 cache
 
-Crystal 251's current importer is built on top of the full Stadium module family from Dramatic Shape. DSR therefore separates **cache generation** from **cache rendering**.
+Crystal 251's current importer is built on top of a full Stadium module family. DSR therefore separates **cache generation** from **cache rendering**.
 
 ### Dramaless Shape
 
@@ -43,7 +83,7 @@ This is the easiest experimental setup.
 
 DSR detects Crystal 251 plus Dramaless Shape and, when the DSM cache is missing or stale, attaches Crystal's own Stadium 2 bridge to Dramaless automatically. Alpha.5+ can load Crystal's bridge module directly even when Crystal itself did not export `crystalStadium2` because original `DRAMATIC_SHAPE` was absent. Crystal remains the owner of the ROM picker, extraction, cache format and generated files.
 
-After the bridge is attached, use Crystal's normal `STADIUM 2 MODELS` / Stadium 2 ROM import flow if it does not start automatically.
+After the bridge is attached, use Crystal's normal Stadium 2 ROM import flow if it does not start automatically.
 
 ### Original Dramatic Shape
 
@@ -53,13 +93,7 @@ Crystal 251 already discovers the original `DRAMATIC_SHAPE` provider itself. DSR
 
 Battle Art is fully supported for **rendering an existing DSR Stadium 2 cache**, including the interpolated/anchored DSR skeleton fallback.
 
-Battle Art does not currently ship the complete Stadium importer module family Crystal 251 expects. Therefore, if no valid DSM cache exists yet:
-
-1. temporarily run Crystal 251 with Dramaless Shape or the original Dramatic Shape;
-2. import the supported Stadium 2 ROM and let the 251 normal + shiny DSM packs finish building;
-3. close the game after the cache is complete;
-4. switch back to Battle Art Voxel Fork;
-5. keep Crystal 251 and DSR enabled — DSR will read the same persistent `crystal_251/stadium2` cache directly.
+Battle Art does not currently ship the complete Stadium importer module family Crystal 251 expects. Therefore, if no valid DSM cache exists yet, a compatible full import host is still required. Once the cache exists, DSR reads the same persistent `crystal_251/stadium2` cache directly while Battle Art remains the renderer.
 
 The ROM/model data is never copied into the DSR mod package.
 
@@ -86,12 +120,12 @@ Alpha.9 audits the complete 41-role roster and strengthens motion where alpha.8 
 
 The normal roster remains 16 Flight + 17 Ground + 8 Visible Surf. Suicune's extra amphibious-water helper is not a ninth Surf mount.
 
-## Recommended alpha.9 visual checks
+## Recommended visual checks
 
 ### Flight
 
 - Charizard — established animation baseline.
-- Dragonair — serpentine motion should now be easier to read without bird-like banking.
+- Dragonair — serpentine motion should be readable without bird-like banking.
 - Skarmory — moderate armored-bird response.
 - Lugia — large-flight response.
 
@@ -127,8 +161,9 @@ The normal roster remains 16 Flight + 17 Ground + 8 Visible Surf. Suicune's extr
 - Generated DSM4 `fxFrames` should animate at the Stadium source rate (30 Hz).
 - Generated additive fire must not be included in the shadow pass.
 - A missing/invalid Stadium 2 model must fall back instead of making the mount invisible.
-- Fast Ground mounts should now have a visibly readable moving/galloping presentation; heavy bipeds should remain substantially calmer.
+- Fast Ground mounts should have a visibly readable moving/galloping presentation; heavy bipeds should remain substantially calmer.
 - Surf mounts should visibly float at rest and react more strongly during travel and turns.
+- With `STADIUM_OVERWORLD_MODELS` installed, exactly one renderer must own the active DSR mount; companion-managed wild/follower Pokémon may remain active alongside it.
 
 ## Runtime diagnostics
 
@@ -149,6 +184,7 @@ Useful public diagnostic APIs include:
 - `stadium3DMountMotion.profile(role, species, dex)`
 - `stadium3DMountMotion.stats(dex)`
 - `stadium3DMountMotion.audit()`
+- `stadium3DProviderInterop.status()`
 - `stadium3DDiagnostics.snapshot(species)`
 - `stadium3DDiagnostics.log(species)`
 
@@ -158,8 +194,9 @@ The experimental branch is intentionally defensive:
 
 1. Native Stadium 2 model using the voxel provider's StadiumRig when available.
 2. Interpolated, anchored and hardened DSR DSM4 skinning fallback when the provider rig cannot be used.
-3. Randy's compatible Stadium 1 provider for supported Gen I species when present.
-4. DSR 2D mount rendering.
+3. Capability-detected `STADIUM_OVERWORLD_MODELS` companion when installed and able to render the active species.
+4. Legacy Stadium 1 behavior for old companion builds that expose no capability API.
+5. DSR 2D mount rendering.
 
 A broken native cache or failed safety patch must never be treated as a reason to lose the mount entirely.
 
@@ -170,4 +207,4 @@ A broken native cache or failed safety patch must never be treated as a reason t
 - Ground Ride therefore remains presentation-based rather than a fabricated generic skeletal gait.
 - A future per-species locomotion clip should only be used when the actual Stadium source clip has been visually verified as credible for that species.
 - Final rider seat tuning may still need species-specific visual adjustments after real in-game captures.
-- Battle Art can consume the cache but cannot currently act as Crystal 251's cache-generation provider by itself.
+- A ROM picker exposed by a companion is not equivalent to a full Stadium 2 import host.

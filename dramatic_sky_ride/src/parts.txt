@@ -73,4 +73,5 @@ main_46_crystal_stadium2_bootstrap.lua
 main_43_stadium2_provider_rig.lua
 main_45_stadium2_interpolated_fallback.lua
 main_48_stadium2_effect_runtime.lua
+main_49_stadium2_live_animation.lua
 main_44_stadium2_diagnostics.lua

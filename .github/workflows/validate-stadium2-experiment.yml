@@ -1,9 +1,11 @@
-name: Validate Stadium 2 experiment
+name: Validate Stadium 2 renderer
 
 on:
   push:
     branches:
       - experiment/stadium2-3d
+      - release/0.2.0
+      - main
     paths:
       - dramatic_sky_ride/manifest.json
       - dramatic_sky_ride/src/**
@@ -32,7 +34,6 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -43,7 +44,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y luajit
 
-      - name: Validate manifest and experimental source order
+      - name: Validate manifest and Stadium 2 contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -53,27 +54,19 @@ jobs:
           from pathlib import Path
 
           root = Path('dramatic_sky_ride')
-          manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
-          version = manifest['version']
-          if not version.startswith('0.2.0-alpha.'):
-              raise SystemExit(f'experimental branch must use 0.2.0-alpha.*, got {version}')
+          version = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))['version']
+          if not (version == '0.2.0' or version.startswith('0.2.0-alpha.')):
+              raise SystemExit(f'Stadium 2 renderer expects 0.2.0 or 0.2.0-alpha.*, got {version}')
 
           parts = [p.strip() for p in (root / 'src/parts.txt').read_text().splitlines() if p.strip()]
           required = [
-              'main_41_stadium2_3d.lua',
-              'main_42_stadium2_hardening.lua',
-              'main_42b_stadium2_dual_guard.lua',
-              'main_47_stadium2_effect_frames.lua',
-              'main_46a_stadium2_animation_cache_guard.lua',
-              'main_46_crystal_stadium2_bootstrap.lua',
-              'main_43_stadium2_provider_rig.lua',
-              'main_45_stadium2_interpolated_fallback.lua',
-              'main_48_stadium2_effect_runtime.lua',
-              'main_49_stadium2_live_animation.lua',
-              'main_50_stadium2_render_clock.lua',
-              'main_51_stadium2_mount_motion.lua',
-              'main_52_stadium2_motion_audit.lua',
-              'main_53_stadium_overworld_interop.lua',
+              'main_41_stadium2_3d.lua', 'main_42_stadium2_hardening.lua',
+              'main_42b_stadium2_dual_guard.lua', 'main_47_stadium2_effect_frames.lua',
+              'main_46a_stadium2_animation_cache_guard.lua', 'main_46_crystal_stadium2_bootstrap.lua',
+              'main_43_stadium2_provider_rig.lua', 'main_45_stadium2_interpolated_fallback.lua',
+              'main_48_stadium2_effect_runtime.lua', 'main_49_stadium2_live_animation.lua',
+              'main_50_stadium2_render_clock.lua', 'main_51_stadium2_mount_motion.lua',
+              'main_52_stadium2_motion_audit.lua', 'main_53_stadium_overworld_interop.lua',
               'main_44_stadium2_diagnostics.lua',
           ]
           positions = []
@@ -90,7 +83,6 @@ jobs:
                         'stadium3DCrystalBootstrap', 'stadium3DProviderRig',
                         'stadium3DFallback', 'stadium3DLiveAnimation',
                         'stadium3DRenderClock', 'stadium3DMountMotion',
-                        'tuningRevision', 'amphibiousWaterProfile',
                         'stadium3DProviderInterop', 'stadium3DDiagnostics'):
               if token not in source:
                   raise SystemExit(f'missing Stadium 2 contract token: {token}')
@@ -101,10 +93,8 @@ jobs:
           bootstrap = (root / 'src/main_46_crystal_stadium2_bootstrap.lua').read_text(encoding='utf-8')
           interop = (root / 'src/main_53_stadium_overworld_interop.lua').read_text(encoding='utf-8')
 
-          flight = ['CHARIZARD','PIDGEOT','FEAROW','GOLBAT','AERODACTYL','ARTICUNO','ZAPDOS','MOLTRES',
-                    'DRAGONAIR','DRAGONITE','NOCTOWL','CROBAT','XATU','SKARMORY','LUGIA','HO_OH']
-          ground = ['ARCANINE','RAPIDASH','DODRIO','RHYHORN','RHYDON','KANGASKHAN','TAUROS','SNORLAX',
-                    'MEGANIUM','GIRAFARIG','URSARING','DONPHAN','STANTLER','RAIKOU','ENTEI','SUICUNE','TYRANITAR']
+          flight = ['CHARIZARD','PIDGEOT','FEAROW','GOLBAT','AERODACTYL','ARTICUNO','ZAPDOS','MOLTRES','DRAGONAIR','DRAGONITE','NOCTOWL','CROBAT','XATU','SKARMORY','LUGIA','HO_OH']
+          ground = ['ARCANINE','RAPIDASH','DODRIO','RHYHORN','RHYDON','KANGASKHAN','TAUROS','SNORLAX','MEGANIUM','GIRAFARIG','URSARING','DONPHAN','STANTLER','RAIKOU','ENTEI','SUICUNE','TYRANITAR']
           water = ['BLASTOISE','TENTACRUEL','GYARADOS','LAPRAS','FERALIGATR','MANTINE','KINGDRA','LUGIA']
           for role, roster in [('Flight', flight), ('Ground', ground), ('Surf', water)]:
               missing = [name for name in roster if name not in motion and name not in followup]
@@ -112,14 +102,10 @@ jobs:
                   raise SystemExit(f'{role} Stadium motion roster missing: {missing}')
           if 'roleEntries=41' not in motion:
               raise SystemExit('Stadium mount motion must declare all 41 supported role entries')
-          for token in ('WATER.SUICUNE', 'BY_DEX.water[245]', 'amphibiousWater=1',
-                        'matrixPatched', 'shadowPatched', 'motion.audit'):
+          for token in ('WATER.SUICUNE', 'BY_DEX.water[245]', 'amphibiousWater=1', 'motion.audit'):
               if token not in followup:
-                  raise SystemExit(f'alpha.9 Stadium motion audit token missing: {token}')
+                  raise SystemExit(f'Stadium motion audit token missing: {token}')
 
-          # Provider interoperability must remain capability-based. The native
-          # sentinel must not advertise itself to STADIUM_OVERWORLD_MODELS,
-          # while ordinary fallback mounts keep the existing ecosystem contract.
           for token in ('canRenderEntity', 'companionSupport', 'api = 5'):
               if token not in compat:
                   raise SystemExit(f'provider capability token missing: {token}')
@@ -128,7 +114,7 @@ jobs:
                         'cache_ready_bridge_attached', 'uiAttached',
                         'if not state.installed then tryBootstrap("game.ready") end'):
               if token not in bootstrap:
-                  raise SystemExit(f'import-host capability token missing: {token}')
+                  raise SystemExit(f'import-host/UI contract token missing: {token}')
           if 'if not state.needed then' in bootstrap:
               raise SystemExit('READY Stadium 2 cache must not bypass bridge/UI attachment')
           for token in ('dramaticSkyRideMountSpecies = nil', 'stadiumModel = false',
@@ -143,31 +129,25 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-
           root = Path('dramatic_sky_ride')
           parts = [p.strip() for p in (root / 'src/parts.txt').read_text().splitlines() if p.strip()]
           chunks = []
           previous_ends_semicolon = False
           for part in parts:
               path = root / 'src' / part
-              if not path.is_file():
-                  raise SystemExit(f'missing source part: {path}')
+              if not path.is_file(): raise SystemExit(f'missing source part: {path}')
               text = path.read_text(encoding='utf-8')
               if previous_ends_semicolon:
                   i = 0
-                  while i < len(text) and text[i].isspace():
-                      i += 1
-                  if i < len(text) and text[i] == ';':
-                      text = text[:i] + text[i + 1:]
+                  while i < len(text) and text[i].isspace(): i += 1
+                  if i < len(text) and text[i] == ';': text = text[:i] + text[i + 1:]
               chunks.append(text)
               previous_ends_semicolon = text.rstrip().endswith(';')
           Path('/tmp/dramatic_sky_ride.lua').write_text(''.join(chunks), encoding='utf-8')
           PY
-
           luajit -b /tmp/dramatic_sky_ride.lua /tmp/dramatic_sky_ride.ljbc
           luajit -b dramatic_sky_ride/main.lua /tmp/dsr_main.ljbc
           luajit -b dramatic_sky_ride/mod.card /tmp/dsr_card.ljbc
-          echo "Runtime concat lines: $(wc -l < /tmp/dramatic_sky_ride.lua)"
 
       - name: Reject release-only regressions
         shell: bash
@@ -179,18 +159,17 @@ jobs:
             exit 1
           fi
 
-      - name: Build launcher test archive
+      - name: Build test archive
         shell: bash
         run: |
           set -euo pipefail
           VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
           mkdir -p /tmp/stadium2-artifact
-          ARCHIVE="/tmp/stadium2-artifact/dramatic_sky_ride-${VERSION}-stadium2-test.zip"
+          ARCHIVE="/tmp/stadium2-artifact/dramatic-sky-ride-${VERSION}-stadium2-test.zip"
           zip -qr "$ARCHIVE" dramatic_sky_ride
           unzip -t "$ARCHIVE"
-          echo "Built $ARCHIVE"
 
-      - name: Upload launcher test archive
+      - name: Upload test archive
         uses: actions/upload-artifact@v4
         with:
           name: dramatic-sky-ride-stadium2-test

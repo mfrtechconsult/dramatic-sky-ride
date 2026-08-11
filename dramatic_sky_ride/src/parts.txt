@@ -79,3 +79,5 @@ main_51_stadium2_mount_motion.lua
 main_52_stadium2_motion_audit.lua
 main_53_stadium_overworld_interop.lua
 main_44_stadium2_diagnostics.lua
+
+main_54_settings_ux.lua

@@ -13,6 +13,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lua5.4
       - name: Validate manifest JSON
         run: python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
+      - name: Validate Gen2 engine compatibility contract
+        run: python3 tests/gen2_engine_compat_contract.py dramatic_sky_ride
       - name: Rebuild and validate Lua syntax
         shell: bash
         run: |

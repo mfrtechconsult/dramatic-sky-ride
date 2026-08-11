@@ -23,7 +23,7 @@ This separation prevents a renderer, follower mod or Stadium companion from acci
 |---|---|---|
 | Wilds of Kanto (`overworld_wild_spawns`) | Sprite/follower and living-overworld provider | Recommended primary sprite provider. Supports DSR's high-detail PokeMMO mounted path when Wilds uses that style. |
 | mfrtechconsult/PokePCFollowers (`PokePCFollowers_VoxelMerge`) | Alternative sprite/follower provider | Lighter alternative to Wilds. Normally choose one primary follower provider. |
-| Wild Skies | Airborne Pokemon ecosystem | DSR uses its public API for visible flyers and aerial interceptions while retaining Flight ownership. |
+| Wild Skies | Airborne Pokemon ecosystem | Wild Skies owns its flyers and their airborne sprite resolution. DSR uses its public API for aerial interception and only adds a sprite fallback when Wilds is absent. |
 | Battle Art Voxel Fork | Voxel renderer / 1ST / 3RD presentation | Recommended voxel renderer. Can render an existing Stadium cache. |
 | Dramaless Shape | Voxel renderer and Stadium import host | Supported renderer and currently the easiest complete first-time Stadium cache host. |
 | Crystal 251 | Gen II dataset + Stadium cache bridge | Required for DSR's current Stadium 2 cache workflow and useful for Johto mounts. |
@@ -35,17 +35,29 @@ This separation prevents a renderer, follower mod or Stadium companion from acci
 
 DSR can use Wilds-provided follower/mount assets while leaving Wilds in control of its normal overworld population and follower behavior.
 
-When Wilds uses its PokeMMO sprite style, DSR can use the higher-resolution mounted atlas only for the mount presentation. It does not force the rest of Wilds to change sprite style.
+When Wilds uses its PokeMMO sprite style, DSR can use the higher-resolution mounted atlas only for the player's mount presentation. It does not force the rest of Wilds to change sprite style.
+
+Current compatibility work tracks Wilds of Kanto 1.14.x, including its newer variable-size/True Size sprite pipeline. DSR does not attempt to duplicate that pipeline for Wild Skies flyers.
 
 ## PokéPC Followers
 
 The maintained PokéPC path provides Gen I/II follower and mount-sprite support and is intended as a lighter alternative to Wilds.
 
+When Wilds is not enabled, DSR can offer an enabled compatible follower provider to Wild Skies as a species-specific fallback through Wild Skies' public `registerSpriteSource` API.
+
 ## Wild Skies
 
-DSR registers with Wild Skies through public exports rather than reaching into its internal flyer list. Wild Skies owns the airborne NPC ecosystem; DSR owns the player's Flight state and decides when an aerial interception should become a battle.
+Wild Skies is authoritative for the airborne NPC ecosystem: spawning, movement, flyer rendering, sprite-source ordering, flock behavior and flyer consumption remain owned by Wild Skies.
 
-Some Wild Skies species may use generic fallback flying art when no species-specific airborne sheet exists. That is separate from DSR's settings UI and does not indicate a mount renderer failure.
+With **Wilds of Kanto enabled**, DSR deliberately does **not** register a competing sprite source. Wild Skies' built-in Wilds adapter resolves Wilds' style-independent `levitates` art through `render.waterSpriteRegistry`, removes the baked water splash and falls back according to Wild Skies' own rules.
+
+DSR uses the documented Wild Skies exports such as `takeFlyer`, `registerSpriteSource` and `unregisterSpriteSource` rather than reaching into the flyer list or renderer internals. DSR only registers its own species-specific sprite fallback when Wilds is absent and another compatible follower provider is actually enabled.
+
+This also means an installed but disabled follower mod cannot silently become the sky sprite source through DSR.
+
+Wild Skies 1.8.x expands ambient skies from the active encounter dataset, so more species can appear than in older releases. A species with no usable in-air sheet can still legitimately use Wild Skies' generic fallback art; that is different from every flyer unexpectedly becoming generic.
+
+For diagnostics, DSR exposes `wildSkies.spriteIntegrationMode()` with modes such as `wild_skies_native_wilds`, `dsr_fallback_<provider>` and `wild_skies_native_generic`.
 
 ## Battle Art and Dramaless
 

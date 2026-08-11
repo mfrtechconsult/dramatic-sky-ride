@@ -73,6 +73,7 @@ jobs:
               'main_50_stadium2_render_clock.lua',
               'main_51_stadium2_mount_motion.lua',
               'main_52_stadium2_motion_audit.lua',
+              'main_53_stadium_overworld_interop.lua',
               'main_44_stadium2_diagnostics.lua',
           ]
           positions = []
@@ -90,12 +91,16 @@ jobs:
                         'stadium3DFallback', 'stadium3DLiveAnimation',
                         'stadium3DRenderClock', 'stadium3DMountMotion',
                         'tuningRevision', 'amphibiousWaterProfile',
-                        'stadium3DDiagnostics'):
+                        'stadium3DProviderInterop', 'stadium3DDiagnostics'):
               if token not in source:
                   raise SystemExit(f'missing Stadium 2 contract token: {token}')
 
           motion = (root / 'src/main_51_stadium2_mount_motion.lua').read_text(encoding='utf-8')
           followup = (root / 'src/main_52_stadium2_motion_audit.lua').read_text(encoding='utf-8')
+          compat = (root / 'src/main_28_stadium_compat.lua').read_text(encoding='utf-8')
+          bootstrap = (root / 'src/main_46_crystal_stadium2_bootstrap.lua').read_text(encoding='utf-8')
+          interop = (root / 'src/main_53_stadium_overworld_interop.lua').read_text(encoding='utf-8')
+
           flight = ['CHARIZARD','PIDGEOT','FEAROW','GOLBAT','AERODACTYL','ARTICUNO','ZAPDOS','MOLTRES',
                     'DRAGONAIR','DRAGONITE','NOCTOWL','CROBAT','XATU','SKARMORY','LUGIA','HO_OH']
           ground = ['ARCANINE','RAPIDASH','DODRIO','RHYHORN','RHYDON','KANGASKHAN','TAUROS','SNORLAX',
@@ -111,6 +116,21 @@ jobs:
                         'matrixPatched', 'shadowPatched', 'motion.audit'):
               if token not in followup:
                   raise SystemExit(f'alpha.9 Stadium motion audit token missing: {token}')
+
+          # Provider interoperability must remain capability-based. The native
+          # sentinel must not advertise itself to STADIUM_OVERWORLD_MODELS,
+          # while ordinary fallback mounts keep the existing ecosystem contract.
+          for token in ('canRenderEntity', 'companionSupport', 'api = 5'):
+              if token not in compat:
+                  raise SystemExit(f'provider capability token missing: {token}')
+          for token in ('STADIUM_OVERWORLD_MODELS', 'BATTLE_ART_VOXEL_FORK',
+                        'providerHasImporterModules', 'importSurface'):
+              if token not in bootstrap:
+                  raise SystemExit(f'import-host capability token missing: {token}')
+          for token in ('dramaticSkyRideMountSpecies = nil', 'stadiumModel = false',
+                        'chooseUpstreamStadiumRom', 'stadium3DProviderInterop'):
+              if token not in interop:
+                  raise SystemExit(f'overworld interop token missing: {token}')
           PY
 
       - name: Compile exact runtime concatenation with LuaJIT

@@ -4,7 +4,9 @@
 --
 -- Stable DSR historically spoke only to STADIUM_OVERWORLD_MODELS (Randy's
 -- Stadium 1 companion).  The experimental renderer now also accepts DSR's
--- own native Stadium 2 provider, which is registered later in the load order.
+-- own native Stadium 2 provider, while capability-detecting compatible forks
+-- of STADIUM_OVERWORLD_MODELS (including Crystal 251-aware builds) instead of
+-- assuming that every companion is limited to National Dex 151.
 -- The option key is intentionally kept for save compatibility.
 -- -------------------------------------------------------------------------
 
@@ -25,7 +27,7 @@ OPTION_SCHEMA[#OPTION_SCHEMA + 1] = {
 }
 if mod.options and mod.options.define then mod.options:define(OPTION_SCHEMA) end
 
-local function randyHandle()
+local function companionHandle()
   if not mod.find then return nil end
   local ok, handle = pcall(mod.find, mod, "STADIUM_OVERWORLD_MODELS")
   return ok and handle or nil
@@ -83,6 +85,37 @@ local function callSupport(api, species, dex)
   return nil
 end
 
+-- Randy's public API historically exported the OverworldStadium object rather
+-- than a top-level supportsSpecies() helper.  Crystal-aware forks can therefore
+-- support Gen II perfectly while looking like an old 151-only provider to DSR.
+-- Probe canRenderEntity() with an inert synthetic entity: the call resolves the
+-- requested Dex through the companion's own rules and asks its active pack for
+-- availability without touching the real player/follower lifecycle.
+local function companionSupport(handle, species, dex)
+  local ex = handle and handle.exports or nil
+  local direct = callSupport(ex, species, dex)
+  if direct ~= nil then return direct end
+
+  local ow = ex and ex.overworld or nil
+  local nested = callSupport(ow, species, dex)
+  if nested ~= nil then return nested end
+
+  local canRender = ow and ow.canRenderEntity or nil
+  if type(canRender) == "function" and dex then
+    local probe = {
+      stadiumDex = dex,
+      pokemonDex = dex,
+      stadiumSpecies = species,
+      pokemonSpecies = species,
+      stadiumModel = true,
+      pokemonModel = true,
+    }
+    local ok, supported = pcall(canRender, probe)
+    if ok then return supported == true end
+  end
+  return nil
+end
+
 local function stadiumSupportsSpecies(species)
   if not species then return true end
   local dex = speciesDex(species)
@@ -93,13 +126,16 @@ local function stadiumSupportsSpecies(species)
   local nativeAnswer = callSupport(native, species, dex)
   if nativeAnswer ~= nil then return nativeAnswer end
 
-  -- Randy's companion remains a supported Stadium 1 fallback.
-  local handle = randyHandle()
-  local ex = handle and handle.exports or nil
-  local randyAnswer = callSupport(ex, species, dex)
-  if randyAnswer ~= nil then return randyAnswer end
+  -- STADIUM_OVERWORLD_MODELS is an ecosystem contract, not a guarantee that
+  -- the installed build is Randy's original Stadium 1 implementation. Ask the
+  -- installed companion what its current pack can actually render first.
+  local handle = companionHandle()
+  local companionAnswer = companionSupport(handle, species, dex)
+  if companionAnswer ~= nil then return companionAnswer end
 
-  -- Only assume the natural Stadium 1 range when Randy is actually present.
+  -- Compatibility fallback for old Randy builds that expose neither support
+  -- helpers nor canRenderEntity(). Only those legacy builds get the natural
+  -- Stadium 1 range assumption.
   return handle ~= nil and dex ~= nil and dex >= 1 and dex <= 151
 end
 
@@ -115,7 +151,7 @@ end
 
 local function stadiumRendererAvailable()
   if voxelLevel() <= 0 then return false end
-  if not (nativeInstalled() or randyHandle() ~= nil) then return false end
+  if not (nativeInstalled() or companionHandle() ~= nil) then return false end
   return stadiumSupportsSpecies(activeMountSpecies())
 end
 
@@ -158,16 +194,28 @@ mod.exports.flightRendering = {
 }
 
 mod.exports.stadiumCompatibility = {
-  api = 4,
-  installed = function() return nativeInstalled() or randyHandle() ~= nil end,
+  api = 5,
+  installed = function() return nativeInstalled() or companionHandle() ~= nil end,
   requested = function() return requestedRenderer() == RENDERER_STADIUM end,
   enabled = function() return effectiveRenderer() == RENDERER_STADIUM end,
   supportsSpecies = stadiumSupportsSpecies,
   effectiveRenderer = effectiveRenderer,
   activeMountSpecies = activeMountSpecies,
   native = function() return nativeProvider() ~= nil end,
-  randy = function() return randyHandle() ~= nil end,
+  -- Keep the historical name for external consumers while exposing the more
+  -- accurate ecosystem wording for Crystal-aware forks.
+  randy = function() return companionHandle() ~= nil end,
+  companion = function() return companionHandle() ~= nil end,
+  provider = function()
+    if nativeInstalled() and stadiumSupportsSpecies(activeMountSpecies()) then
+      return "native_stadium2"
+    end
+    if companionHandle() and stadiumSupportsSpecies(activeMountSpecies()) then
+      return "stadium_overworld_models"
+    end
+    return nil
+  end,
 }
 
-log("Stadium renderer compatibility API loaded (native Stadium 2 capable; 2D default)")
+log("Stadium renderer compatibility API loaded (native Stadium 2 + capability-detected overworld companions; 2D default)")
 end)();

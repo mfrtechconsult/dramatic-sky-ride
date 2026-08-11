@@ -67,6 +67,7 @@ jobs:
               'main_43_stadium2_provider_rig.lua',
               'main_45_stadium2_interpolated_fallback.lua',
               'main_48_stadium2_effect_runtime.lua',
+              'main_49_stadium2_live_animation.lua',
               'main_44_stadium2_diagnostics.lua',
           ]
           positions = []
@@ -81,7 +82,8 @@ jobs:
           for token in ('C2DSM10', 'stadium3DNative', 'stadium3DHardening',
                         'stadium3DEffects', 'stadium3DAnimationCacheGuard',
                         'stadium3DCrystalBootstrap', 'stadium3DProviderRig',
-                        'stadium3DFallback', 'stadium3DDiagnostics'):
+                        'stadium3DFallback', 'stadium3DLiveAnimation',
+                        'stadium3DDiagnostics'):
               if token not in source:
                   raise SystemExit(f'missing Stadium 2 contract token: {token}')
           PY

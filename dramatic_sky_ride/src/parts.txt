@@ -50,6 +50,7 @@ main_25_discovery_gates.lua
 main_26_surf_third_person.lua
 main_14.lua
 main_33_gen2_mounts.lua
+main_33b_gen2_gold_suicune.lua
 main_34_mount_runtime_polish.lua
 main_35_mount_runtime_followup.lua
 main_36_ground_followers_only.lua

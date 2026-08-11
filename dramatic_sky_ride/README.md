@@ -1,289 +1,232 @@
-# Dramatic Sky Ride 0.1.7
+# Dramatic Sky Ride 0.2.0
 
-Dramatic Sky Ride adds controllable flying, terrestrial and visible Surf mounts to **Gen1Recomp**, with native 2D flight, optional voxel cameras, Generation II mounts, Wild Skies integration, compatibility with either Wilds of Kanto or PokéPC Followers, optional OTF Player Switcher support, and a high-detail PokeMMO mount path for Wilds.
+Dramatic Sky Ride adds controllable **Flight**, **Ground Ride** and **Visible Surf** mounts to Gen1Recomp. It works in native 2D and with supported voxel renderers, supports Generation II mounts, integrates with Wild Skies, and can optionally render the active mount with animated **Pokemon Stadium 2** models generated from the player's own ROM through Crystal 251.
 
-## Installation and recommended mod stack
+## Requirements
 
-### What is actually required
+Dramatic Sky Ride has no mandatory third-party mod dependency.
 
-Dramatic Sky Ride itself has **no mandatory third-party mod dependency**.
+- Gen1Recomp `>=0.1.69 <2.0.0`
+- Dramatic Sky Ride
 
-You need:
+Native 2D Flight works without Battle Art, Dramaless, Crystal 251, Wild Skies or a follower mod.
 
-1. **[Gen1Recomp](https://github.com/bryanthaboi/gen1recomp)** `>=0.1.69 <2.0.0`;
-2. **Dramatic Sky Ride**.
+## Recommended setups
 
-Native 2D flight works without Battle Art, Dramaless, Wild Skies, Crystal 251, OTF Player Switcher, or any music pack.
+### Native 2D
 
-### Recommended complete setup
+Use Dramatic Sky Ride with either:
 
-For the experience Dramatic Sky Ride is primarily designed around, use:
+- **Wilds of Kanto** (`overworld_wild_spawns`), or
+- **mfrtechconsult/PokePCFollowers** (`PokePCFollowers_VoxelMerge`).
 
-1. **Dramatic Sky Ride**;
-2. **Wilds of Kanto** *or* **mfrtechconsult/PokePCFollowers** for Pokémon mount/follower sprites;
-3. **Battle Art Voxel Fork** `>=1.7.6 <2.0.0` for the recommended voxel world and 1ST/3RD camera experience;
-4. **Wild Skies** `>=1.4.1` for visible airborne Pokémon and aerial interceptions.
+Do not normally install both follower providers together.
 
-**Battle Art Voxel Fork is the recommended voxel companion for Dramatic Sky Ride.** It provides the voxel presentation and 1ST/3RD cameras while DSR keeps Flight, Ground Ride, Surf, collision, altitude and progression renderer-independent.
+Add **Wild Skies 1.4.1+** for visible airborne Pokemon and aerial interceptions. Add Crystal 251 or another compatible Gen II content provider if you want Johto Pokemon to exist in the game.
 
-**Dramaless Shape** `>=1.6.4 <2.0.0` is also fully supported as an alternative voxel provider. Install one voxel provider for the voxel experience; native 2D flight needs neither.
+### Voxel / 1ST / 3RD camera
 
-If you want Johto mounts, add **Crystal 251 or another compatible Gen2 content mod** so Generation II Pokémon actually exist in the loaded game.
+Supported voxel providers:
 
-### Choose ONE Pokémon sprite / follower provider
+- **Battle Art Voxel Fork** `>=1.7.6 <2.0.0` — recommended renderer;
+- **Dramaless Shape** `>=1.6.4 <2.0.0` — supported alternative.
 
-For a normal installation, use **Wilds of Kanto OR PokéPC Followers — not both**.
+DSR remains the owner of movement, collision, altitude, progression, mounted state and rider logic. The voxel provider owns the world presentation.
 
-#### Recommended for the fullest overworld experience: Wilds of Kanto
+## Pokemon Stadium 2 mounts
 
-**[Wilds of Kanto](https://github.com/YoDrehDenSwagAuf/overworld-spawn-mod)** — `overworld_wild_spawns`
+Version 0.2.0 promotes the native Stadium 2 mount renderer to the stable branch.
 
-Recommended if you want the most complete living-overworld setup:
+Set:
 
-- visible overworld wild Pokémon;
-- the Wilds follower system;
-- Generation I and Generation II mount sprites for DSR;
-- optional high-detail PokeMMO mount rendering when Wilds uses its PokeMMO sprite style;
-- strong integration with DSR Flight, Ground Ride and Surf;
-- works especially well alongside Wild Skies: Wilds populates the ground while Wild Skies populates the air.
+`MOUNT RENDERER = STADIUM 3D`
 
-When Wilds is installed, it remains the authoritative follower runtime so DSR does not create a competing follower lifecycle.
+DSR then replaces only the **active DSR mount** with a native animated Stadium 2 model. Normal wild Pokemon, followers and NPCs remain owned by their respective mods unless another companion mod changes them.
 
-#### Alternative: maintained PokéPC Followers fork
+### What is required for Stadium 2
 
-**[mfrtechconsult/PokePCFollowers](https://github.com/mfrtechconsult/PokePCFollowers)** — `PokePCFollowers_VoxelMerge`
+- Crystal 251 `>=0.9.13 <1.0.0`;
+- a compatible voxel renderer;
+- a legally obtained supported Pokemon Stadium 2 US ROM supplied by the player;
+- a generated Crystal 251 Stadium 2 cache.
 
-Recommended if you want a lighter follower-and-mount-sprite setup without Wilds of Kanto's overworld spawn system:
+DSR never ships Nintendo model data or the ROM.
 
-- Generation I and II follower sprites;
-- Pokédex-proportional follower sizing;
-- compatible mount art for Flight, Ground Ride and Surf;
-- direct compatibility target maintained alongside DSR.
+The generated cache is stored under:
 
-The fork deliberately keeps the original PokéPC mod id for save/install compatibility. Older PokéPC builds sharing that id remain best-effort legacy fallbacks, but the maintained `mfrtechconsult/PokePCFollowers` fork is the recommended PokéPC implementation.
+`crystal_251/stadium2/`
 
-> **Do not install Wilds of Kanto and PokéPC Followers together for the normal user setup.** DSR has resilience logic for accidental co-installation, but they are designed here as alternative providers.
+with normal and shiny DSM packs for National Dex 1-251.
 
-## Recommended full experience
+### Stadium 2 import with Dramaless
 
-The following stack gives the broadest DSR experience while keeping responsibilities clean:
+Dramaless contains the full Stadium module family Crystal 251 needs to build the Stadium 2 cache. DSR attaches Crystal's Stadium 2 bridge automatically.
 
-| Purpose | Recommended mod | Requirement level |
-|---|---|---|
-| Game engine | **Gen1Recomp** `>=0.1.69` | Required |
-| Mount sprites + followers + living ground overworld | **Wilds of Kanto** | Strongly recommended; choose this **or** PokéPC |
-| Lighter mount sprites + followers | **mfrtechconsult/PokePCFollowers** | Alternative to Wilds; do **not** use both normally |
-| Voxel world / 1ST / 3RD cameras | **Battle Art Voxel Fork** | **Recommended voxel provider** |
-| Alternative voxel provider | **Dramaless Shape** | Supported alternative |
-| Visible airborne Pokémon and aerial interceptions | **[Wild Skies](https://github.com/ShaneHudson/gen1recomp-mods)** `>=1.4.1` | Strongly recommended |
-| Generation II Pokémon in the actual game | **Crystal 251** or another compatible Gen2 content mod | Required only if you want Gen2 mounts |
-| Player character switching | **OTF Player Switcher** | Optional |
-| Flight music | FRLG, HGSS or LGPE music pack | Optional |
+The Options menu exposes the Stadium 2 import flow. After a successful import, the row remains available and reports `READY`; version 0.2.0 fixes the previous behavior where it could disappear on the next boot once the cache already existed.
 
-### Recommended 2D setup
+An existing healthy cache is never deleted or rebuilt merely to restore the UI.
 
-For the complete 2D-oriented experience:
+### Stadium 2 with Battle Art
 
-- Dramatic Sky Ride;
-- **Wilds of Kanto** *or* **mfrtechconsult/PokePCFollowers**;
-- **Wild Skies**;
-- Crystal 251 or another compatible Gen2 content mod if you want Johto mounts;
-- optionally OTF Player Switcher;
-- optionally one compatible music pack.
+Battle Art is fully supported for **rendering an existing Stadium 2 cache**.
 
-No voxel mod is required.
+Battle Art currently does not ship the complete Stadium importer module family Crystal 251 expects. A first-time cache therefore still needs a compatible full import host such as Dramaless/Dramatic Shape. After the cache exists, Battle Art can render DSR's Stadium 2 mounts directly.
 
-### Recommended voxel / 1ST / 3RD setup
+### STADIUM_OVERWORLD_MODELS compatibility
 
-Start with the recommended setup above, then use **Battle Art Voxel Fork** as the preferred voxel provider:
+DSR 0.2.0 supports `STADIUM_OVERWORLD_MODELS` and compatible Crystal-aware forks without allowing both mods to claim the active mount at the same time.
 
-- **[Battle Art Voxel Fork](https://github.com/absol89/DramaticShapeVoxelMod)** `>=1.7.6 <2.0.0` — recommended;
-- **[Dramaless Shape](https://github.com/artyrambles/DRAMALESS_SHAPE)** `>=1.6.4 <2.0.0` — supported alternative.
+The integration is capability-based:
 
-A normal setup only needs one voxel provider. Dramaless reserves `G` for V-GRID, so Ground Ride uses `J` with Dramaless. Battle Art and flat 2D use `G`.
+- voxel rendering, Stadium cache building and ROM-selection UI are treated as separate capabilities;
+- companion mods may continue to handle wild Pokemon, followers and their own UI;
+- when DSR's native Stadium 2 renderer owns the active mount, the companion renderer is prevented from rebuilding that same mount;
+- fallback behavior remains available when DSR cannot use the native Stadium 2 model.
 
-## Native 2D flight
+## Stadium 2 animation and mount motion
 
-A voxel provider is **not required to fly**.
+The Stadium 2 DSM cache contains real skeletal animations. DSR drives pose/skin updates from the render path so visible mounts continue animating even when a provider's overworld update seam does not advance the model reliably.
 
-DSR uses one renderer-independent flight mechanic: movement, collision, altitude, progression, encounters, battles and map transitions share the same flight state in flat 2D and supported voxel cameras.
+The supported mount-motion roster is:
 
-`2D SPRITES` is the default flight presentation. The flat overworld reuses Pokédex-proportional mount sizing and per-species size options.
+- **16 Flight roles**
+- **17 Ground Ride roles**
+- **8 Visible Surf roles**
+- plus Suicune's internal amphibious-water presentation
 
-In 0.1.7, automatic safety climbs required internally to clear tall authored buildings no longer make the mount/rider card visibly jump in flat 2D. Collision and logical altitude remain unchanged, while manual altitude changes, takeoff and landing still remain visible. Voxel 1ST/3RD modes continue to show the real safety climb.
+DSR does not fabricate generic bone mappings or reuse arbitrary battle attacks as fake walk/run animations. Pokemon Stadium 2 does not expose a reliable shared overworld `walk`, `run`, `fly` or `swim` contract, so 0.2.0 keeps genuine Stadium skeletal animation and adds morphology-aware whole-model presentation:
 
-## Wild Skies — strongly recommended
+- Flight: playback cadence, forward pitch, climb/dive pitch and banking;
+- Ground Ride: movement cadence, body bob/lean and restrained turn response;
+- Visible Surf: buoyancy, pitch and water-turn roll;
+- the model and its shadow use the same transform.
 
-**[Wild Skies](https://github.com/ShaneHudson/gen1recomp-mods) 1.4.1+ is strongly recommended for the full flight experience.**
+Fast quadrupeds and runner birds are intentionally more expressive than heavy bipeds such as Snorlax and Tyranitar.
 
-DSR uses its public API for ambient airborne Pokémon and consumes the exact visible species and level when an aerial interception starts a battle.
+## Supported mounts
 
-Wild Skies is complementary to both supported Pokémon providers:
-
-- **Wilds of Kanto + Wild Skies** gives a populated ground and populated sky;
-- **PokéPC Followers + Wild Skies** gives the lighter follower/mount setup plus airborne encounters.
-
-Wild Skies is optional: DSR flight itself still works without it.
-
-## Generation II mounts
-
-Generation II support is based on **National Pokédex data**, not a hard dependency on Crystal 251 by mod id.
-
-To actually use a Generation II mount, that Pokémon must exist in the loaded game data and be available to the player. **Crystal 251 or another compatible Gen2 content mod therefore becomes necessary if you want to use the Johto mount roster.** Wilds of Kanto or the maintained PokéPC fork then supplies compatible overworld mount art.
-
-DSR 0.1.7 also includes canonical Johto height fallbacks for its curated Gen2 mounts so Pokédex-proportional sizing remains coherent even if the active Gen2 content provider does not publish height fields.
-
-### Flying
+### Flight — 16
 
 Generation I: Charizard, Pidgeot, Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair, Dragonite.
 
-Generation II: **Noctowl, Crobat, Xatu, Skarmory, Lugia, Ho-Oh**.
+Generation II: Noctowl, Crobat, Xatu, Skarmory, Lugia, Ho-Oh.
 
-### Ground Ride
+### Ground Ride — 17
 
 Generation I: Arcanine, Rapidash, Dodrio, Rhyhorn, Rhydon, Kangaskhan, Tauros, Snorlax.
 
-Generation II: **Meganium, Girafarig, Ursaring, Donphan, Stantler, Raikou, Entei, Suicune, Tyranitar**.
+Generation II: Meganium, Girafarig, Ursaring, Donphan, Stantler, Raikou, Entei, Suicune, Tyranitar.
 
-### Visible Surf
+### Visible Surf — 8
 
 Generation I: Blastoise, Tentacruel, Gyarados, Lapras.
 
-Generation II: **Feraligatr, Mantine, Kingdra, Lugia**.
+Generation II: Feraligatr, Mantine, Kingdra, Lugia.
 
-## Suicune — seamless land/water Ground Ride
+## Suicune amphibious Ground Ride
 
-Suicune is intentionally the **only amphibious Ground Ride mount**.
+Suicune is the only amphibious Ground Ride mount. Once normal Surf progression is available, it can move directly from land to water and back without dismounting or switching to the normal Visible Surf lifecycle.
 
-Once normal Surf progression is available, Suicune can run directly from land onto water and back onto land without dismounting or switching to the normal Visible Surf presentation. Ground Ride remains the visual and lifecycle owner for the trip.
+Version 0.2.0 includes a dedicated Stadium water-motion profile for Suicune while preserving Ground Ride ownership of the state.
 
-Normal water collision, Surf progression, map connections and map restrictions remain authoritative. Gallop state stays continuous across the shoreline.
+## Wilds of Kanto and PokéPC Followers
 
-The same land/water transition support is applied to supported 1ST/3RD free-camera movement paths.
+For a normal installation, choose one primary Pokemon follower/sprite provider:
 
-## Followers while mounted
+- Wilds of Kanto — living overworld, followers and optional high-detail PokeMMO mount atlases;
+- mfrtechconsult/PokePCFollowers — lighter follower/mount setup with Gen I/II support.
 
-Followers are hidden by default whenever a DSR mount is active.
+When Wilds uses its PokeMMO sprite style, DSR can use the higher-resolution atlas only for mounted Pokemon while keeping the normal Wilds sprite pipeline intact elsewhere.
 
-`GROUND FOLLOWERS` can be enabled for **land Ground Ride only**. Flight and every Surf/water state keep followers hidden.
+## Wild Skies
 
-Known limitation in 0.1.7: when `GROUND FOLLOWERS` is enabled, the Pokémon currently used as the Ground Ride mount may still appear in the follower trail. The option is OFF by default.
+Wild Skies `>=1.4.1` is strongly recommended for Flight. DSR uses its public integration surface for visible airborne Pokemon and aerial interceptions while keeping DSR as the player's flight engine.
 
-## Wilds of Kanto compatibility
+## OTF Player Switcher
 
-- Wilds can provide Generation I and II mount sprites without requiring PokéPC Followers.
-- DSR uses cooperative/self-healing overworld update protection rather than restoring stale function snapshots.
-- Generation II and Suicune runtime layers are part of the protected update chain.
-- Gen II mount facing is reasserted after late Wilds updates in supported 1ST/3RD camera modes.
-- Suicune preserves its amphibious Ground Ride across seamless map connections.
+OTF Player Switcher is optional. Mounted rider art follows the selected player character during Flight, Ground Ride and Visible Surf.
 
-### High-detail PokeMMO mount rendering
+During Flight, Page Up/Page Down remain reserved for DSR altitude control.
 
-When Wilds is installed and its sprite style is explicitly set to **PokeMMO**, DSR can render mounted Pokémon directly from Wilds' original higher-resolution 32/64 px follow-sprite atlases instead of enlarging the generated 16 px runtime walker cards.
-
-DSR measures a stable shared opaque crop before applying its normal Pokédex and per-species size scale, so transparent padding in the source atlas does not make large mounts appear artificially small. Nearest-neighbor filtering is preserved. Other Wilds sprite styles keep their existing rendering path unchanged.
-
-Known Wilds-only visual limitation: after a battle on water, Suicune can briefly show the ordinary Surf mount before the amphibious Ground Ride presentation is restored.
-
-## OTF Player Switcher — optional
-
-**[OTF Player Switcher](https://github.com/on1san/otf-player-switcher)** is optional.
-
-When installed, DSR tracks the active player overworld sprite and refreshes the separate mounted rider art during Flight, Ground Ride and Visible Surf. Different OTF characters receive distinct rider cache entries, so switching characters does not reuse the previous player's crop.
-
-During Flight, `Page Up/Page Down` remain reserved for DSR altitude. Outside Flight, OTF keeps its normal shortcuts. Trainer Card and battle backsprite handling remain owned by OTF.
-
-Without OTF installed, this compatibility layer is inactive and DSR follows its normal player-sprite path.
-
-## Flying Music — optional
+## Flying Music
 
 `FLYING MUSIC` defaults to `None`.
 
-DSR can reuse compatible Surf/Bike OGG files from already-installed **FRLG**, **HGSS** or **LGPE** packs from [DarioMelo/Gen1Recomp-MusicMods](https://github.com/DarioMelo/Gen1Recomp-MusicMods).
-
-DSR does not copy or redistribute those audio assets. Battle, victory and jingle cues retain priority, and normal map/Surf music is restored after landing.
-
-A music pack is never required to use Flight.
+DSR can reuse compatible installed FRLG, HGSS or LGPE music packs without redistributing their audio assets. Battle, victory and jingle cues retain priority.
 
 ## Controls
 
-### Flying
+### Flight
 
-- Keyboard: `H` toggles Flight.
-- Controller: `X` toggles Flight in free-roam.
-- `R2/L2` or `Page Up/Page Down`: manual altitude.
-- In supported voxel `1ST` / `3RD` modes, camera look can control altitude when `CAMERA ALTITUDE` is enabled.
+- Keyboard: `H`
+- Controller: `X`
+- Altitude: `R2/L2` or `Page Up/Page Down`
 
 ### Ground Ride
 
-- Flat 2D / Battle Art keyboard: `G`.
-- Dramaless keyboard: `J`, because Dramaless reserves `G` for V-GRID.
-- Controller: `Y`.
+- Flat 2D / Battle Art: `G`
+- Dramaless: `J` because Dramaless reserves `G` for V-GRID
+- Controller: `Y`
 
-### Visible Surf
-
-Native Surf movement, collision and progression remain authoritative. Suicune is excluded from the normal Visible Surf roster because its unique amphibious Ground Ride owns both land and water presentation.
+Visible Surf uses the game's normal Surf movement/collision/progression rules.
 
 ## Speed and size
 
-- `FLIGHT SPEED`: 50% to 200%, default 100%.
-- `GROUND SPEED`: 50% to 200%, default 100%.
-- Pokédex-proportional mount sizing is enabled by default, with per-species overrides including Generation II mounts.
-- Generation II Ground Ride species receive curated base/gallop speed profiles while retaining the existing stamina/acceleration behavior.
+- `FLIGHT SPEED`: 50%-200%
+- `GROUND SPEED`: 50%-200%
+- Pokédex-proportional mount sizing is enabled by default
+- Generation II mounts have canonical height fallbacks when the active content provider does not publish complete Pokédex height data
 
 ## Progression safeguards
 
-DSR can require FLY and enforce THUNDERBADGE/SOULBADGE progression. `STORY GATES` respects data-driven story/badge gates while airborne.
+DSR can enforce FLY, badge and story progression while flying. Discovery gates prevent first-time airborne entry into canonical vanilla Kanto maps until those areas have been reached normally. Unknown/custom maps remain open by default.
 
-`DISCOVERY GATES` prevent first-time airborne entry into canonical vanilla Kanto routes/cities until those maps have been reached normally. Unknown/custom map IDs remain open by default.
-
-Suicune water running uses normal SURF field-move progression and preserves existing forced-bike and Seafoam restrictions.
-
-## Compatibility summary
-
-- **Required:** Gen1Recomp `>=0.1.69 <2.0.0` + Dramatic Sky Ride.
-- **Normal sprite/follower setup:** Wilds of Kanto **or** maintained `mfrtechconsult/PokePCFollowers` — choose one.
-- **Recommended voxel provider:** Battle Art Voxel Fork `>=1.7.6 <2.0.0`.
-- **Alternative voxel provider:** Dramaless Shape `>=1.6.4 <2.0.0`.
-- **Strongly recommended for Flight:** Wild Skies `>=1.4.1 <2.0.0`.
-- **Gen2 mounts:** require those species to be supplied by Crystal 251 or another compatible Gen2 content mod.
-- **Optional player switching:** OTF Player Switcher.
-- **Optional high-detail PokeMMO mounts:** Wilds of Kanto with its PokeMMO sprite style selected.
-- **Optional Flying Music:** `Music_FRLG`, `Music_HGSS`, or `Music_LGPE`.
-- `free_fly` conflicts because it is an alternative player-flight engine.
-
-The optional Stadium renderer remains an **experimental compatibility path** and is intentionally not part of the recommended 0.1.7 setup.
+Suicune water running still requires normal Surf progression.
 
 ## Known limitations
 
-- With `GROUND FOLLOWERS` enabled, the active Ground Ride mount may still appear in the follower trail. Leave the option OFF for the cleanest presentation.
-- With Wilds of Kanto, Suicune may briefly show the ordinary Surf mount during the post-battle return before Suicune is restored.
-- Experimental compatibility paths are not part of the validated core 0.1.7 experience.
+- With `GROUND FOLLOWERS` enabled, the active Ground Ride Pokemon may still appear in the follower trail.
+- With Wilds of Kanto, Suicune can briefly show the ordinary Surf mount during some post-battle restoration paths.
+- Battle Art can render an existing Stadium 2 cache but cannot currently build one by itself.
+- Stadium 2 Ground/Surf motion uses authentic skeletal clips plus whole-model presentation; species-specific true walk/run/swim clips are not claimed unless they have been individually validated.
+
+## Diagnostics
+
+Useful public APIs include:
+
+- `stadium3DNative.cacheStatus()`
+- `stadium3DCrystalBootstrap.status()`
+- `stadium3DProviderInterop.status()`
+- `stadium3DProviderRig.active()`
+- `stadium3DLiveAnimation.stats(dex)`
+- `stadium3DRenderClock.stats(dex)`
+- `stadium3DMountMotion.audit()`
+- `stadium3DDiagnostics.snapshot(species)`
+
+See `STADIUM2_TESTING.md` and `STADIUM2_MOUNT_MOTION.md` for the technical Stadium 2 notes.
 
 ## Credits
 
-- absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork, voxel cameras and 3D presentation.
-- artyrambles/DRAMALESS_SHAPE — Dramaless Shape voxel provider and public integration surface.
-- DramaticShape/DramaticShapeVoxelMod — original voxel architecture.
-- mfrtechconsult/PokePCFollowers — maintained PokéPC compatibility fork used by DSR, including Gen 1/2 sprite-provider support and Pokédex-proportional sizing.
-- gamecorner-033/PokePCFollowers — original PokéPC follower project and upstream foundation.
-- YoDrehDenSwagAuf/overworld-spawn-mod — Wilds of Kanto follower/wild overworld ecosystem and Generation II GSC/PokeMMO sprite-provider support.
-- on1san/otf-player-switcher — optional player-character switching integration target.
-- ShaneHudson/gen1recomp-mods — Free Fly/Wild Skies public flight and hook interoperability patterns.
-- DarioMelo/Gen1Recomp-MusicMods — optional FRLG/HGSS/LGPE music providers.
+- absol89/DramaticShapeVoxelMod — Battle Art Voxel Fork
+- artyrambles/DRAMALESS_SHAPE — Dramaless Shape and Stadium provider surface
+- DramaticShape/DramaticShapeVoxelMod — original voxel/Stadium architecture
+- Deftones565/gen1recomp-mod-crystal-251 — Crystal 251 Stadium 2 extraction/cache bridge
+- randyadr/3D-Pokemon-Sprites and compatible forks — Stadium overworld companion interoperability target
+- mfrtechconsult/PokePCFollowers and gamecorner-033/PokePCFollowers — follower/mount sprite integration
+- YoDrehDenSwagAuf/overworld-spawn-mod — Wilds of Kanto integration
+- ShaneHudson/gen1recomp-mods — Wild Skies interoperability patterns
+- on1san/otf-player-switcher — player-switching integration
+- DarioMelo/Gen1Recomp-MusicMods — optional music providers
 
-## Testing / bug reports
+## Bug reports
 
-For bug reports, include:
+Please include:
 
 - Gen1Recomp version;
-- **Wilds of Kanto or PokéPC Followers** setup;
-- Wilds sprite style if used;
-- OTF Player Switcher version if used;
-- voxel provider/version if used;
-- Generation II content provider if used;
-- Wild Skies version if used;
-- music pack/version if used;
-- mount species;
-- camera mode;
-- exact reproduction steps.
+- DSR version;
+- selected mount and renderer;
+- Battle Art or Dramaless version;
+- Crystal 251 version if Stadium 2 is involved;
+- whether the Stadium 2 cache already existed before the current launch;
+- Wilds/PokéPC/Wild Skies setup;
+- relevant DSR Stadium diagnostic log lines.

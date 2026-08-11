@@ -15,6 +15,10 @@ jobs:
         run: python -m json.tool dramatic_sky_ride/manifest.json > /dev/null
       - name: Validate Gen2 engine compatibility contract
         run: python3 tests/gen2_engine_compat_contract.py dramatic_sky_ride
+      - name: Validate Gen2 runtime bridge syntax
+        run: luac -p dramatic_sky_ride/src/main_21b_gen2_runtime.lua
+      - name: Validate Gen2 progression syntax
+        run: luac -p dramatic_sky_ride/src/main_22b_gen2_progression.lua
       - name: Rebuild and validate Lua syntax
         shell: bash
         run: |

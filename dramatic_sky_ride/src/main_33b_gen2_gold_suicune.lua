@@ -146,7 +146,7 @@ end, 110)
 local previousGoldStartGroundRide = startGroundRide
 startGroundRide = function(game, mon)
   if not isGold() then return previousGoldStartGroundRide(game, mon) end
-  local world = game and game.overworld
+  local world = mod.exports._mountWorld(game)
   local player = world and world.player
   local species = groundSpecies(game, mon)
   if species ~= "SUICUNE" or not (player and waterAt(world.map, player.cellX, player.cellY)) then

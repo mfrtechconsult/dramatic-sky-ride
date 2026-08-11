@@ -121,7 +121,7 @@ end
 -- keyboard shortcut and gamepad shortcut) automatically receives the same gate.
 local startFlightWithoutProgressionRules = startFlight
 startFlight = function(game, mon)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   if not (ow and mon) then return false end
   if not selectedMountCanFly(game, ow, mon) then
     say(game, "This Pokemon can't\nuse FLY yet.")
@@ -157,7 +157,7 @@ end
 local preferredMountWithoutFlightRules = preferredMount
 preferredMount = function(game)
   local party = game and game.save and game.save.party or {}
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   if lastMountIndex and healthy(party[lastMountIndex])
      and mountSpecies(game, party[lastMountIndex])
      and selectedMountCanFly(game, ow, party[lastMountIndex]) then
@@ -176,7 +176,7 @@ end
 -- Give the badge-specific explanation before the older generic landing error.
 local beginLandingWithoutProgressionMessage = beginLanding
 beginLanding = function(game, forced)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   local p = ow and ow.player
   if not forced and flight.active and badgeChecksEnabled()
      and p and ow.map and ow.map.isWaterCell
@@ -218,7 +218,7 @@ if not OverworldState.dramaticSkyRideStoryGateWrapped then
   if type(nativeCrossConnection) == "function" then
     OverworldState.crossConnection = function(self, dir, conn, ...)
       if flight.active and Game.overworld == self and conn
-         and storyGateBlocks(conn.map) then
+         and storyGateBlocks(conn.mapId or conn.map) then
         if (flight.storyGateNoticeCooldown or 0) <= 0 then
           notifyHud("STORY BLOCKED")
           feedback("blocked")
@@ -247,6 +247,7 @@ mod.exports.flightRules = {
   requireFlyMove = requireFlyMoveEnabled,
   badgeChecks = badgeChecksEnabled,
   storyGates = storyGatesEnabled,
+  storyGateBlocks = storyGateBlocks,
   cameraAltitudeEnabled = cameraAltitudeEnabled,
   airEncountersEnabled = airEncountersEnabled,
   canTakeOff = function(mon)

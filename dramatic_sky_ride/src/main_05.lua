@@ -116,8 +116,22 @@ local function safeAssetName(value)
   return tostring(value or "player"):gsub("[^%w_%-]", "_")
 end
 
-local function writeRiderSheet(player)
-  local sourceDef = player and player.sprite and player.sprite.def or nil
+-- Gold temporarily replaces the live Player sprite with the current mount.
+-- A Ground -> Flight switch can happen before the bridge's next update, so
+-- player.sprite may still be Raikou when Ho-Oh asks us to build its rider.
+-- Resolve the native renderer kept underneath the mount when one is exposed.
+mod.exports._riderSourceSprite = function(player)
+  local bridge = mod.exports and mod.exports.gen2PlayerBridge or nil
+  if bridge and type(bridge.nativePlayerSprite) == "function" then
+    local ok, sprite = pcall(bridge.nativePlayerSprite, player)
+    if ok and sprite then return sprite end
+  end
+  return player and player.sprite or nil
+end
+
+local function writeRiderSheet(player, sourceSprite)
+  sourceSprite = sourceSprite or mod.exports._riderSourceSprite(player)
+  local sourceDef = sourceSprite and sourceSprite.def or nil
   local sourcePath = sourceDef and sourceDef.image
   if not sourcePath then return nil, "player_image_missing" end
   if not (love and love.image and love.image.newImageData

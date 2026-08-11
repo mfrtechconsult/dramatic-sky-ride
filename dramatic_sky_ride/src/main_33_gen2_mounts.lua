@@ -130,6 +130,21 @@ local function providerImage(species, dex, role)
         end
       end
     end
+    -- PokePCFollowers 0.8 publishes its canonical asset resolver directly
+    -- instead of the Wilds-style descriptor resolver. Accept that stable API
+    -- and validate the returned six-frame walker sheet exactly as above.
+    if ex and type(ex.assetPath) == "function" then
+      for _, identity in ipairs(identities) do
+        local okPath, path = pcall(ex.assetPath, identity)
+        if okPath and type(path) == "string" and path ~= "" then
+          local okImage, image = pcall(Assets.image, path)
+          if okImage and image then
+            local w, h = image:getDimensions()
+            if w >= 16 and h >= 96 then return path end
+          end
+        end
+      end
+    end
   end
   return nil
 end
@@ -385,7 +400,7 @@ end)
 -- cell. Temporarily clear native Surf only through the old land-only guard.
 local gen2StartGroundRide = startGroundRide
 startGroundRide = function(game, mon)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   local p = ow and ow.player
   local species = groundSpecies(game, mon)
   if species ~= SUICUNE

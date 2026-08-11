@@ -85,3 +85,6 @@ main_53_stadium_overworld_interop.lua
 main_44_stadium2_diagnostics.lua
 
 main_54_settings_ux.lua
+main_56_gen2_player_bridge.lua
+main_57_gen2_ground_water_bridge.lua
+main_55_gen2_test_gift.lua

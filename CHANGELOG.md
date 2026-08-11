@@ -2,6 +2,23 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.4
+
+### Generation II support
+
+- Declared Gen2 compatibility in the normal release manifest.
+- Added Gold-native live-player bridges for Flight, Ground Ride and Visible Surf rendering and movement.
+- Added Generation II mount selection, Pokedex sizing fallbacks and 2D provider-safe sprites.
+- Added seamless airborne map connections, Gold reverse-ledge jumps and native water-landing Surf transitions.
+- Preserved authored map topology, ordinary solid-wall collision and existing progression rules.
+- Added automated Gold coverage for mount activation, Ground-to-Flight switching, map connections, reverse ledges, water landing, shoreline exit and ordinary Surf.
+
+### Testing scope
+
+- Added a temporary New Bark Town NPC that gives Ho-Oh, Suicune, Raikou and Gyarados for rapid Gen2 testing.
+- Badge requirements can be disabled from DSR settings during testing.
+- Generation II voxel/Stadium rendering remains dependent on compatible companion providers; 2D is the validated Gen2 path in this release.
+
 ## 0.2.3
 
 ### Gen 1 runtime stability

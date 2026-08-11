@@ -46,7 +46,7 @@ local function goldCanUseSelectedFlyMount(game, mon)
   local okRuntime, Runtime = pcall(require, "src.mods.Runtime")
   if okRuntime and Runtime and Runtime.wantsHook
      and Runtime.wantsHook("fieldmove.eligibility") then
-    local world = game and game.overworld
+    local world = mod.exports._mountWorld(game)
     if world and type(world.partyKnows) == "function" then
       local ok, user = pcall(world.partyKnows, world, "FLY")
       return ok and user ~= nil
@@ -84,7 +84,7 @@ local beginLandingAfterGen1Rules = beginLanding
 beginLanding = function(game, forced)
   if isGen2Runtime(game) and not forced and flight.active
      and settingEnabled("badge_checks", true) then
-    local world = game and game.overworld
+    local world = mod.exports._mountWorld(game)
     local player = world and world.player
     local map = world and world.map
     local onWater = player and map and type(map.isWaterCell) == "function"

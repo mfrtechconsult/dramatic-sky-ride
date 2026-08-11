@@ -21,14 +21,15 @@
 end
 
 local function buildRiderSprite(player)
-  if not (player and player.sprite) then return nil, "player_sprite_missing" end
-  local path, reason = writeRiderSheet(player)
+  local sourceSprite = mod.exports._riderSourceSprite(player)
+  if not sourceSprite then return nil, "player_sprite_missing" end
+  local path, reason = writeRiderSheet(player, sourceSprite)
   if not path then
     -- Palette correctness is more important than cropping. An unusual port
     -- without ImageData encoding falls back to the live player renderer.
-    return player.sprite, "uncropped_fallback:" .. tostring(reason)
+    return sourceSprite, "uncropped_fallback:" .. tostring(reason)
   end
-  local sourceDef = player.sprite.def or {}
+  local sourceDef = sourceSprite.def or {}
   local def = shallowCopy(sourceDef)
   def.id = "SKY_RIDE_RIDER_" .. safeAssetName(sourceDef.id)
   def.image = path
@@ -36,6 +37,12 @@ local function buildRiderSprite(player)
   def.walker = true
   local sprite = SpriteRenderer.new(def,
     "sky_ride_rider:" .. tostring(sourceDef.id or sourceDef.image))
+  -- Gold assigns the live player's CGB OBJ palette to the renderer instance,
+  -- not to spriteDef. The cropped rider is a new instance, so carry that
+  -- palette across explicitly or Chris is drawn in the fallback grey ramp.
+  if sourceSprite.objColors and type(sprite.setObjPalette) == "function" then
+    sprite:setObjPalette(sourceSprite.objColors, sourceSprite.objGroup)
+  end
   return sprite
 end
 

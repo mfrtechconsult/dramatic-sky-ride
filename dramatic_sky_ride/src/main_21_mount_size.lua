@@ -101,6 +101,19 @@
     return canonicalMountScale(species) * percent / 100
   end
 
+  -- Late compatibility layers can provide missing Pokedex heights (notably
+  -- Gold's Johto roster). Resolve the public function at draw time so the 2D
+  -- card, rider seat and voxel billboard all use the same final scale.
+  local function effectiveMountVisualScale(species)
+    local current = mod.exports and mod.exports.mountVisualScale or nil
+    if type(current) == "function" and current ~= mountVisualScale then
+      local ok, value = pcall(current, species)
+      value = ok and tonumber(value) or nil
+      if value and value > 0 then return value end
+    end
+    return mountVisualScale(species)
+  end
+
   -- Mount sprites use true-color follower sheets. Draw the chosen frame
   -- directly so the scale pivots around the feet while PaletteFX receives the
   -- actual enlarged/shrunk screen rect. This keeps 2D palette masking correct.
@@ -112,7 +125,7 @@
     local rawDraw = sprite.draw
     sprite.draw = function(self, px, py, camX, camY, facing, walkPhase,
                            stepFlip, topHalf)
-      local scale = mountVisualScale(species)
+      local scale = effectiveMountVisualScale(species)
       if topHalf or math.abs(scale - 1) < 0.0001
          or not (love and love.graphics and love.graphics.draw) then
         return rawDraw(self, px, py, camX, camY, facing, walkPhase,
@@ -178,7 +191,7 @@
     if flight.active and flight.species then
       local cfg = RIDER_OFFSETS[flight.species] or DEFAULT_RIDER_OFFSET
       py = py - (tonumber(cfg.lift) or DEFAULT_RIDER_OFFSET.lift)
-        * (mountVisualScale(flight.species) - 1)
+        * (effectiveMountVisualScale(flight.species) - 1)
     end
     return sprite, px, py, facing, phase, flip, hopping
   end
@@ -198,7 +211,7 @@
       rawGroundRiderPoseForSize(entity)
     if ground.active and ground.species then
       local lift = GROUND_RIDER_LIFT[ground.species] or 6.5
-      py = py - lift * (mountVisualScale(ground.species) - 1)
+      py = py - lift * (effectiveMountVisualScale(ground.species) - 1)
     end
     return sprite, px, py, facing, phase, flip, hopping
   end
@@ -254,7 +267,7 @@
     local function scaledMesh(def, frame, fallback)
       local species = def and def.dramaticSkyRideMountSpecies
       if not species then return fallback(def, frame) end
-      local scale = mountVisualScale(species)
+      local scale = effectiveMountVisualScale(species)
       if math.abs(scale - 1) < 0.0001 then return fallback(def, frame) end
       local key = table.concat({ tostring(def.image), tostring(frame),
         tostring(species), string.format("%.4f", scale) }, "#")

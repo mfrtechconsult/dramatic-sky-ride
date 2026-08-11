@@ -26,6 +26,44 @@ local OverworldState = require("src.world.OverworldController")
 local PikachuFollower = require("src.world.PikachuFollower")
 local unpackArgs = table.unpack or unpack
 
+-- Gen 1 exposes the live map as `game.overworld` and keeps it on top of the
+-- state stack. Gold exposes it as `game.world`; an EMPTY stack is free-roam.
+-- Mod callbacks receive the native Game2 instance rather than this file's
+-- Gen2Compat facade, so every user-facing mount entry must normalize both
+-- shapes before it checks whether the field is ready.
+mod.exports._mountWorld = function(game)
+  if not game then return nil end
+  return game.overworld or game.world
+end
+
+mod.exports._mountFreeRoam = function(game, world)
+  world = world or mod.exports._mountWorld(game)
+  if not (game and world and world.player and world.map and game.stack) then
+    return false
+  end
+  local top = game.stack:top()
+  if top ~= nil then return top == world end
+  if type(world.acceptsMenuInput) == "function" then
+    local ok, accepted = pcall(world.acceptsMenuInput, world)
+    return ok and accepted == true
+  end
+  return false
+end
+
+-- Gold's Party/Mount screens sit over the START menu. A field action must
+-- clear that whole UI stack, just like PartyMenu:exitToField does for native
+-- field moves. Gen 1 keeps its established single-pop behaviour.
+mod.exports._closeMountMenus = function(game)
+  local world = mod.exports._mountWorld(game)
+  local stack = game and game.stack
+  if not (world and stack) then return end
+  if game.world == world and type(stack.clear) == "function" then
+    stack:clear()
+  elseif stack:top() ~= nil then
+    stack:pop()
+  end
+end
+
 -- These compatibility fallbacks only need the top-level manifest id. Avoid
 -- importing src.link.Json for that tiny read: Gen1Recomp correctly treats all
 -- src.link.* modules as network-gated even when used only as a JSON parser.

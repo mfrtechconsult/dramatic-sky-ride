@@ -360,7 +360,7 @@ startFlight = function(game, mon)
   local ok = previousFollowerPolicyStartFlight(game, mon)
   if ok then
     suicuneBattleVisual = nil
-    if mountedFollowersEnabled() then applyFollowerDrawPolicy(game and game.overworld) end
+    if mountedFollowersEnabled() then applyFollowerDrawPolicy(mod.exports._mountWorld(game)) end
   end
   return ok
 end
@@ -370,7 +370,7 @@ startGroundRide = function(game, mon)
   local ok = previousFollowerPolicyStartGroundRide(game, mon)
   if ok then
     if ground and ground.species == "SUICUNE" then suicuneBattleVisual = nil end
-    if mountedFollowersEnabled() then applyFollowerDrawPolicy(game and game.overworld) end
+    if mountedFollowersEnabled() then applyFollowerDrawPolicy(mod.exports._mountWorld(game)) end
   end
   return ok
 end

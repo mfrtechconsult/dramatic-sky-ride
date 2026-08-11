@@ -3,8 +3,8 @@ end
 
 local function useMountShortcut(game)
   if not mountShortcutEnabled() then return false end
-  local ow = game and game.overworld
-  if not (ow and game.stack and game.stack:top() == ow) then return false end
+  local ow = mod.exports._mountWorld(game)
+  if not mod.exports._mountFreeRoam(game, ow) then return false end
   if flight.active then
     beginLanding(game, false)
     return true
@@ -70,4 +70,4 @@ local gameGamepadpressed = Game.gamepadpressed
 function Game:gamepadpressed(joystick, button, ...)
   -- L2/R2 are altitude controls in flight; consume the button-edge so the
   -- engine does not also change global game speed when a trigger is pulled.
-  if flight.active and (button == 
+  if flight.active and (button ==

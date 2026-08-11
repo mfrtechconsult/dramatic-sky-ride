@@ -4,7 +4,7 @@
 end
 
 local function forceImmediateLand(game)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   if not (flight.active and ow and ow.player) then return false end
   local x, y, kind, surfMon = findLandingCell(ow)
   if not x and flight.originMap and ow.setMap then

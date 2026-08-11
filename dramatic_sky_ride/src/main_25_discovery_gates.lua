@@ -89,7 +89,7 @@ local function mapReached(mapId)
 end
 
 local function currentMapId(game)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   return ow and ow.map and ow.map.id or nil
 end
 
@@ -130,7 +130,7 @@ if not OverworldState.dramaticSkyRideDiscoveryGateWrapped then
   local crossConnectionWithoutDiscoveryGate = OverworldState.crossConnection
   if type(crossConnectionWithoutDiscoveryGate) == "function" then
     OverworldState.crossConnection = function(self, dir, conn, ...)
-      local target = conn and conn.map
+      local target = conn and (conn.mapId or conn.map)
       if flight.active and Game.overworld == self and discoveryGatesEnabled()
          and discoveryGatedMap(target) and not mapReached(target) then
         if (flight.storyGateNoticeCooldown or 0) <= 0 then

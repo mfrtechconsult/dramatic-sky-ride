@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.4
+
+- Declared Generation II support in the standard release manifest.
+- Added Gold-native live-player rendering for Flight, Ground Ride and Visible Surf mounts.
+- Added Generation II Flight, Ground and Surf mount rosters with native 2D fallback art.
+- Fixed Gold movement, landing and shortcut activation paths that bypass Gen 1 compatibility methods.
+- Added airborne route/city connection traversal while preserving authored topology and progression gates.
+- Added Gold reverse-ledge Ground Ride jumps while keeping ordinary walls, warps, water and occupied cells blocked.
+- Added native Gold Surf-state activation for Flight water landings, ordinary Surf, water movement and shoreline exits.
+- Added Generation II Pokedex height fallbacks and corrected live 2D mount scaling.
+- Added a temporary New Bark Town test NPC that supplies Ho-Oh, Suicune, Raikou and Gyarados with the required field moves.
+- Kept Generation II voxel/Stadium presentation provider-dependent; the validated Gen2 path for this release is 2D.
+
 ## 0.2.3
 
 - Fixed Flight and Visible Surf being bypassed when Wild Skies re-armed its overworld update watchdog around DSR.

@@ -22,7 +22,7 @@
 end
 
 local function beginLanding(game, forced)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   if not (flight.active and ow and ow.player) then return false end
   local x, y = ow.player.cellX, ow.player.cellY
   local kind, _, reason = landingCellKind(ow, x, y)

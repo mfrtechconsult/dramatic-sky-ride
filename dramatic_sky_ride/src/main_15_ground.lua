@@ -135,7 +135,7 @@ end
 
 local function stopGroundRide(game, reason, keepFollowers)
   if not ground.active then return false end
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   removeGroundRiderEntity(ow)
   if not keepFollowers then restoreFollowers(ow) end
   ground.active, ground.species, ground.mon = false, nil, nil
@@ -145,8 +145,8 @@ local function stopGroundRide(game, reason, keepFollowers)
 end
 
 local function startGroundRide(game, mon)
-  local ow = game and game.overworld
-  if not (ow and ow.player and ow.map and game.stack and game.stack:top() == ow) then return false end
+  local ow = mod.exports._mountWorld(game)
+  if not mod.exports._mountFreeRoam(game, ow) then return false end
   if flight.active then notifyHud("LAND FIRST"); feedback("blocked"); return false end
   if ground.active then return true end
   if not groundAreaAllowed(ow) then say(game, "You cannot ride here."); return false end
@@ -181,8 +181,8 @@ local function preferredGroundMount(game)
 end
 
 local function useGroundShortcut(game)
-  local ow = game and game.overworld
-  if not (ow and game.stack and game.stack:top() == ow) then return false end
+  local ow = mod.exports._mountWorld(game)
+  if not mod.exports._mountFreeRoam(game, ow) then return false end
   if flight.active then notifyHud("LAND FIRST"); say(game, "Land before changing\nmounts."); return true end
   if ground.active then stopGroundRide(game, "shortcut"); return true end
   if ow.player.surfing then say(game, "Reach land first."); return true end
@@ -199,7 +199,7 @@ mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   if flight.active or ground.active or (ctx and ctx.battle) then return out end
   if not groundSpecies(game, mon) then return out end
   table.insert(out, 1, { label = Strings("RIDE"), onSelect = function(selected, liveGame)
-    if liveGame and liveGame.stack then liveGame.stack:pop() end
+    mod.exports._closeMountMenus(liveGame)
     for i, partyMon in ipairs(liveGame.save.party or {}) do
       if partyMon == selected then lastGroundMountIndex = i break end
     end

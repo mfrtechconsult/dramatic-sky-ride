@@ -57,11 +57,11 @@ require('require("src.world.gen2.Player")' not in gold_suicune,
 require("mod.exports.gen2GoldSuicune" in gold_suicune,
         "Gold Suicune runtime diagnostics must remain externally inspectable")
 
-# This branch is preparation, not a false compatibility claim. The upstream
-# guide says games=[gen1,gen2] means the author has actually boot-tested Gold.
-games = manifest.get("games")
-require(not games or "gen2" not in [str(x).lower().replace(" ", "") for x in games],
-        "Do not declare Gen2 in the manifest before real Gold boot validation")
+# Gold boot, shortcut, party submenu and unified MOUNTS flows are now exercised
+# against the live engine. Keep both generations declared in release packages.
+games = [str(x).lower().replace(" ", "") for x in manifest.get("games", [])]
+require("gen1" in games and "gen2" in games,
+        "The validated release manifest must target both Gen1 and Gen2")
 
 if errors:
     print("Gen2 engine compatibility contract FAILED")

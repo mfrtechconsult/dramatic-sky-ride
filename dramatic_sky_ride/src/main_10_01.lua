@@ -22,9 +22,9 @@
 end
 
 local function startFlight(game, mon)
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   if not (ow and ow.player and ow.map) then return false end
-  if game.stack and game.stack:top() ~= ow then return false end
+  if not mod.exports._mountFreeRoam(game, ow) then return false end
   if ow.transitioning or (ow.runner and ow.runner.isRunning and ow.runner:isRunning()) then
     say(game, "Finish the current\nevent first.")
     return false

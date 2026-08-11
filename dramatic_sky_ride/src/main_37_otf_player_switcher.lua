@@ -35,7 +35,8 @@ end
 
 local function currentOtfPlayerImage(player)
   if not otfInstalled() then
-    local def = player and player.sprite and player.sprite.def or nil
+    local source = mod.exports._riderSourceSprite(player)
+    local def = source and source.def or nil
     return def and def.image or nil
   end
 
@@ -46,12 +47,14 @@ local function currentOtfPlayerImage(player)
   local red = sprites and sprites.SPRITE_RED or nil
   if red and red.image then return red.image end
 
-  local def = player and player.sprite and player.sprite.def or nil
+  local source = mod.exports._riderSourceSprite(player)
+  local def = source and source.def or nil
   return def and def.image or nil
 end
 
 local function riderSourceFingerprint(player)
-  local def = player and player.sprite and player.sprite.def or nil
+  local source = mod.exports._riderSourceSprite(player)
+  local def = source and source.def or nil
   local image = currentOtfPlayerImage(player)
   if not image then return nil end
   return tostring(def and def.id or "SPRITE_RED") .. "|" .. tostring(image)
@@ -63,11 +66,12 @@ buildRiderSprite = function(player)
   if not otfInstalled() then
     return originalBuildRiderSprite(player)
   end
-  if not (player and player.sprite and player.sprite.def) then
+  local sourceSprite = mod.exports._riderSourceSprite(player)
+  if not (sourceSprite and sourceSprite.def) then
     return nil, "player_sprite_missing"
   end
 
-  local sourceDef = player.sprite.def
+  local sourceDef = sourceSprite.def
   local sourcePath = currentOtfPlayerImage(player)
   if not sourcePath then
     return originalBuildRiderSprite(player)
@@ -83,7 +87,7 @@ buildRiderSprite = function(player)
   if not path then
     -- Match DSR's existing graceful fallback semantics if ImageData encoding
     -- is unavailable on an unusual port.
-    return player.sprite, "uncropped_fallback:" .. tostring(reason)
+    return sourceSprite, "uncropped_fallback:" .. tostring(reason)
   end
 
   local def = shallowCopy(proxyDef)
@@ -92,6 +96,9 @@ buildRiderSprite = function(player)
   def.frames = 6
   def.walker = true
   local sprite = SpriteRenderer.new(def, "sky_ride_rider:otf:" .. token)
+  if sourceSprite.objColors and type(sprite.setObjPalette) == "function" then
+    sprite:setObjPalette(sourceSprite.objColors, sourceSprite.objGroup)
+  end
   return sprite
 end
 

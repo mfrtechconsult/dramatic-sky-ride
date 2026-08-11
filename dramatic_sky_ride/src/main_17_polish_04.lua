@@ -17,11 +17,11 @@ end
 
 local function activateWaterRide(game, requested)
   if amphibiousGroundOwnsWaterVisual() then
-    clearWaterRide(game and game.overworld)
+    clearWaterRide(mod.exports._mountWorld(game))
     return false
   end
   if mountOption("visible_surf_mounts", true) ~= true then return false end
-  local ow = game and game.overworld
+  local ow = mod.exports._mountWorld(game)
   local mon = preferredWaterMount(game, requested)
   local species = waterSpecies(game, mon)
   local sprite = species and buildWaterSprite(species)
@@ -94,12 +94,13 @@ mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   local species = waterSpecies(game, mon)
   if not species or not monKnowsMove(mon, "SURF") or (ctx and ctx.battle) then return out end
   table.insert(out, 1, { label = Strings("SURF & RIDE"), onSelect = function(selected, liveGame)
-    if liveGame and liveGame.stack then liveGame.stack:pop() end
+    mod.exports._closeMountMenus(liveGame)
     for i, partyMon in ipairs(liveGame.save.party or {}) do
       if partyMon == selected then lastWaterMountIndex = i break end
     end
-    if liveGame.overworld and liveGame.overworld.player.surfing then
-      clearWaterRide(liveGame.overworld)
+    local liveWorld = mod.exports._mountWorld(liveGame)
+    if liveWorld and liveWorld.player.surfing then
+      clearWaterRide(liveWorld)
       activateWaterRide(liveGame, selected)
     else
       say(liveGame, "Selected for Surf.\nUse Surf normally.")
@@ -140,6 +141,7 @@ if mod.content and mod.content.screens and mod.ui and mod.ui.ListMenu then
         onChoose = function(item, menu)
           local value = item and item.value or {}
           menu:close()
+          mod.exports._closeMountMenus(game)
           if value.kind == "land" then beginLanding(game, false)
           elseif value.kind == "dismount" then stopGroundRide(game, "menu")
           elseif value.kind == "ground" then
@@ -151,8 +153,9 @@ if mod.content and mod.content.screens and mod.ui and mod.ui.ListMenu then
             startFlight(game, game.save.party[value.index])
           elseif value.kind == "water" then
             lastWaterMountIndex = value.index
-            if game.overworld and game.overworld.player.surfing then
-              clearWaterRide(game.overworld)
+            local world = mod.exports._mountWorld(game)
+            if world and world.player.surfing then
+              clearWaterRide(world)
               activateWaterRide(game, game.save.party[value.index])
             else
               say(game, "Selected for Surf.\nUse Surf normally.")
@@ -185,6 +188,17 @@ mod.exports.waterRideDiagnostics = function()
     lastFailure = water.lastFailure,
     rider = water.riderSprite ~= nil,
   }
+end
+-- Read-only late-render bridge. Visible Surf deliberately keeps its mutable
+-- lifecycle private; Gold's live-player renderer only needs the chosen mount
+-- and the already-validated rider pose.
+mod.exports._waterRideVisual = function()
+  return water.active == true and water.sprite or nil
+end
+mod.exports._waterRideRiderPose = function(entity)
+  if not (water.active and water.riderSprite) then return nil end
+  entity.sprite = water.riderSprite
+  return waterRiderPose(entity)
 end
 mod.exports.eligibleWaterMounts = function()
   local out = {}

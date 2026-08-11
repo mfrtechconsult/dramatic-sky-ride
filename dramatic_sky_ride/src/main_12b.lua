@@ -35,7 +35,7 @@ mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
     label = Strings("RIDE & FLY"),
     onSelect = function(selected, liveGame)
       -- Close PartyMenu before returning control to the overworld.
-      if liveGame and liveGame.stack then liveGame.stack:pop() end
+      mod.exports._closeMountMenus(liveGame)
       for i, partyMon in ipairs(liveGame.save.party or {}) do
         if partyMon == selected then lastMountIndex = i break end
       end

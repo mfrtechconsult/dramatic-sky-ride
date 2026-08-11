@@ -29,7 +29,8 @@ end
 local function compatibleProviderInstalled()
   local handle = pokePcHandle()
   local ex = handle and handle.exports or nil
-  return ex ~= nil and type(ex.resolveFollowerSprite) == "function"
+  return ex ~= nil and (type(ex.resolveFollowerSprite) == "function"
+    or type(ex.assetPath) == "function")
 end
 
 mod.exports.pokePcCompatibility = {

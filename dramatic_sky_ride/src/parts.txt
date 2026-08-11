@@ -68,6 +68,7 @@ main_41_stadium2_3d.lua
 main_42_stadium2_hardening.lua
 main_42b_stadium2_dual_guard.lua
 main_47_stadium2_effect_frames.lua
+main_46a_stadium2_animation_cache_guard.lua
 main_46_crystal_stadium2_bootstrap.lua
 main_43_stadium2_provider_rig.lua
 main_45_stadium2_interpolated_fallback.lua

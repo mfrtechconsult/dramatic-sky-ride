@@ -14,6 +14,14 @@
 -- one mod name. This also lets future/legacy forks work when they preserve the
 -- same public importer module contract.
 --
+-- IMPORTANT: cache readiness and bridge/UI installation are independent.
+-- A valid Stadium 2 cache must never cause this bootstrap to return before
+-- Crystal's bridge is attached to the active full import host. The bridge is
+-- what patches the host's Stadium picker from STADIUM ROM to STADIUM 2 ROM and
+-- provides the STADIUM 2 MODELS row. Keeping it attached after a successful
+-- import means the row remains visible as READY on later boots and can be used
+-- to reimport without deleting the existing cache.
+--
 -- Crystal's historical Stadium 2 importer also produced valid-looking
 -- C2DSM10 caches containing only a synthetic one-frame bind pose when motion
 -- extraction failed. main_46a detects those legacy caches. If a current
@@ -25,10 +33,12 @@
 local state = {
   attempts = 0,
   installed = false,
+  uiAttached = false,
   crystal = false,
   provider = nil,
   importSurface = nil,
   needed = nil,
+  cacheReady = false,
   reason = nil,
   invalidatedStaticCache = false,
   bridgeSource = nil,
@@ -178,23 +188,25 @@ end
 local function tryBootstrap(reason)
   state.attempts = state.attempts + 1
   local status = cacheStatus()
-  state.needed = status.compatible ~= true
-  if not state.needed then
-    state.reason = "cache_ready"
-    return true
-  end
+  state.cacheReady = status.compatible == true
+  state.needed = not state.cacheReady
 
+  -- Do NOT return merely because the pack is ready. The Crystal bridge owns
+  -- the persistent Stadium 2 options/picker integration and must be attached
+  -- on every boot where a compatible full import host is available.
   local crystal = crystalHandle()
   state.crystal = crystal ~= nil
   if not crystal then
-    state.reason = "crystal_251_missing"
-    return false
+    state.reason = state.cacheReady and "cache_ready_crystal_251_missing"
+      or "crystal_251_missing"
+    return state.cacheReady
   end
 
   local bridge = crystalBridge(crystal)
   if not bridge then
-    state.reason = "crystal_251_bridge_unavailable"
-    return false
+    state.reason = state.cacheReady and "cache_ready_bridge_unavailable"
+      or "crystal_251_bridge_unavailable"
+    return state.cacheReady
   end
 
   local surface, surfaceId = stadiumImportSurface()
@@ -204,6 +216,14 @@ local function tryBootstrap(reason)
   state.provider = providerId
   if not provider then
     local battleArt = safeFind("BATTLE_ART_VOXEL_FORK") ~= nil
+    if state.cacheReady then
+      -- Rendering can continue from the persistent DSM cache, but there is no
+      -- full builder host available to expose a functional reimport action.
+      state.reason = surface and "cache_ready_import_surface_without_builder"
+        or (battleArt and "cache_ready_battle_art_renderer_only"
+          or "cache_ready_without_import_host")
+      return true
+    end
     if surface then
       state.reason = battleArt and "battle_art_import_surface_without_builder"
         or "stadium_import_surface_without_builder"
@@ -220,10 +240,11 @@ local function tryBootstrap(reason)
     return false
   end
 
-  -- Only remove the completion marker once we know both sides required for a
-  -- correct rebuild are present: a Crystal bridge with the fixed decoder and
-  -- a full Stadium import host. Existing DSM files remain until overwritten.
-  if not invalidateLegacyStaticCache(bridge, status) then return false end
+  -- Only invalidate a legacy static marker when reconstruction is genuinely
+  -- required. A healthy READY cache is never touched just to restore the UI.
+  if not state.cacheReady and not invalidateLegacyStaticCache(bridge, status) then
+    return false
+  end
 
   local options = {
     count = 251,
@@ -232,44 +253,56 @@ local function tryBootstrap(reason)
   }
   local ok, active = pcall(bridge.install, crystal, nil, provider, options)
   if not ok or not active then
-    state.reason = "bridge_install_failed"
+    state.reason = state.cacheReady and "cache_ready_bridge_attach_failed"
+      or "bridge_install_failed"
     warnOnce("install:" .. tostring(providerId),
       "Could not attach Crystal 251's Stadium 2 importer to %s: %s",
       tostring(providerId), tostring(active))
-    return false
+    return state.cacheReady
   end
 
   state.installed = true
+  state.uiAttached = true
   state.provider = providerId
-  state.reason = state.invalidatedStaticCache and "rebuild_attached" or (reason or "installed")
-  log("Crystal 251 Stadium 2 cache bootstrap attached to %s (bridge=%s, importSurface=%s, rebuild=%s)",
+  if state.cacheReady then
+    state.reason = "cache_ready_bridge_attached"
+  elseif state.invalidatedStaticCache then
+    state.reason = "rebuild_attached"
+  else
+    state.reason = reason or "installed"
+  end
+  log("Crystal 251 Stadium 2 bridge attached to %s (bridge=%s, importSurface=%s, cacheReady=%s, rebuild=%s)",
     tostring(providerId), tostring(state.bridgeSource), tostring(state.importSurface),
-    tostring(state.invalidatedStaticCache))
+    tostring(state.cacheReady), tostring(state.invalidatedStaticCache))
   return true
 end
 
 tryBootstrap("load")
 if mod.events and mod.events.on then
   mod.events:on("game.ready", function()
-    if not state.installed and not cacheCompatible() then
-      tryBootstrap("game.ready")
-    end
+    -- Provider/UI modules may finish installing after DSR's initial load. Retry
+    -- once at game.ready whether or not the cache already exists: READY packs
+    -- still need the bridge so STADIUM 2 ROM remains visible.
+    if not state.installed then tryBootstrap("game.ready") end
   end)
 end
 
 mod.exports.stadium3DCrystalBootstrap = {
-  api = 3,
+  api = 4,
   retry = tryBootstrap,
   status = function()
     local status = cacheStatus()
-    state.needed = status.compatible ~= true
+    state.cacheReady = status.compatible == true
+    state.needed = not state.cacheReady
     return {
       attempts = state.attempts,
       installed = state.installed,
+      uiAttached = state.uiAttached,
       crystal = state.crystal,
       provider = state.provider,
       importSurface = state.importSurface,
       needed = state.needed,
+      cacheReady = state.cacheReady,
       reason = state.reason,
       invalidatedStaticCache = state.invalidatedStaticCache,
       bridgeSource = state.bridgeSource,

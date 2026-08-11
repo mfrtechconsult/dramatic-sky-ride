@@ -6,6 +6,7 @@ on:
       - agent/gen2-gen1recomp-plus-compat
     paths-ignore:
       - docs/gen2check-latest.txt
+      - docs/lua-syntax-latest.txt
   pull_request:
     branches:
       - main
@@ -34,10 +35,12 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          set +e
           python3 gen1recomp-upstream/tools/modkit.py gen2check \
             "$GITHUB_WORKSPACE/dramatic_sky_ride" --notes \
             | tee /tmp/dsr-gen2check.txt
           status=${PIPESTATUS[0]}
+          set -e
           {
             echo '## Dramatic Sky Ride — Gen1Recomp++ audit'
             echo

@@ -220,19 +220,19 @@ function OverworldState:update(dt, ...)
   return result
 end
 
--- Other overworld encounter mods can start BattleState.newWild directly from
--- entity collision. While DSR is airborne those are ground encounters and are
--- suppressed; only the Wild Skies battle DSR just queued is allowed through.
-local okBattleState, BattleState = pcall(require, "src.battle.BattleState")
-if okBattleState and BattleState and not BattleState.dramaticSkyRideAirGateWrapped then
-  local nativeNewWild = BattleState.newWild
-  if type(nativeNewWild) == "function" then
-    BattleState.newWild = function(...)
-      if flight.active and (wildSkies.expectedBattle or 0) <= 0 then return nil end
-      return nativeNewWild(...)
+-- Suppress ordinary overworld encounters while DSR owns airborne movement.
+-- encounter.species is a shared Gen 1/Gen 2 seam: returning nil cancels the
+-- already-rolled encounter before repel/battle startup. The Wild Skies battle
+-- DSR explicitly queues above does not pass through this random-encounter seam,
+-- so expectedBattle remains only a short compatibility allowance for providers
+-- that intentionally enter through the shared encounter pipeline.
+if mod.hooks and mod.hooks.wrap then
+  mod.hooks:wrap("encounter.species", function(next, encounter, ctx)
+    if flight.active and (wildSkies.expectedBattle or 0) <= 0 then
+      return nil
     end
-  end
-  BattleState.dramaticSkyRideAirGateWrapped = true
+    return next(encounter, ctx)
+  end, 90)
 end
 
 mod.events:on("battle.started", function()

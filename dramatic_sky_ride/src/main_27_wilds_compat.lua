@@ -108,6 +108,8 @@ local skyRideHookRecoveries = 0
 
 local DSR_UPDATE_LINK_NAMES = {
   gen2Update = true,
+  previousGoldSuicuneUpdate = true,
+  previousGen1SurfUpdate = true,
   wildSkiesUpdate = true,
   storyRuleUpdate = true,
   lot1Update = true,
@@ -117,6 +119,35 @@ local DSR_UPDATE_LINK_NAMES = {
   groundUpdate = true,
   update = true,
 }
+
+-- Watchdog-style mods such as Wild Skies legitimately wrap the complete DSR
+-- update root. A frame can skip the overworld tick during a transition, so a
+-- missed heartbeat alone does not mean that DSR was displaced. Detect the
+-- already-composed root before attempting any boundary surgery; rebinding an
+-- inner DSR link to an outer wrapper would otherwise create a loop and amputate
+-- the flight/Surf layers that precede this compatibility part.
+local function functionGraphContains(root, target)
+  if root == target then return true end
+  if type(root) ~= "function" or type(target) ~= "function"
+      or not (debug and debug.getupvalue) then return false end
+  local seen = {}
+  local remaining = 96
+  local function visit(fn)
+    if fn == target then return true end
+    if type(fn) ~= "function" or seen[fn] or remaining <= 0 then return false end
+    seen[fn] = true
+    remaining = remaining - 1
+    local index = 1
+    while true do
+      local ok, name, value = pcall(debug.getupvalue, fn, index)
+      if not ok or not name then break end
+      if type(value) == "function" and visit(value) then return true end
+      index = index + 1
+    end
+    return false
+  end
+  return visit(root)
+end
 
 local function dsrChildLink(fn)
   if type(fn) ~= "function" or not (debug and debug.getupvalue and debug.setupvalue) then
@@ -178,6 +209,7 @@ end
 local function composeSkyRideAround(current, reason, countRecovery)
   if not skyRideGuardReady or type(current) ~= "function" then return nil end
   if current == skyRideRootUpdate then return skyRideRootUpdate end
+  if functionGraphContains(current, skyRideRootUpdate) then return current end
   if dsrFunctionSet[current] then
     if countRecovery ~= false then recordRecovery(reason or "intermediate DSR wrapper") end
     return skyRideRootUpdate
@@ -192,6 +224,7 @@ local function recoverSkyRideUpdate(reason)
   local current = OverworldState.update
   if current == skyRideRootUpdate then return true end
   if type(current) ~= "function" then return false end
+  if functionGraphContains(current, skyRideRootUpdate) then return true end
   local composed = composeSkyRideAround(current, reason, true)
   if not composed then return false end
   OverworldState.update = composed
@@ -200,6 +233,12 @@ end
 
 local function skyRideRuntimeActive()
   if flight.active or (ground and ground.active) then return true end
+  -- Visible Surf is activated from OverworldState:update itself. If another
+  -- watchdog displaced DSR before that first tick, the private water state is
+  -- still false; use the engine's authoritative Surf flag to bootstrap the
+  -- recovery instead of waiting on state that cannot yet be created.
+  local ow = Game.overworld
+  if ow and ow.player and ow.player.surfing == true then return true end
   local isWater = mod.exports and mod.exports.isWaterRiding
   if type(isWater) == "function" then
     local ok, active = pcall(isWater)

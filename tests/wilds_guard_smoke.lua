@@ -46,7 +46,17 @@ local function dsrChain(external)
   local function story(self, dt, ...) return storyRuleUpdate(self, dt, ...) end
   local wildSkiesUpdate = story
   local function wild(self, dt, ...) return wildSkiesUpdate(self, dt, ...) end
-  return wild
+  local previousGen1SurfUpdate = wild
+  local function gen1Surf(self, dt, ...)
+    return previousGen1SurfUpdate(self, dt, ...)
+  end
+  local gen2Update = gen1Surf
+  local function gen2(self, dt, ...) return gen2Update(self, dt, ...) end
+  local previousGoldSuicuneUpdate = gen2
+  local function goldSuicune(self, dt, ...)
+    return previousGoldSuicuneUpdate(self, dt, ...)
+  end
+  return goldSuicune
 end
 
 local function dddLayer(nextUpdate, counter)
@@ -128,7 +138,7 @@ do
   local h = newSkyHarness()
   local compat = assert(h.mod.exports.wildsCompatibility)
   check(compat.hookGuardReady(), "Sky Ride guard is armed")
-  check(compat.protectedWrappers() == 8, "Sky Ride protects all synthetic DSR wrappers")
+  check(compat.protectedWrappers() == 11, "Sky Ride protects all synthetic DSR wrappers")
   check(h.env.followerPath("CHARIZARD") == "wilds/follower.png",
     "flight mount uses Wilds sprite provider")
   check(h.env.groundFollowerPath("TAUROS") == "wilds/follower.png",
@@ -138,6 +148,17 @@ do
 
   h.Game:step(1 / 60)
   check(compat.updateHeartbeat() > 0, "Sky Ride heartbeat reaches external boundary")
+  local composedRoot = h.root
+  local runComposedRoot = false
+  local function watchdogOuter(self, dt, ...)
+    if runComposedRoot then return composedRoot(self, dt, ...) end
+  end
+  h.OverworldState.update = watchdogOuter
+  h.Game:step(1 / 60)
+  check(h.OverworldState.update == watchdogOuter,
+    "missed heartbeat preserves an outer wrapper that still owns the DSR root")
+  check(compat.hookRecoveries() == 0,
+    "composed watchdog wrapper does not trigger a false recovery")
   h.displace()
   h.Game:step(1 / 60)
   check(h.OverworldState.update == h.root, "Sky Ride restores complete DSR root")

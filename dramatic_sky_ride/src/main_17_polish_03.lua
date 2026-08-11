@@ -56,7 +56,7 @@ local WATER_ELIGIBLE = {
 local WATER_BY_DEX = {}
 for species, cfg in pairs(WATER_ELIGIBLE) do WATER_BY_DEX[cfg.dex] = species end
 local water = { active = false, species = nil, mon = nil, sprite = nil,
-  riderSprite = nil, riderEntity = nil }
+  riderSprite = nil, riderEntity = nil, source = nil, lastFailure = nil }
 local lastWaterMountIndex = nil
 local waterSpriteCache = {}
 
@@ -95,8 +95,40 @@ local function genericFollowerPath(cfg)
   return fallback
 end
 
+local function buildWaterRenderer(species, path, source, trueColor)
+  if not path then return nil, "missing_path" end
+  local okImage, image = pcall(Assets.image, path)
+  if not okImage or not image then return nil, "image_load_failed" end
+  setNearest(image)
+  local w, h = image:getDimensions()
+
+  -- Visible Surf uses the same six 16x16 facing frames as Gen1Recomp's
+  -- SpriteRenderer. Providers may expose PokeMMO/other enlarged sheets for
+  -- ordinary followers; accepting one here turns the whole sheet into one
+  -- giant malformed Surf card. Use only the canonical mount-safe layout.
+  if w ~= 16 or h ~= 96 then
+    return nil, string.format("unsafe_sheet_%dx%d", tonumber(w) or 0, tonumber(h) or 0)
+  end
+
+  local def = {
+    id = "WATER_RIDE_" .. species,
+    image = path,
+    frames = 6,
+    walker = true,
+    trueColor = trueColor ~= false,
+    dramaticSkyRideWaterMount = true,
+    dramaticSkyRideMountSpecies = species,
+    skyRideSpriteProvider = source,
+  }
+  local sprite = SpriteRenderer.new(def, "water_ride_" .. species)
+  sprite.image = image
+  return sprite
+end
+
 local function publicWaterMountSprite(species)
-  if not mod.find then return nil end
+  if not mod.find then return nil, "provider_api_unavailable" end
+  local cfg = WATER_ELIGIBLE[species]
+  local dex = cfg and cfg.dex or nil
   local providerIds = {
     "overworld_wild_spawns",
     "PokePCFollowers_VoxelMerge",
@@ -104,74 +136,76 @@ local function publicWaterMountSprite(species)
     "FOLLOWERS_EX",
     "followers_ex",
   }
+  local lastReason = "no_provider_sprite"
   for _, providerId in ipairs(providerIds) do
     local okFind, handle = pcall(mod.find, mod, providerId)
     local exports = okFind and handle and handle.exports or nil
     if exports and type(exports.resolveFollowerSprite) == "function" then
+      -- Water art is preferred when a provider has a dedicated canonical
+      -- follower sheet. Land/follower is a safe second request because many
+      -- providers expose only one six-frame overworld strip.
       local requests = {
         { surface = "water" },
+        { surface = "land", style = providerId == "overworld_wild_spawns" and "followers" or nil },
       }
-      if providerId == "overworld_wild_spawns" then
-        requests[#requests + 1] = { surface = "land", style = "followers" }
-      end
       for _, request in ipairs(requests) do
         local okDef, provided = pcall(exports.resolveFollowerSprite, {
           species = species,
+          dex = dex,
           surface = request.surface,
           style = request.style,
           role = "surf_mount",
           game = Game,
         })
-        local frames = provided and tonumber(provided.frames) or 0
-        if okDef and provided and provided.image and frames >= 6 then
-          local okImage, image = pcall(Assets.image, provided.image)
-          if okImage and image then
-            setNearest(image)
-            local w, h = image:getDimensions()
-            if w >= 16 and h >= 96 then
-              local def = {
-                id = "WATER_RIDE_" .. species,
-                image = provided.image,
-                frames = 6,
-                walker = true,
-                trueColor = provided.trueColor ~= false,
-                skyRideSpriteProvider = provided.providerId or providerId,
-              }
-              local sprite = SpriteRenderer.new(def, "water_ride_" .. species)
-              sprite.image = image
-              return sprite
-            end
-          end
+        if okDef and provided and provided.image and tonumber(provided.frames) == 6 then
+          local sprite, reason = buildWaterRenderer(species, provided.image,
+            provided.providerId or providerId, provided.trueColor)
+          if sprite then return sprite, nil end
+          lastReason = tostring(reason)
+        elseif okDef and provided and provided.image then
+          lastReason = "provider_frames_" .. tostring(provided.frames)
         end
       end
     end
   end
-  return nil
+  return nil, lastReason
 end
 
 local function buildWaterSprite(species)
-  if waterSpriteCache[species] then return waterSpriteCache[species] end
-
-  local provided = publicWaterMountSprite(species)
-  if provided then
-    waterSpriteCache[species] = provided
-    return provided
+  if waterSpriteCache[species] then
+    water.source = "cache"
+    water.lastFailure = nil
+    return waterSpriteCache[species]
   end
 
   local cfg = WATER_ELIGIBLE[species]
+
+  -- Prefer the raw dex-numbered follower strip when it exists. It is the
+  -- stable 16x96 contract DSR's Flight/Ground paths already rely on and is
+  -- deliberately independent of a provider's currently selected visual mode.
   local path = genericFollowerPath(cfg)
-  if not path then return nil end
-  local ok, image = pcall(Assets.image, path)
-  if not ok or not image then return nil end
-  setNearest(image)
-  local w, h = image:getDimensions()
-  if w < 16 or h < 96 then return nil end
-  local def = { id = "WATER_RIDE_" .. species, image = path,
-    frames = 6, walker = true, trueColor = true }
-  local sprite = SpriteRenderer.new(def, "water_ride_" .. species)
-  sprite.image = image
-  waterSpriteCache[species] = sprite
-  return sprite
+  if path then
+    local sprite, reason = buildWaterRenderer(species, path, "dex_follower_asset", true)
+    if sprite then
+      waterSpriteCache[species] = sprite
+      water.source = "dex_follower_asset"
+      water.lastFailure = nil
+      return sprite
+    end
+    water.lastFailure = reason
+  end
+
+  local provided, reason = publicWaterMountSprite(species)
+  if provided then
+    waterSpriteCache[species] = provided
+    water.source = provided.def and provided.def.skyRideSpriteProvider or "provider"
+    water.lastFailure = nil
+    return provided
+  end
+
+  water.source = nil
+  water.lastFailure = reason or water.lastFailure or "missing_mount_sprite"
+  return nil
 end
 
 local function preferredWaterMount(game, requested)

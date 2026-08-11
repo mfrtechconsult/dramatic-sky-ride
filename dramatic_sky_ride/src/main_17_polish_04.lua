@@ -25,7 +25,20 @@ local function activateWaterRide(game, requested)
   local mon = preferredWaterMount(game, requested)
   local species = waterSpecies(game, mon)
   local sprite = species and buildWaterSprite(species)
-  if not (ow and ow.player and ow.player.surfing and mon and sprite) then return false end
+  if not (ow and ow.player and ow.player.surfing and mon and sprite) then
+    if species and water.lastFailure then
+      local signature = species .. ":" .. tostring(water.lastFailure)
+      if water.warnedFailure ~= signature then
+        water.warnedFailure = signature
+        if mod.log then
+          mod.log:warn("Visible Surf mount %s unavailable: %s",
+            tostring(species), tostring(water.lastFailure))
+        end
+      end
+    end
+    return false
+  end
+  water.warnedFailure = nil
   water.active, water.mon, water.species, water.sprite = true, mon, species, sprite
   water.riderSprite = select(1, buildRiderSprite(ow.player))
   ensureWaterRider(ow)
@@ -164,6 +177,15 @@ mod.exports.groundStamina = function() return ground.stamina or 0 end
 mod.exports.groundGalloping = function() return ground.gallop == true end
 mod.exports.waterMountSpecies = function() return water.species end
 mod.exports.isWaterRiding = function() return water.active == true end
+mod.exports.waterRideDiagnostics = function()
+  return {
+    active = water.active == true,
+    species = water.species,
+    source = water.source,
+    lastFailure = water.lastFailure,
+    rider = water.riderSprite ~= nil,
+  }
+end
 mod.exports.eligibleWaterMounts = function()
   local out = {}
   for species, cfg in pairs(WATER_ELIGIBLE) do out[#out + 1] = { species = species, dex = cfg.dex } end

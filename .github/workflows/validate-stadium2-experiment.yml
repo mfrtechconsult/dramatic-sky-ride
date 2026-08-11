@@ -55,8 +55,8 @@ jobs:
 
           root = Path('dramatic_sky_ride')
           version = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))['version']
-          if not (version == '0.2.0' or version.startswith('0.2.0-alpha.')):
-              raise SystemExit(f'Stadium 2 renderer expects 0.2.0 or 0.2.0-alpha.*, got {version}')
+          if not version.startswith('0.2.'):
+              raise SystemExit(f'Stadium 2 renderer expects the current 0.2.x line, got {version}')
 
           parts = [p.strip() for p in (root / 'src/parts.txt').read_text().splitlines() if p.strip()]
           required = [

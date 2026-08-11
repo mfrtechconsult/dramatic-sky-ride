@@ -41,13 +41,17 @@ main_19_ground_final_03.lua
 main_19_ground_final_04.lua
 main_20_compat.lua
 main_21_mount_size.lua
+main_21b_gen2_runtime.lua
 main_22_flight_rules.lua
+main_22b_gen2_progression.lua
 main_23_camera_altitude.lua
 main_24_wild_skies.lua
 main_25_discovery_gates.lua
 main_26_surf_third_person.lua
+main_26b_gen1_surf_runtime.lua
 main_14.lua
 main_33_gen2_mounts.lua
+main_33b_gen2_gold_suicune.lua
 main_34_mount_runtime_polish.lua
 main_35_mount_runtime_followup.lua
 main_36_ground_followers_only.lua

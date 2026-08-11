@@ -127,9 +127,20 @@ jobs:
           from pathlib import Path
           root = Path("sky/dramatic_sky_ride/src")
           parts = [line.strip() for line in (root / "parts.txt").read_text().splitlines() if line.strip()]
-          source = "".join((root / part).read_text(encoding="utf-8") for part in parts)
-          Path("/tmp/dramatic_sky_ride_assembled.lua").write_text(source, encoding="utf-8")
-          print(f"assembled {len(parts)} Sky Ride source parts")
+          chunks = []
+          previous_ends_semicolon = False
+          for part in parts:
+              text = (root / part).read_text(encoding="utf-8")
+              if previous_ends_semicolon:
+                  i = 0
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+                  if i < len(text) and text[i] == ';':
+                      text = text[:i] + text[i + 1:]
+              chunks.append(text)
+              previous_ends_semicolon = text.rstrip().endswith(';')
+          Path("/tmp/dramatic_sky_ride_assembled.lua").write_text("".join(chunks), encoding="utf-8")
+          print(f"assembled {len(parts)} Sky Ride source parts with canonical boundaries")
           PY
 
           luajit -b /tmp/dramatic_sky_ride_assembled.lua /tmp/dramatic_sky_ride.luac
@@ -248,11 +259,24 @@ jobs:
           unzip -q "$ARCHIVE" -d /tmp/dsr-release-check
           python -m json.tool /tmp/dsr-release-check/manifest.json > /dev/null
 
-          : > /tmp/dsr-release-sky-ride.lua
-          while IFS= read -r part; do
-            test -n "$part" || continue
-            cat "/tmp/dsr-release-check/src/$part" >> /tmp/dsr-release-sky-ride.lua
-          done < /tmp/dsr-release-check/src/parts.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('/tmp/dsr-release-check/src')
+          parts = [p.strip() for p in (root / 'parts.txt').read_text().splitlines() if p.strip()]
+          chunks = []
+          previous_ends_semicolon = False
+          for part in parts:
+              text = (root / part).read_text(encoding='utf-8')
+              if previous_ends_semicolon:
+                  i = 0
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+                  if i < len(text) and text[i] == ';':
+                      text = text[:i] + text[i + 1:]
+              chunks.append(text)
+              previous_ends_semicolon = text.rstrip().endswith(';')
+          Path('/tmp/dsr-release-sky-ride.lua').write_text(''.join(chunks), encoding='utf-8')
+          PY
 
           luajit -b /tmp/dsr-release-sky-ride.lua /tmp/dsr-release-sky-ride.ljbc
           luajit -b /tmp/dsr-release-check/main.lua /tmp/dsr-release-main.ljbc

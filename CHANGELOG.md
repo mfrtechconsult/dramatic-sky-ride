@@ -2,6 +2,18 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.2
+
+### Wild Skies / Wilds of Kanto compatibility
+
+- Updated compatibility work for Wilds of Kanto 1.14.x and Wild Skies 1.8.x.
+- Wild Skies now remains authoritative for airborne sprite-source ordering when Wilds of Kanto is enabled.
+- Removed DSR's direct filesystem scan for Wild Skies flyer sprites, preventing installed-but-disabled follower mods from influencing sky rendering.
+- DSR explicitly removes its own legacy Wild Skies sprite source before allowing Wild Skies' built-in Wilds `levitates` adapter to resolve airborne species art.
+- Retained a species-specific DSR fallback through Wild Skies' public `registerSpriteSource` API only when Wilds is absent and a compatible enabled follower provider is available.
+- Added `wildSkies.spriteIntegrationMode()` diagnostics to identify the active integration path.
+- Flight movement, Ground Ride, Visible Surf and Stadium 2 mount gameplay are unchanged.
+
 ## 0.2.1
 
 ### Settings UX

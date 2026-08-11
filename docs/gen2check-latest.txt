@@ -6,8 +6,8 @@ MK400 ERROR manifest.json: no Gen 2 game in "games" (and no gen2compat), so a Ge
 MK403 WARN  src/main_01.lua:17: requires src.world.Player, but a Gen 2 game runs src.world.gen2.Player; the require succeeds and hands back a module nothing instantiates
 modkit: unresolved: 1 site: engine module names handed to a call this scan does not follow (main.lua:5)
 modkit: unresolved: 1 site: requires whose result is neither bound to a name nor indexed here, so where the module goes is not followed (src/main_54_settings_ux.lua:423)
-modkit: unresolved: 58 debug upvalue calls whose target function this scan could not tie to an engine module, so the local they reach could not be resolved (src/main_27_wilds_compat.lua:127, src/main_27_wilds_compat.lua:166, src/main_42_stadium2_hardening.lua:30, src/main_42_stadium2_hardening.lua:39 and 54 more)
-modkit: unresolved: 25 calls through a mod helper this scan could not confirm carries an upvalue name through to the debug call, so what they patch is unknown (src/main_27_wilds_compat.lua:143, src/main_27_wilds_compat.lua:145, src/main_27_wilds_compat.lua:170, src/main_27_wilds_compat.lua:185 and 21 more)
+modkit: unresolved: 58 debug upvalue calls whose target function this scan could not tie to an engine module, so the local they reach could not be resolved (src/main_27_wilds_compat.lua:158, src/main_27_wilds_compat.lua:197, src/main_42_stadium2_hardening.lua:30, src/main_42_stadium2_hardening.lua:39 and 54 more)
+modkit: unresolved: 33 calls through a mod helper this scan could not confirm carries an upvalue name through to the debug call, so what they patch is unknown (src/main_27_wilds_compat.lua:144, src/main_27_wilds_compat.lua:149, src/main_27_wilds_compat.lua:174, src/main_27_wilds_compat.lua:176 and 29 more)
 modkit: OptionsMenu.new: synthesises onDone out of opts.onCancel plus the pop Gen 1 does for itself
 FAIL DRAMATIC_SKY_RIDE on gen 2: will not work (1 error, 1 warning)
 
@@ -17,7 +17,7 @@ MK400 ERROR manifest.json: no Gen 2 game in "games" (and no gen2compat), so a Ge
 MK403 WARN  src/main_01.lua:17: requires src.world.Player, but a Gen 2 game runs src.world.gen2.Player; the require succeeds and hands back a module nothing instantiates
 modkit: unresolved: 1 site: engine module names handed to a call this scan does not follow (main.lua:5)
 modkit: unresolved: 1 site: requires whose result is neither bound to a name nor indexed here, so where the module goes is not followed (src/main_54_settings_ux.lua:423)
-modkit: unresolved: 58 debug upvalue calls whose target function this scan could not tie to an engine module, so the local they reach could not be resolved (src/main_27_wilds_compat.lua:127, src/main_27_wilds_compat.lua:166, src/main_42_stadium2_hardening.lua:30, src/main_42_stadium2_hardening.lua:39 and 54 more)
-modkit: unresolved: 25 calls through a mod helper this scan could not confirm carries an upvalue name through to the debug call, so what they patch is unknown (src/main_27_wilds_compat.lua:143, src/main_27_wilds_compat.lua:145, src/main_27_wilds_compat.lua:170, src/main_27_wilds_compat.lua:185 and 21 more)
+modkit: unresolved: 58 debug upvalue calls whose target function this scan could not tie to an engine module, so the local they reach could not be resolved (src/main_27_wilds_compat.lua:158, src/main_27_wilds_compat.lua:197, src/main_42_stadium2_hardening.lua:30, src/main_42_stadium2_hardening.lua:39 and 54 more)
+modkit: unresolved: 33 calls through a mod helper this scan could not confirm carries an upvalue name through to the debug call, so what they patch is unknown (src/main_27_wilds_compat.lua:144, src/main_27_wilds_compat.lua:149, src/main_27_wilds_compat.lua:174, src/main_27_wilds_compat.lua:176 and 29 more)
 modkit: OptionsMenu.new: synthesises onDone out of opts.onCancel plus the pop Gen 1 does for itself
 FAIL DRAMATIC_SKY_RIDE on gen 2: will not work (1 error, 1 warning)

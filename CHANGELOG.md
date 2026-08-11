@@ -2,6 +2,61 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## Unreleased — 0.2.1
+
+### Settings UX
+
+- Added `SETTINGS VIEW` with Simple and Advanced presentations.
+- Simple mode keeps the main Flight/Ground/Surf controls visible while hiding specialist configuration.
+- Contextual Simple rows appear only when their integration is useful, including Wild Skies air encounters, detected Flying Music and Stadium renderer selection.
+- Added `SIZE OVERRIDES` so the per-species size controls no longer dominate the normal settings menu.
+- Hidden advanced settings and per-species sizes retain their saved values.
+- Reordered Advanced settings into a more predictable logical flow.
+- Improved selected labels without renaming persistent option keys: `REALISTIC MOUNT SIZES`, `SHOW FOLLOWERS`, `GALLOP HUD`, `QUEST COLLISIONS`.
+- Added immediate Mod Manager row rebuilding when Settings View or Size Overrides changes.
+
+### Documentation
+
+- Replaced the oversized project front page with a concise quick-start README.
+- Added dedicated installation, settings, compatibility, Stadium 2, troubleshooting and technical documentation pages.
+- Consolidated first-time Stadium import, cache persistence, `READY`, Dramaless/Battle Art roles and reimport guidance.
+- Documented DSR's gameplay-ownership model and capability-based integrations.
+
+### Gameplay
+
+- No intended Flight, Ground Ride, Visible Surf, collision, progression or Stadium mount gameplay changes in this release.
+
+## 0.2.0
+
+### Stadium 2 mounts
+
+- Promoted the native animated Pokemon Stadium 2 mount renderer to the stable branch.
+- Added genuine Stadium 2 skeletal animation, interpolation and compatible effect-frame animation for the active DSR mount.
+- Covered the complete current mount roster: 16 Flight, 17 Ground Ride and 8 Visible Surf roles, plus Suicune's amphibious-water presentation.
+- Added morphology-aware Flight, Ground Ride and Surf presentation while keeping DSR authoritative for movement, collision, altitude, progression, rider state and sizing.
+- Added Crystal 251 `>=0.9.13` Stadium cache support and fixed the `STADIUM 2 ROM = READY` bridge so a healthy cache remains available after restart.
+- Separated voxel renderer, Stadium import host and ROM-selection capabilities for cleaner Battle Art, Dramaless and companion interoperability.
+- Added explicit `STADIUM_OVERWORLD_MODELS` interoperability to prevent duplicate active-mount rendering.
+
+### Existing features retained
+
+- Native renderer-independent 2D Flight.
+- Generation II Flight/Ground/Surf mounts.
+- Wilds of Kanto and maintained PokéPC Followers compatibility.
+- Wild Skies aerial encounters.
+- Optional high-detail PokeMMO mounted sprites.
+- OTF Player Switcher compatibility.
+- Optional FRLG/HGSS/LGPE Flying Music integration.
+- Suicune seamless land/water Ground Ride.
+
+## 0.1.7
+
+- Added optional OTF Player Switcher rider compatibility.
+- Added the high-detail PokeMMO mounted sprite path for Wilds of Kanto and corrected transparent-padding size distortion.
+- Added canonical Generation II height fallbacks for coherent Pokédex-proportional mount sizing.
+- Improved flat 2D Flight presentation over tall buildings while preserving authoritative collision altitude.
+- Added defensive source-loader boundary normalization for late compatibility chunks.
+
 ## 0.1.0-alpha.15
 
 - Added species-aware Ground Ride profiles for speed, acceleration, gallop strength, stamina and rider positioning.
@@ -18,7 +73,6 @@ All notable changes to Dramatic Sky Ride are documented here.
 - Allowed ordinary NPC conversations and sign reading while mounted.
 - Added safe automatic dismount before incompatible native interactions and field actions.
 - Kept the validated alpha.14 flight camera behaviour unchanged.
-- Added a repository backlog for deferred feature work; feature development is paused after this release.
 
 ## 0.1.0-alpha.14
 
@@ -43,7 +97,7 @@ All notable changes to Dramatic Sky Ride are documented here.
 
 ## 0.1.0-alpha.11
 
-- Removed the Pokemon Stadium integration experiment.
+- Removed the early Pokemon Stadium integration experiment.
 - Corrected continuous free flight in `1ST` and `3RD`.
 - Corrected boost application and automatic camera follow.
 - Added Fearow, Golbat, Aerodactyl, Articuno, Zapdos, Moltres, Dragonair and Dragonite.

@@ -124,9 +124,13 @@ jobs:
               if token not in compat:
                   raise SystemExit(f'provider capability token missing: {token}')
           for token in ('STADIUM_OVERWORLD_MODELS', 'BATTLE_ART_VOXEL_FORK',
-                        'providerHasImporterModules', 'importSurface'):
+                        'providerHasImporterModules', 'importSurface',
+                        'cache_ready_bridge_attached', 'uiAttached',
+                        'if not state.installed then tryBootstrap("game.ready") end'):
               if token not in bootstrap:
                   raise SystemExit(f'import-host capability token missing: {token}')
+          if 'if not state.needed then' in bootstrap:
+              raise SystemExit('READY Stadium 2 cache must not bypass bridge/UI attachment')
           for token in ('dramaticSkyRideMountSpecies = nil', 'stadiumModel = false',
                         'chooseUpstreamStadiumRom', 'stadium3DProviderInterop'):
               if token not in interop:

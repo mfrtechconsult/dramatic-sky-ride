@@ -1,7 +1,7 @@
 {
   "id": "DRAMATIC_SKY_RIDE",
   "name": "Dramatic Sky Ride",
-  "version": "0.2.0-alpha.11",
+  "version": "0.2.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -30,6 +30,6 @@
     "filesystem"
   ],
   "affects_link": false,
-  "description": "Experimental 0.2 branch: animated Pokemon Stadium 2 mounts with audited Flight/Ground/Surf motion, render-driven skeletons, persistent Crystal 251 Stadium 2 importer UI after cache creation, capability-based provider/import-host detection and conflict-free STADIUM_OVERWORLD_MODELS interoperability across Dramaless, Battle Art and compatible voxel forks.",
+  "description": "Controllable Flight, Ground Ride and Visible Surf mounts for Gen1Recomp, including optional animated Pokemon Stadium 2 mounts, Generation II support, Wild Skies integration, Battle Art/Dramaless compatibility and renderer-independent native 2D flight.",
   "github": "mfrtechconsult/dramatic-sky-ride"
 }

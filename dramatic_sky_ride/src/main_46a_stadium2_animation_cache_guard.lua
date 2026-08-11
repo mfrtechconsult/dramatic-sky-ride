@@ -28,6 +28,10 @@ local native = mod.exports and mod.exports.stadium3DNative or nil
 local rawCacheStatus = native and native.cacheStatus or nil
 local rawModelInfo = native and native.modelInfo or nil
 local rawClearCache = native and native.clearCache or nil
+local rawInstalled = native and native.installed or nil
+local rawSupportsSpecies = native and native.supportsSpecies or nil
+local rawHasModel = native and native.hasModel or nil
+local rawModelAvailable = native and native.modelAvailable or nil
 
 local function inspect()
   if state.checked then return state end
@@ -65,6 +69,10 @@ local function inspect()
   return state
 end
 
+local function animationUsable()
+  return inspect().stale ~= true
+end
+
 local function invalidateMarker()
   local current = inspect()
   if not current.stale then return false, current.reason end
@@ -100,10 +108,41 @@ if native and type(rawCacheStatus) == "function" then
     end
     return status
   end
+
+  -- A legacy cache should never keep rendering silently just because its DSM
+  -- geometry is structurally valid. Until it is rebuilt, expose the same
+  -- defensive "unavailable" answer as a corrupt/missing native pack so the
+  -- normal Stadium-1/2D fallback hierarchy remains intact.
+  native.installed = function(...)
+    if not animationUsable() then return false end
+    if type(rawInstalled) ~= "function" then return true end
+    local ok, value = pcall(rawInstalled, ...)
+    return ok and value == true
+  end
+  native.supportsSpecies = function(...)
+    if not animationUsable() then return false end
+    if type(rawSupportsSpecies) ~= "function" then return false end
+    local ok, value = pcall(rawSupportsSpecies, ...)
+    return ok and value == true
+  end
+  native.hasModel = function(...)
+    if not animationUsable() then return false end
+    local fn = type(rawHasModel) == "function" and rawHasModel or rawSupportsSpecies
+    if type(fn) ~= "function" then return false end
+    local ok, value = pcall(fn, ...)
+    return ok and value == true
+  end
+  native.modelAvailable = function(...)
+    if not animationUsable() then return false end
+    local fn = type(rawModelAvailable) == "function" and rawModelAvailable or rawSupportsSpecies
+    if type(fn) ~= "function" then return false end
+    local ok, value = pcall(fn, ...)
+    return ok and value == true
+  end
 end
 
 mod.exports.stadium3DAnimationCacheGuard = {
-  api = 1,
+  api = 2,
   inspect = function()
     local s = inspect()
     return {
@@ -115,6 +154,7 @@ mod.exports.stadium3DAnimationCacheGuard = {
       probeSpecies = PROBE_SPECIES,
     }
   end,
+  usable = animationUsable,
   invalidateMarker = invalidateMarker,
 }
 

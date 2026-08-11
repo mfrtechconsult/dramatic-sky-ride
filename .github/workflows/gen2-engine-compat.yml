@@ -71,3 +71,13 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
+
+      - name: Upload checker reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen2check-reports
+          path: |
+            /tmp/dsr-gen2check.txt
+            /tmp/dsr-gen2check-strict.txt
+          if-no-files-found: warn

@@ -79,6 +79,17 @@ require("rawset(player, \"pose\", wrapper)" in interop
         and "restoreRider" in interop,
         "player pose override is not reversible")
 
+# Flight rider and mount must use Randy's exact Gold voxel ground calculation.
+# Gold map:cellTile() is a collision class, so DSR's generic terrain helper can
+# disagree with VoxelScene.groundAt around roofs/cliffs and split rider/mount.
+require("providerGroundHeight" in interop
+        and 'pcall(lib.require, "VoxelScene")' in interop
+        and "scene.groundAt" in interop,
+        "Gen2 voxel flight does not use Randy's authoritative groundAt height")
+require("local providerGround = providerGroundHeight(ow, player)" in interop
+        and "if providerGround ~= nil then return providerGround end" in interop,
+        "provider ground height is not preferred before DSR's legacy fallback")
+
 require("desiredModelHeight" in interop and "mountVisualScale" in interop,
         "Stadium model height does not follow DSR mount sizing")
 require("M.scale(factor, factor, factor)" in interop

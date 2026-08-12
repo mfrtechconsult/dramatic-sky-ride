@@ -36,6 +36,9 @@ jobs:
           git clone --depth 1 \
             https://github.com/randyadr/Gen2-3D-Sprites.git /tmp/gen2-3d-sprites
 
+      - name: Validate Gen2 voxel flight encounter and 2D sizing contract
+        run: python3 tests/gen2_voxel_runtime_compat_contract.py dramatic_sky_ride /tmp/gen2-3d-sprites
+
       - name: Validate maintained PokéPC fork contract and Gen2 art
         shell: bash
         run: |

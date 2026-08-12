@@ -11,6 +11,12 @@ local patchedStates = setmetatable({}, { __mode = "k" })
 local mapImage = nil
 local mapImageTried = false
 local MAP_ASSET = "assets/open_sky_region_map.jpg"
+local MAP_ASSET_PARTS = {
+  "assets/open_sky_map/part01.b64",
+  "assets/open_sky_map/part02.b64",
+  "assets/open_sky_map/part03.b64",
+  "assets/open_sky_map/part04.b64",
+}
 
 local SOURCE_X0, SOURCE_X1 = 6, 154
 local SOURCE_Y0, SOURCE_Y1 = 22, 138
@@ -39,23 +45,28 @@ local function loadImageFromRaw(raw, filename)
   return image
 end
 
+local function readMapBytes()
+  if not (mod.read and love and love.data and love.data.decode) then return nil end
+  local encoded = {}
+  for _, relative in ipairs(MAP_ASSET_PARTS) do
+    local okRead, part = pcall(mod.read, mod, relative)
+    if not okRead or type(part) ~= "string" or part == "" then return nil end
+    encoded[#encoded + 1] = part:gsub("%s", "")
+  end
+  local okDecode, raw = pcall(love.data.decode, "string", "base64",
+    table.concat(encoded))
+  return okDecode and type(raw) == "string" and raw or nil
+end
+
 local function loadMapImage()
   if mapImageTried then return mapImage end
   mapImageTried = true
   if not (love and love.graphics) then return nil end
 
-  -- Prefer the installed file path. Some launcher/filesystem layouts do not
-  -- expose that path directly, so mod:read + FileData is the guaranteed
-  -- package fallback.
-  local direct = mod.path and (tostring(mod.path) .. "/" .. MAP_ASSET) or nil
-  if direct then
-    local okImage, image = pcall(love.graphics.newImage, direct)
-    if okImage and image then mapImage = image end
-  end
-  if not mapImage and mod.read then
-    local okRead, raw = pcall(mod.read, mod, MAP_ASSET)
-    if okRead then mapImage = loadImageFromRaw(raw, "open_sky_region_map.jpg") end
-  end
+  -- The binary artwork is split into small Base64 package fragments. This
+  -- avoids launcher/Git transport corruption while still decoding to one
+  -- normal LÖVE image entirely in memory.
+  mapImage = loadImageFromRaw(readMapBytes(), "open_sky_region_map.jpg")
   if mapImage then pcall(mapImage.setFilter, mapImage, "linear", "linear") end
   return mapImage
 end
@@ -203,6 +214,7 @@ end)
 
 playable.illustratedMap = function() return true end
 playable.mapAsset = function() return MAP_ASSET end
+playable.openSkyMapImage = loadMapImage
 playable.projectMapPoint = project
 playable.drawIllustratedMap = drawIllustratedMap
 

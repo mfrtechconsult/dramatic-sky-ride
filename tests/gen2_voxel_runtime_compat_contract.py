@@ -35,7 +35,7 @@ require("Wild Skies" in compat,
 require("battle.started" not in compat and "pushBattle" not in compat,
         "runtime compatibility must not take ownership of general battle rendering")
 
-# main_60 still owns construction of DSR-sized 2D meshes.
+# main_60 still owns construction of DSR-sized ordinary 16x96 2D meshes.
 require('providerModule(ex, "SpriteBillboards")' in compat
         and 'providerModule(ex, "Voxel3D")' in compat,
         "Randy billboard modules are not patched through its public lib seam")
@@ -43,6 +43,18 @@ require("mountVisualScale" in compat,
         "2D billboard does not use DSR's canonical/user mount size")
 require("local halfW = 8 * scale" in compat and "local y1 = 16 * scale" in compat,
         "2D billboard geometry is not scaled around the feet like main_21")
+
+# Regression: the HGSS/PokeMMO renderer is a native 4x4 high-resolution atlas,
+# not a 16x96 six-frame sheet. The generic main_60 UV builder used to sample
+# only its top-left 16px, producing a partial mount (and occasionally leaving
+# only the rider visible). Native definitions must delegate to main_40's crop/
+# animation-aware billboard chain instead of entering buildScaledCard().
+require("nativePokeMMODef" in compat
+        and "dramaticSkyRideNativePokeMMO == true" in compat,
+        "runtime compatibility does not recognize native PokeMMO mount definitions")
+require("if nativePokeMMODef(def) then" in compat
+        and "return fallback(def, frame)" in compat,
+        "native PokeMMO 4x4 atlases can still enter the generic 16x96 billboard builder")
 
 # Regression: a mount SpriteDef is shared by Gold's flat player bridge and the
 # DSR voxel proxy. Never use that SpriteDef identity as the final ownership

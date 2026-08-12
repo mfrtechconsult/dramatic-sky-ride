@@ -73,7 +73,13 @@ jobs:
       - name: Build and validate install archive
         shell: bash
         run: |
-          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
-          ARCHIVE="/tmp/dramatic_sky_ride-$VERSION.zip"
+          ARCHIVE="$GITHUB_WORKSPACE/dramatic-sky-ride-open-sky.zip"
           zip -qr "$ARCHIVE" dramatic_sky_ride
           unzip -t "$ARCHIVE"
+      - name: Upload install archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-open-sky
+          path: dramatic-sky-ride-open-sky.zip
+          if-no-files-found: error
+          compression-level: 0

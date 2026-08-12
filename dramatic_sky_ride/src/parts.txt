@@ -88,7 +88,6 @@ main_53c_gen2_open_sky_playable.lua
 main_53d_gen2_open_sky_runtime_guard.lua
 main_53e_gen2_open_sky_input_latch.lua
 main_53f_gen2_open_sky_art_map.lua
-main_53g_gen2_open_sky_stadium2_3d.lua
 
 main_54_settings_ux.lua
 main_56_gen2_player_bridge.lua

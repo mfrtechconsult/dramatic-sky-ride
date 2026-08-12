@@ -79,10 +79,21 @@ jobs:
       - name: Build and validate install archive
         shell: bash
         run: |
-          ARCHIVE="$GITHUB_WORKSPACE/dramatic-sky-ride-open-sky.zip"
+          VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          ARCHIVE="/tmp/dramatic_sky_ride-$VERSION.zip"
           zip -qr "$ARCHIVE" dramatic_sky_ride
           unzip -t "$ARCHIVE"
-      - name: Upload install archive
+          cp "$ARCHIVE" "$GITHUB_WORKSPACE/dramatic-sky-ride-open-sky.zip"
+      - name: Upload Gen2 voxel test archive
+        if: github.event_name == 'push' && github.ref_name == 'agent/gen2-stadium2-voxel-interop'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-gen2-voxel-test
+          path: /tmp/dramatic_sky_ride-*.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Open Sky install archive
+        if: github.event_name == 'push' && github.ref_name == 'agent/gen2-open-sky'
         uses: actions/upload-artifact@v4
         with:
           name: dramatic-sky-ride-open-sky

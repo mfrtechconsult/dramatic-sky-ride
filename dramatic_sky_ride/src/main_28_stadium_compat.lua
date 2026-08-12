@@ -2,17 +2,19 @@
 -- -------------------------------------------------------------------------
 -- Stadium 3D renderer compatibility contract.
 --
--- Stable DSR historically spoke only to STADIUM_OVERWORLD_MODELS (Randy's
--- Stadium 1 companion).  The experimental renderer now also accepts DSR's
--- own native Stadium 2 provider, while capability-detecting compatible forks
--- of STADIUM_OVERWORLD_MODELS (including Crystal 251-aware builds) instead of
--- assuming that every companion is limited to National Dex 151.
--- The option key is intentionally kept for save compatibility.
+-- Gen 2 has one important ownership rule: once STADIUM2_OVERWORLD_MODELS is
+-- installed and its Gold voxel compositor is active, it owns the Gen 2 Stadium
+-- renderer for the whole session. Species/model availability must never switch
+-- DSR between external Stadium, the experimental native renderer and 2D during
+-- a mount transition. Missing models are a per-Pokemon fallback handled by the
+-- provider, not a global renderer decision.
 -- -------------------------------------------------------------------------
 
 local FLIGHT_RENDERER_OPTION = "flight_mount_renderer"
 local RENDERER_2D = "2d"
 local RENDERER_STADIUM = "stadium"
+local GEN1_COMPANION_ID = "STADIUM_OVERWORLD_MODELS"
+local GEN2_COMPANION_ID = "STADIUM2_OVERWORLD_MODELS"
 
 OPTION_SCHEMA[#OPTION_SCHEMA + 1] = {
   key = FLIGHT_RENDERER_OPTION,
@@ -27,16 +29,33 @@ OPTION_SCHEMA[#OPTION_SCHEMA + 1] = {
 }
 if mod.options and mod.options.define then mod.options:define(OPTION_SCHEMA) end
 
-local function companionHandle()
+local function safeHandle(id)
   if not mod.find then return nil end
-  local ok, handle = pcall(mod.find, mod, "STADIUM_OVERWORLD_MODELS")
+  local ok, handle = pcall(mod.find, mod, id)
   return ok and handle or nil
+end
+
+local function legacyCompanionHandle()
+  return safeHandle(GEN1_COMPANION_ID)
+end
+
+local function gen2CompanionHandle()
+  return safeHandle(GEN2_COMPANION_ID)
 end
 
 local function nativeProvider()
   local ex = mod.exports
   local api = ex and ex.stadium3DNative
   return type(api) == "table" and api or nil
+end
+
+local function isGen2()
+  local generation = mod.exports and mod.exports.runtimeGeneration or nil
+  if generation and type(generation.isGen2) == "function" then
+    local ok, value = pcall(generation.isGen2, Game)
+    if ok then return value == true end
+  end
+  return false
 end
 
 local function requestedRenderer()
@@ -85,12 +104,6 @@ local function callSupport(api, species, dex)
   return nil
 end
 
--- Randy's public API historically exported the OverworldStadium object rather
--- than a top-level supportsSpecies() helper.  Crystal-aware forks can therefore
--- support Gen II perfectly while looking like an old 151-only provider to DSR.
--- Probe canRenderEntity() with an inert synthetic entity: the call resolves the
--- requested Dex through the companion's own rules and asks its active pack for
--- availability without touching the real player/follower lifecycle.
 local function companionSupport(handle, species, dex)
   local ex = handle and handle.exports or nil
   local direct = callSupport(ex, species, dex)
@@ -109,6 +122,7 @@ local function companionSupport(handle, species, dex)
       pokemonSpecies = species,
       stadiumModel = true,
       pokemonModel = true,
+      dramaticSkyRideMountSpecies = species,
     }
     local ok, supported = pcall(canRender, probe)
     if ok then return supported == true end
@@ -116,27 +130,30 @@ local function companionSupport(handle, species, dex)
   return nil
 end
 
-local function stadiumSupportsSpecies(species)
-  if not species then return true end
-  local dex = speciesDex(species)
+local function gen2VoxelActive(handle)
+  if not handle then return false end
+  local ex = handle.exports or nil
+  if type(ex) ~= "table" then return false end
 
-  -- Prefer DSR's native provider. Stadium 2 packs can cover National Dex
-  -- 1..251 and therefore remove the old Gen-1-only renderer ceiling.
-  local native = nativeProvider()
-  local nativeAnswer = callSupport(native, species, dex)
-  if nativeAnswer ~= nil then return nativeAnswer end
+  local state = ex.voxelPipelineState
+  if type(state) == "table" then
+    if type(state.status) == "function" then
+      local ok, status = pcall(state.status)
+      if ok and type(status) == "table" and status.active ~= nil then
+        return status.active == true
+      end
+    end
+    if state.active ~= nil then return state.active == true end
+  end
 
-  -- STADIUM_OVERWORLD_MODELS is an ecosystem contract, not a guarantee that
-  -- the installed build is Randy's original Stadium 1 implementation. Ask the
-  -- installed companion what its current pack can actually render first.
-  local handle = companionHandle()
-  local companionAnswer = companionSupport(handle, species, dex)
-  if companionAnswer ~= nil then return companionAnswer end
+  if ex.voxelComposeHook ~= nil then return ex.voxelComposeHook == true end
+  return ex.rendererInstalled == true
+end
 
-  -- Compatibility fallback for old Randy builds that expose neither support
-  -- helpers nor canRenderEntity(). Only those legacy builds get the natural
-  -- Stadium 1 range assumption.
-  return handle ~= nil and dex ~= nil and dex >= 1 and dex <= 151
+local function gen2ProviderAvailable()
+  if not isGen2() then return false end
+  local handle = gen2CompanionHandle()
+  return handle ~= nil and gen2VoxelActive(handle)
 end
 
 local function nativeInstalled()
@@ -149,10 +166,51 @@ local function nativeInstalled()
   return true
 end
 
+local function nativeSupports(species)
+  if not nativeInstalled() then return false end
+  if not species then return true end
+  local answer = callSupport(nativeProvider(), species, speciesDex(species))
+  return answer == true
+end
+
+local function legacySupports(species)
+  local handle = legacyCompanionHandle()
+  if not handle then return false end
+  if not species then return true end
+  local dex = speciesDex(species)
+  local answer = companionSupport(handle, species, dex)
+  if answer ~= nil then return answer end
+  return dex ~= nil and dex >= 1 and dex <= 151
+end
+
+local function selectedProvider(species)
+  species = species or activeMountSpecies()
+  -- Stable Gen 2 ownership: model probing is intentionally NOT consulted here.
+  if gen2ProviderAvailable() then return "gen2_stadium2_voxel" end
+  if nativeSupports(species) then return "native_stadium2" end
+  if legacySupports(species) then return "stadium_overworld_models" end
+  return nil
+end
+
+local function stadiumSupportsSpecies(species)
+  local provider = selectedProvider(species)
+  if provider == "gen2_stadium2_voxel" then
+    if not species then return true end
+    local answer = companionSupport(gen2CompanionHandle(), species, speciesDex(species))
+    -- Unknown means the provider is still the renderer owner; it can decide its
+    -- own card/model fallback. Only an explicit false is reported unsupported.
+    return answer ~= false
+  end
+  if provider == "native_stadium2" then return nativeSupports(species) end
+  if provider == "stadium_overworld_models" then return legacySupports(species) end
+  return false
+end
+
 local function stadiumRendererAvailable()
-  if voxelLevel() <= 0 then return false end
-  if not (nativeInstalled() or companionHandle() ~= nil) then return false end
-  return stadiumSupportsSpecies(activeMountSpecies())
+  local provider = selectedProvider(activeMountSpecies())
+  if not provider then return false end
+  if provider == "gen2_stadium2_voxel" then return true end
+  return voxelLevel() > 0
 end
 
 local function effectiveRenderer()
@@ -162,8 +220,6 @@ local function effectiveRenderer()
   return RENDERER_2D
 end
 
--- Canonical flight state stays renderer-independent for Wild Skies and other
--- ecosystem consumers.
 mod.exports.isFlying = function()
   return flight.active == true
 end
@@ -177,10 +233,6 @@ mod.exports.currentAltitude = function()
   return flight.active and (tonumber(flight.altitude) or 0) or 0
 end
 
--- Stadium providers use this as the exact currently-rendered mount identity.
--- It now covers Flight, Ground Ride and Visible Surf while STADIUM 3D is the
--- effective renderer; outside that mode it remains nil so installing a Stadium
--- provider cannot silently take ownership of DSR's normal 2D presentation.
 mod.exports.mountSpecies = function()
   if effectiveRenderer() ~= RENDERER_STADIUM then return nil end
   return activeMountSpecies()
@@ -189,33 +241,42 @@ end
 mod.exports.flightRendering = {
   requested = requestedRenderer,
   effective = effectiveRenderer,
+  provider = function() return selectedProvider(activeMountSpecies()) end,
   uses2D = function() return effectiveRenderer() == RENDERER_2D end,
   usesStadium = function() return effectiveRenderer() == RENDERER_STADIUM end,
+  usesNativeStadium = function()
+    return effectiveRenderer() == RENDERER_STADIUM
+      and selectedProvider(activeMountSpecies()) == "native_stadium2"
+  end,
+  usesGen2VoxelStadium = function()
+    return effectiveRenderer() == RENDERER_STADIUM
+      and selectedProvider(activeMountSpecies()) == "gen2_stadium2_voxel"
+  end,
 }
 
 mod.exports.stadiumCompatibility = {
-  api = 5,
-  installed = function() return nativeInstalled() or companionHandle() ~= nil end,
+  api = 7,
+  installed = function()
+    return nativeInstalled() or gen2CompanionHandle() ~= nil
+      or legacyCompanionHandle() ~= nil
+  end,
   requested = function() return requestedRenderer() == RENDERER_STADIUM end,
   enabled = function() return effectiveRenderer() == RENDERER_STADIUM end,
   supportsSpecies = stadiumSupportsSpecies,
   effectiveRenderer = effectiveRenderer,
   activeMountSpecies = activeMountSpecies,
   native = function() return nativeProvider() ~= nil end,
-  -- Keep the historical name for external consumers while exposing the more
-  -- accurate ecosystem wording for Crystal-aware forks.
-  randy = function() return companionHandle() ~= nil end,
-  companion = function() return companionHandle() ~= nil end,
-  provider = function()
-    if nativeInstalled() and stadiumSupportsSpecies(activeMountSpecies()) then
-      return "native_stadium2"
-    end
-    if companionHandle() and stadiumSupportsSpecies(activeMountSpecies()) then
-      return "stadium_overworld_models"
-    end
-    return nil
+  gen2Voxel = gen2ProviderAvailable,
+  gen2VoxelId = GEN2_COMPANION_ID,
+  legacyCompanionId = GEN1_COMPANION_ID,
+  randy = function()
+    return gen2CompanionHandle() ~= nil or legacyCompanionHandle() ~= nil
   end,
+  companion = function()
+    return gen2CompanionHandle() ~= nil or legacyCompanionHandle() ~= nil
+  end,
+  provider = function() return selectedProvider(activeMountSpecies()) end,
 }
 
-log("Stadium renderer compatibility API loaded (native Stadium 2 + capability-detected overworld companions; 2D default)")
+log("Stadium renderer compatibility API loaded (stable Gen2 voxel ownership -> native fallback -> legacy companion)")
 end)();

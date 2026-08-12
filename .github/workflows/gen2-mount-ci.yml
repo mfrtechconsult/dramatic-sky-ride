@@ -5,6 +5,7 @@ on:
     branches:
       - compat/wilds-of-kanto
       - agent/gen2-stadium2-voxel-interop
+      - agent/gen2-pokemmo-sprite-style
   pull_request:
     branches:
       - main
@@ -38,6 +39,9 @@ jobs:
 
       - name: Validate Gen2 voxel flight encounter and 2D sizing contract
         run: python3 tests/gen2_voxel_runtime_compat_contract.py dramatic_sky_ride /tmp/gen2-3d-sprites
+
+      - name: Validate Gen2 embedded HGSS/PokeMMO mount contract
+        run: python3 tests/gen2_embedded_pokemmo_contract.py dramatic_sky_ride /tmp/gen2-3d-sprites
 
       - name: Validate maintained PokéPC fork contract and Gen2 art
         shell: bash

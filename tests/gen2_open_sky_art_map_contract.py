@@ -28,6 +28,9 @@ require('openSkyMapImage = loadMapImage' in text, 'Open Sky does not expose the 
 require('REGION_RECT' in text and 'project(state.region' in text, 'Gold regional coordinates are not projected onto artwork')
 require('visitedPoints(state.region)' in text, 'landing markers are no longer driven by visited Fly Points')
 require('flight.sprite' in text and 'sprite.draw' in text, 'moving icon is not the active DSR mount sprite')
+require('local fallback = state.draw' in text and 'pcall(fallback, self)' in text, 'illustrated map does not preserve the known-good safe renderer underneath')
+require('G.clear(' not in text, 'illustrated map can erase the safe renderer before artwork succeeds')
+require('lastIllustratedDrawError' in text, 'illustrated draw failures are not exposed for diagnostics')
 if errors:
     print('Gen2 Open Sky illustrated map contract FAILED')
     for e in errors: print(' -',e)

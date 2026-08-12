@@ -90,18 +90,19 @@ end
 
 local function drawBackdrop(G)
   local image = loadMapImage()
-  if not image then
-    G.setColor(0.58, 0.80, 0.96, 1)
-    G.rectangle("fill", 0, 0, 160, 144)
-    return false
-  end
+  if not image then return false, "map image unavailable" end
 
-  G.setColor(1, 1, 1, 1)
-  local iw, ih = image:getDimensions()
-  local scale = math.min(160 / math.max(1, iw), 106 / math.max(1, ih))
-  local dw, dh = iw * scale, ih * scale
-  G.draw(image, (160 - dw) * 0.5, 18 + (106 - dh) * 0.5, 0, scale, scale)
-  return true
+  local ok, err = pcall(function()
+    G.setColor(1, 1, 1, 1)
+    local iw, ih = image:getDimensions()
+    local scale = math.min(160 / math.max(1, iw), 106 / math.max(1, ih))
+    local dw, dh = iw * scale, ih * scale
+    -- Never clear the state here. main_53d has already drawn a known-good
+    -- dependency-light view underneath us; the artwork is an overlay. If this
+    -- draw fails, that safe renderer remains visible instead of a blank frame.
+    G.draw(image, (160 - dw) * 0.5, 18 + (106 - dh) * 0.5, 0, scale, scale)
+  end)
+  return ok, err
 end
 
 local function drawLandingPoints(G, state)
@@ -168,30 +169,68 @@ local function drawHud(G, state)
   G.print(bottom, 4, 128)
 end
 
-local function drawIllustratedMap(state)
+local lastDrawError = nil
+
+local function emergencyDraw(state)
   if not (love and love.graphics) then return end
   local G = love.graphics
-  local pushed = false
-  local ok, err = pcall(function()
-    G.push("all")
-    pushed = true
-    G.clear(0.58, 0.80, 0.96, 1)
-    drawBackdrop(G)
-    drawLandingPoints(G, state)
-    local x, y = project(state.region, state.x, state.y)
-    drawMountMiniature(G, state, x, y)
-    drawHud(G, state)
+  -- Deliberately avoid push/pop/clear/canvas APIs here. This is the final
+  -- fail-safe and only uses primitives already exercised by the base game.
+  pcall(function()
+    G.setColor(0.58, 0.80, 0.96, 1)
+    G.rectangle("fill", 0, 0, 160, 144)
+    G.setColor(0, 0, 0, 0.72)
+    G.rectangle("fill", 0, 0, 160, 18)
+    G.rectangle("fill", 0, 124, 160, 20)
+    G.setColor(1, 1, 1, 1)
+    if type(G.print) == "function" then
+      G.print("OPEN SKY - SAFE MODE", 4, 4)
+      G.print("DESCEND TO RETURN", 4, 128)
+    end
   end)
-  if pushed then pcall(G.pop) end
-  if not ok then
-    pcall(function() log("Open Sky illustrated map draw failed: %s", tostring(err)) end)
+end
+
+local function drawIllustratedMap(state)
+  if not (love and love.graphics) then return false, "graphics unavailable" end
+  local G = love.graphics
+
+  -- Each overlay stage is isolated. Most importantly there is no framebuffer clear and
+  -- no push("all") here: the safe renderer from main_53d stays on screen until
+  -- the illustrated backdrop has actually drawn successfully.
+  local okBackdrop, backdropErr = drawBackdrop(G)
+  if not okBackdrop then return false, backdropErr end
+
+  local okPoints, pointsErr = pcall(drawLandingPoints, G, state)
+  local x, y = project(state.region, state.x, state.y)
+  local okMount, mountErr = pcall(drawMountMiniature, G, state, x, y)
+  local okHud, hudErr = pcall(drawHud, G, state)
+
+  if not (okPoints and okMount and okHud) then
+    return false, tostring(pointsErr or mountErr or hudErr or "overlay error")
   end
+  return true
 end
 
 local function patchState(state)
   if type(state) ~= "table" or patchedStates[state] then return end
   patchedStates[state] = true
-  state.draw = function(self) drawIllustratedMap(self) end
+  local fallback = state.draw
+  state.draw = function(self)
+    local baseOk, baseErr = true, nil
+    if type(fallback) == "function" then
+      baseOk, baseErr = pcall(fallback, self)
+    end
+
+    local artOk, artErr = drawIllustratedMap(self)
+    if artOk then
+      lastDrawError = nil
+      return
+    end
+
+    lastDrawError = tostring(artErr or baseErr or "unknown illustrated draw error")
+    pcall(function() log("Open Sky illustrated map fallback: %s", lastDrawError) end)
+    if not baseOk then emergencyDraw(self) end
+  end
   state._dsrOpenSkyIllustratedMap = true
 end
 
@@ -218,6 +257,7 @@ playable.mapAsset = function() return MAP_ASSET end
 playable.openSkyMapImage = loadMapImage
 playable.projectMapPoint = project
 playable.drawIllustratedMap = drawIllustratedMap
+playable.lastIllustratedDrawError = function() return lastDrawError end
 
 log("Gen2 Open Sky illustrated regional map loaded")
 end)();

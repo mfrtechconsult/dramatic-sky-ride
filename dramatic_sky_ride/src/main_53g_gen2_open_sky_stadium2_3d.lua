@@ -20,10 +20,25 @@ local function clean(v)
   return tostring(v or ""):gsub("\n", " "):gsub("^LANDMARK_", ""):gsub("_", " ")
 end
 
+local function providerVoxelActive(e)
+  if type(e) ~= "table" then return false end
+  local state = e.voxelPipelineState
+  if type(state) == "table" then
+    if type(state.status) == "function" then
+      local ok, status = pcall(state.status)
+      if ok and type(status) == "table" and status.active ~= nil then
+        return status.active == true
+      end
+    end
+    if state.active ~= nil then return state.active == true end
+  end
+  if e.voxelComposeHook ~= nil then return e.voxelComposeHook == true end
+  return e.rendererInstalled == true and e.active ~= false
+end
+
 local function provider()
-  if cache.provider then return cache.provider end
-  if cache.tried then return nil end
-  cache.tried = true
+  if cache.provider and providerVoxelActive(cache.provider) then return cache.provider end
+  cache.provider = false
   if type(mod.find) ~= "function" then return nil end
   local handle
   local ok, value = pcall(function() return mod.find(PROVIDER_ID) end)
@@ -33,7 +48,7 @@ local function provider()
     if ok then handle = value end
   end
   local e = handle and handle.exports
-  if type(e) ~= "table" or e.active == false or e.rendererInstalled == false
+  if type(e) ~= "table" or not providerVoxelActive(e)
       or type(e.lib) ~= "table" or type(e.lib.require) ~= "function" then
     return nil
   end
@@ -170,12 +185,19 @@ local function hud(G,state)
 end
 
 local function draw3d(state,fallback)
-  local r=ensure()
-  if not r or not love or not love.graphics then return fallback and fallback(state) end
-  local G,V,M=love.graphics,r.Voxel3D,r.Mat4
-  local oldCamera,oldTint=V.camera,V.tint
+  -- Draw the proven 2D path first. The 3D renderer is strictly an enhancement:
+  -- if any provider/canvas/shader call fails, the player must still see Open Sky.
+  local fallbackOk, fallbackErr = true, nil
+  if type(fallback) == "function" then
+    fallbackOk, fallbackErr = pcall(fallback, state)
+  end
+
+  local r = ensure()
+  if not r or not love or not love.graphics then return fallbackOk end
+  local G,V,M = love.graphics,r.Voxel3D,r.Mat4
+  local oldCamera,oldTint = V.camera,V.tint
   local canvas,begun
-  local ok,err=pcall(function()
+  local okScene,sceneErr = pcall(function()
     V.camera={eye={80,126,178},focus={80,4,68},fov=math.rad(37),curve=0,up={0,1,0}}
     V.tint={1,1,1}
     begun=V.beginScene(160,144,80,68,160,144,nil,"dsr_open_sky_region")
@@ -185,10 +207,29 @@ local function draw3d(state,fallback)
     canvas=V.endScene(); begun=false
   end)
   if begun then pcall(V.endScene) end
-  V.camera,V.tint=oldCamera,oldTint; pcall(G.setCanvas); pcall(G.setShader); pcall(G.setDepthMode)
-  if not ok or not canvas then cache.error=tostring(err or "no 3D canvas"); cache.ready=false; return fallback and fallback(state) end
-  G.push("all"); G.clear(.58,.80,.96,1); G.setColor(1,1,1,1); G.draw(canvas,0,0)
-  overlays(G,state,V); hud(G,state); G.pop()
+  V.camera,V.tint=oldCamera,oldTint
+  pcall(G.setCanvas); pcall(G.setShader); pcall(G.setDepthMode)
+
+  if not okScene or not canvas then
+    cache.error=tostring(sceneErr or "no 3D canvas")
+    cache.ready=false
+    return fallbackOk
+  end
+
+  -- Do not clear the screen before compositing the 3D canvas. If G.draw itself
+  -- fails, the already-rendered 2D map remains untouched. Keep HUD redraw in a
+  -- separate protected call so even a beacon projection error cannot blank it.
+  local okCanvas, canvasErr = pcall(function()
+    G.setColor(1,1,1,1)
+    G.draw(canvas,0,18,0,1,106/144)
+  end)
+  if not okCanvas then
+    cache.error=tostring(canvasErr or "3D canvas draw failed")
+    return fallbackOk
+  end
+  pcall(overlays,G,state,V)
+  pcall(hud,G,state)
+  return true
 end
 
 local function patch()

@@ -177,7 +177,11 @@ local function tryBattleRemount(self)
     clearBattleResume()
     return
   end
-  if not (Game.stack and Game.stack:top() == self) then return end
+  -- Gen 1 puts the overworld state on top of the stack; Gold represents free
+  -- roam with an empty stack and exposes the live World through the facade.
+  -- The shared capability check handles both shapes and also waits out any
+  -- evolution/dialogue screen before rebuilding the mount.
+  if not mod.exports._mountFreeRoam(Game, self) then return end
   if self.transitioning or self.runner and self.runner:isRunning() then return end
 
   local snap = battleResume

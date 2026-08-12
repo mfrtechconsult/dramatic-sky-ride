@@ -2,6 +2,17 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.6
+
+### Generation II post-battle mount restoration
+
+- Restored Flight, Ground Ride and Visible Surf only after Gold has fully returned to free roam following a battle.
+- Preserved the exact selected Visible Surf mount across battle cleanup, including Gyarados and amphibious Suicune.
+- Prevented Gold's generic native Surf sheet from being cropped and rendered on top of a restored custom water mount.
+- Applied `REMOUNT AFTER BATTLE` consistently to every mount type.
+- Declined automatic remount safely after a loss or when the saved mount is fainted, missing or no longer eligible.
+- Added Generation II battle-remount regression coverage and a full Lua 5.1 runtime compilation check.
+
 ## 0.2.5
 
 ### Generation II transition fix

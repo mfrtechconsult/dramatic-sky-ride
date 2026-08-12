@@ -423,8 +423,53 @@ mod.exports.gen2PlayerBridge = {
     return player and player.sprite or nil,
       player and player.spriteDef or nil
   end,
+  riderPlayerSprite = function(player)
+    local sprite, def
+    if player and visual.player == player then
+      if player.sprite and player.sprite ~= visual.installedSprite then
+        visual.originalSprite = player.sprite
+        visual.originalSpriteDef = player.spriteDef
+      end
+      sprite, def = visual.originalSprite, visual.originalSpriteDef
+    else
+      sprite, def = player and player.sprite or nil,
+        player and player.spriteDef or nil
+    end
+
+    -- Gold's native Surf sheets already contain the generic water vehicle.
+    -- They are correct for traversal/restoration but can never be cropped as
+    -- the human rider placed on Gyarados or Suicune. Build a palette-correct
+    -- temporary SPRITE_CHRIS renderer solely as the rider-sheet source.
+    local id = def and tostring(def.id or "") or ""
+    if isGold() and (id == "SPRITE_SURF" or id == "SPRITE_SURFING_PIKACHU") then
+      local world = liveWorld()
+      local normalDef = world and world.sprites and world.sprites.SPRITE_CHRIS
+      if normalDef then
+        local proxy = {
+          spriteDef = normalDef,
+          sprite = SpriteRenderer.new(normalDef, "dsr_gen2_rider_source"),
+        }
+        if type(world.applySpritePalette) == "function" then
+          pcall(world.applySpritePalette, world, proxy)
+        end
+        return proxy.sprite, normalDef
+      end
+    end
+    return sprite, def
+  end,
   riderSpriteId = function()
-    local sprite = flight and flight.riderSprite or nil
+    local sprite
+    if visual.kind == "flight" then
+      sprite = flight and flight.riderSprite or nil
+    elseif visual.kind == "ground" then
+      sprite = ground and ground.riderSprite or nil
+    elseif visual.kind == "water" then
+      local pose = mod.exports and mod.exports._waterRideRiderPose or nil
+      if type(pose) == "function" then
+        local ok, value = pcall(pose, visual.riderProxy)
+        if ok then sprite = value end
+      end
+    end
     return sprite and sprite.def and sprite.def.id or nil
   end,
 }

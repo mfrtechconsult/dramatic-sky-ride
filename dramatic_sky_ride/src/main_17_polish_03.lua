@@ -58,6 +58,7 @@ for species, cfg in pairs(WATER_ELIGIBLE) do WATER_BY_DEX[cfg.dex] = species end
 local water = { active = false, species = nil, mon = nil, sprite = nil,
   riderSprite = nil, riderEntity = nil, source = nil, lastFailure = nil }
 local lastWaterMountIndex = nil
+local waterBattleResume = nil
 local waterSpriteCache = {}
 
 local function waterSpecies(game, mon)

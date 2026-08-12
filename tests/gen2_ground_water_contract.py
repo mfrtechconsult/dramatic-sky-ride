@@ -8,6 +8,9 @@ parts = (src / "parts.txt").read_text(encoding="utf-8")
 bridge = (src / "main_57_gen2_ground_water_bridge.lua").read_text(encoding="utf-8")
 player_bridge = (src / "main_56_gen2_player_bridge.lua").read_text(encoding="utf-8")
 water = (src / "main_17_polish_04.lua").read_text(encoding="utf-8")
+water_state = (src / "main_17_polish_03.lua").read_text(encoding="utf-8")
+ground = (src / "main_19_ground_final_01.lua").read_text(encoding="utf-8")
+flight = (src / "main_13b.lua").read_text(encoding="utf-8")
 errors = []
 
 
@@ -40,6 +43,17 @@ require("mod.exports._waterRideVisual" in player_bridge
         "Gold's live player cannot render the private Visible Surf mount")
 require("restoreGroundBridge" in bridge and "state.restore" in bridge,
         "the live Gold ledge override is not reversible")
+require("mod.exports._mountFreeRoam(Game, self)" in ground,
+        "Ground remount still expects Gold's empty stack to contain the World")
+require("waterBattleResume = nil" in water_state
+        and 'mod.events:on("battle.started"' in water
+        and "resolveWaterBattleMount" in water
+        and "activateWaterRide(Game, mon)" in water,
+        "Visible Surf does not preserve the selected mount across battle cleanup")
+require("flightBattleResume.ended = true" in flight
+        and "tryFlightBattleResume" in flight
+        and "mod.exports._mountFreeRoam(Game, self)" in flight,
+        "Flight is restored before Gold actually returns to free roam")
 
 if errors:
     print("Gen2 Ground/Water bridge contract FAILED")

@@ -73,27 +73,44 @@ mod.events:on("battle.started", function()
 end)
 
 mod.events:on("battle.ended", function(ev)
+  if not flightBattleResume then return end
+  flightBattleResume.ended = true
+  flightBattleResume.result = ev and ev.result
+end)
+
+mod.exports._tryFlightBattleResume = function(self)
   local snapshot = flightBattleResume
+  if not (snapshot and snapshot.ended) then return end
+  -- battle.ended is raised when the battle engine decides the outcome, before
+  -- Gold closes its battle/evolution screens. Wait for real free roam so the
+  -- engine and companion mods cannot overwrite the restored mount afterwards.
+  if not mod.exports._mountFreeRoam(Game, self) then return end
   flightBattleResume = nil
-  if not snapshot then return end
 
   local mon = resolveFlightBattleMount(snapshot)
   local species = mon and mountSpecies(Game, mon) or nil
-  if (ev and ev.result == "lose") or not healthy(mon) or not species then
+  if snapshot.result == "lose"
+     or optionValue("remount_after_battle", true) ~= true
+     or not healthy(mon) or not species then
     -- A defeated, removed or no-longer-eligible mount cannot stay airborne.
-    forceImmediateLand(Game)
+    if flight.active then forceImmediateLand(Game) end
     return
   end
 
   local sprite = flight.sprite
-  if species ~= flight.species then
+  if not sprite or species ~= flight.species then
     local rebuilt = buildMountSprite(species)
     if not rebuilt then
-      forceImmediateLand(Game)
+      if flight.active then forceImmediateLand(Game) end
       return
     end
     sprite = rebuilt
   end
+
+  -- Another battle integration may have cleared DSR's live state after the
+  -- early battle.ended event. Re-enter through the normal start path once the
+  -- overworld is authoritative again, then restore the saved airborne values.
+  if not flight.active and not startFlight(Game, mon) then return end
 
   -- Restore the exact pre-battle airborne state. This also protects against
   -- another battle callback touching one of these values while the battle UI
@@ -110,13 +127,21 @@ mod.events:on("battle.ended", function(ev)
   flight.boost = snapshot.boost
   flight.boostWasHeld = false
 
-  local ow = Game.overworld
+  local ow = mod.exports._mountWorld(Game)
   if ow then
+    flight.riderSprite = select(1, buildRiderSprite(ow.player))
     purgeFollowersDuringFlight(ow)
     if showRiderEnabled() then ensureRiderEntity(ow) else removeRiderEntity(ow) end
     ensureGroundFxEntity(ow)
   end
-end)
+end
+
+mod.exports._flightBattlePreviousUpdate = OverworldState.update
+function OverworldState:update(dt, ...)
+  local result = mod.exports._flightBattlePreviousUpdate(self, dt, ...)
+  if Game.overworld == self then mod.exports._tryFlightBattleResume(self) end
+  return result
+end
 
 mod.events:on("save.writing", function()
   -- The vanilla SAVE row is blocked above and asks for a manual landing. This

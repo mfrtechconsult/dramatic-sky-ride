@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.6
+
+- Restored Flight, Ground Ride and Visible Surf mounts only after Gold has fully returned to free roam following a battle.
+- Preserved the exact selected Visible Surf mount across battle cleanup, including Gyarados and amphibious Suicune.
+- Prevented Gold's generic native Surf sheet from being cropped and displayed on top of a restored custom water mount.
+- Applied `REMOUNT AFTER BATTLE` consistently to Flight, Ground Ride and Visible Surf.
+- Kept loss, fainted-mount and unavailable-mount outcomes safe by declining an invalid automatic remount.
+- Added Generation II post-battle remount regression coverage and a complete Lua 5.1 runtime compilation check.
+
 ## 0.2.5
 
 - Fixed the Gold Visible Surf mount appearing on the back of the Flight mount when taking off directly from water.

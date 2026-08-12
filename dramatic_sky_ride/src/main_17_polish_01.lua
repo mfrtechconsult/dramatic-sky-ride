@@ -27,7 +27,7 @@ local MOUNT_OPTION_SCHEMA = {
     { key = "reverse_ledge_jumps", type = "toggle", label = "TWO-WAY LEDGES", default = true,
       help = "Allow Ground Ride to jump official low ledges in reverse." },
     { key = "remount_after_battle", type = "toggle", label = "REMOUNT AFTER BATTLE", default = true,
-      help = "Restore Ground Ride after battle when the mount remains usable." },
+      help = "Restore Flight, Ground Ride or Visible Surf after battle when the mount remains usable." },
     { key = "visible_surf_mounts", type = "toggle", label = "VISIBLE SURF MOUNTS", default = true,
       help = "Show compatible Surf Pokemon instead of the generic Surf sprite." },
     { key = "mount_menu", type = "toggle", label = "MOUNTS MENU", default = true,

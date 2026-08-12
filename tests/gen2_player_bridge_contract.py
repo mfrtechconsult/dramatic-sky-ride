@@ -43,6 +43,10 @@ require("_riderSourceSprite" in rider_source
         "rider crops do not resolve Gold's native sprite under a mount")
 require("nativePlayerSprite = function(player)" in bridge,
         "the Gold bridge does not expose its preserved native player sprite")
+require("riderPlayerSprite = function(player)" in bridge
+        and 'id == "SPRITE_SURF"' in bridge
+        and "world.sprites.SPRITE_CHRIS" in bridge,
+        "Gold's generic Surf sheet can still become the rider on a custom mount")
 require("player.sprite ~= visual.installedSprite" in bridge
         and "visual.originalSprite = player.sprite" in bridge,
         "Surf -> Flight can crop Gold's stale native Surf sheet as its rider")

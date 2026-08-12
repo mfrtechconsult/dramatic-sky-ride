@@ -71,11 +71,91 @@ setSurfingState = function(ow, enabled, surfMon)
   return result
 end
 
+local function waterPartyIndex(game, wanted)
+  for i, mon in ipairs(game and game.save and game.save.party or {}) do
+    if mon == wanted then return i end
+  end
+  return nil
+end
+
+local function resolveWaterBattleMount(snapshot)
+  local party = Game.save and Game.save.party or {}
+  for _, mon in ipairs(party) do
+    if mon == snapshot.mon then return mon end
+  end
+  local slotted = snapshot.index and party[snapshot.index]
+  if slotted and waterSpecies(Game, slotted) == snapshot.species then return slotted end
+  if snapshot.nickname and snapshot.nickname ~= "" then
+    for _, mon in ipairs(party) do
+      if mon.nickname == snapshot.nickname
+         and waterSpecies(Game, mon) == snapshot.species then return mon end
+    end
+  end
+  for _, mon in ipairs(party) do
+    if waterSpecies(Game, mon) == snapshot.species then return mon end
+  end
+  return nil
+end
+
+mod.events:on("battle.started", function()
+  if not (water.active and water.mon and water.species) then return end
+  waterBattleResume = {
+    mon = water.mon,
+    index = waterPartyIndex(Game, water.mon),
+    species = water.species,
+    nickname = water.mon.nickname,
+  }
+end)
+
+mod.events:on("battle.ended", function(ev)
+  if not waterBattleResume then return end
+  waterBattleResume.ended = true
+  waterBattleResume.result = ev and ev.result
+end)
+
+local function tryWaterBattleResume(self)
+  local snapshot = waterBattleResume
+  if not (snapshot and snapshot.ended) then return false end
+  if not mod.exports._mountFreeRoam(Game, self) then return false end
+  waterBattleResume = nil
+
+  if snapshot.result == "lose"
+     or mountOption("remount_after_battle", true) ~= true then
+    clearWaterRide(self)
+    return false
+  end
+
+  local mon = resolveWaterBattleMount(snapshot)
+  if not (healthy(mon) and waterSpecies(Game, mon) == snapshot.species
+          and monKnowsMove(mon, "SURF")) then
+    clearWaterRide(self)
+    return false
+  end
+
+  -- Gold keeps traversal in World.playerState. Mirror it before the later
+  -- Gen2 bridge tick so Visible Surf can be restored on this first free frame.
+  local nativeState = self.playerState
+  if nativeState == "surf" or nativeState == "surf_pika" then
+    self.player.surfing = true
+  end
+  if not self.player.surfing then
+    clearWaterRide(self)
+    return false
+  end
+
+  lastWaterMountIndex = waterPartyIndex(Game, mon) or snapshot.index
+  clearWaterRide(self)
+  return activateWaterRide(Game, mon)
+end
+
 local waterUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = waterUpdate(self, dt, ...)
   if Game.overworld == self and self.player then
-    if amphibiousGroundOwnsWaterVisual() then
+    local resumed = tryWaterBattleResume(self)
+    if resumed then
+      ensureWaterRider(self)
+    elseif amphibiousGroundOwnsWaterVisual() then
       if water.active then clearWaterRide(self) end
     elseif self.player.surfing and mountOption("visible_surf_mounts", true) then
       if not water.active then activateWaterRide(Game) end

@@ -122,6 +122,10 @@ end
 -- Resolve the native renderer kept underneath the mount when one is exposed.
 mod.exports._riderSourceSprite = function(player)
   local bridge = mod.exports and mod.exports.gen2PlayerBridge or nil
+  if bridge and type(bridge.riderPlayerSprite) == "function" then
+    local ok, sprite = pcall(bridge.riderPlayerSprite, player)
+    if ok and sprite then return sprite end
+  end
   if bridge and type(bridge.nativePlayerSprite) == "function" then
     local ok, sprite = pcall(bridge.nativePlayerSprite, player)
     if ok and sprite then return sprite end

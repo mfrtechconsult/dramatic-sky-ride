@@ -14,6 +14,13 @@
 --    Rebuild only the ACTIVE DSR mount card at DSR's exact visual scale while
 --    MOUNT RENDERER is 2D. Stadium geometry and every non-DSR sprite are left
 --    completely unchanged.
+--
+-- Native HGSS/PokeMMO DSR definitions are an exception to #2: they point at a
+-- 4x4 high-resolution atlas, not a generated 16x96 walker sheet. main_40 owns
+-- their crop, UV selection, animation and apparent-size correction. Feeding
+-- one of those definitions through the generic 16x16 card builder samples only
+-- the atlas corner (the partial Pokemon seen on Ground Ride), so this layer
+-- must delegate native PokeMMO cards to the already-installed main_40 chain.
 -- -------------------------------------------------------------------------
 
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
@@ -81,6 +88,10 @@ local function mountScale(species)
     if value and value > 0 then return value end
   end
   return 1
+end
+
+local function nativePokeMMODef(def)
+  return type(def) == "table" and def.dramaticSkyRideNativePokeMMO == true
 end
 
 -- -------------------------------------------------------------------------
@@ -202,6 +213,15 @@ local function install2DBillboardSizeHook()
 
   local function scaled(def, frame, fallback)
     if not (isGold() and renderer2D()) then return fallback(def, frame) end
+
+    -- main_40/main_38 already own the native HGSS/PokeMMO 4x4 atlas contract.
+    -- Never reinterpret it as Randy's ordinary 16x96 six-frame sheet here.
+    -- This delegation also keeps the opaque-union crop and native animation
+    -- selected by main_40 instead of showing only the atlas' top-left 16px.
+    if nativePokeMMODef(def) then
+      return fallback(def, frame)
+    end
+
     local species, activeDef = activeMountDef()
     -- Identity check is intentional. A wild/follower of the same species may
     -- share an image path, but only DSR's active mount definition is resized.
@@ -280,7 +300,7 @@ mod.exports.gen2VoxelRuntimeCompat = {
   status = function()
     return {
       battleGateInstalled = state.battleGateInstalled,
-      billboardSizeHookInstalled = state.billboardHookInstalled,
+      billboardHookInstalled = state.billboardHookInstalled,
       blockedGroundBattles = state.blockedGroundBattles,
       scaled2DMeshes = state.scaled2DMeshes,
       current2DScale = state.last2DScale,
@@ -290,5 +310,5 @@ mod.exports.gen2VoxelRuntimeCompat = {
 }
 
 installAll()
-log("Gen2 voxel runtime compat loaded (Flight ignores Randy ground Wilds; 2D mount sizes follow DSR)")
+log("Gen2 voxel runtime compat loaded (Flight ignores Randy ground Wilds; 2D mount sizes follow DSR; native PokeMMO cards delegate to main_40)")
 end)();

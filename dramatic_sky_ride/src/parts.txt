@@ -89,3 +89,4 @@ main_56_gen2_player_bridge.lua
 main_57_gen2_ground_water_bridge.lua
 main_58_gen2_voxel_interop.lua
 main_55_gen2_test_gift.lua
+main_59_gen2_voxel_visual_fixes.lua

@@ -15,6 +15,7 @@
     "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
     "STADIUM_OVERWORLD_MODELS",
+    "STADIUM2_OVERWORLD_MODELS",
     "CRYSTAL_251@>=0.9.13 <1.0.0",
     "wild_skies@>=1.4.1 <2.0.0",
     "otf-player-switcher",

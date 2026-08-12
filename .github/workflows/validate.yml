@@ -59,7 +59,7 @@ jobs:
             cat /tmp/lua-syntax-latest.txt 2>/dev/null || true
           } > docs/lua-syntax-latest.txt
           git config user.name 'github-actions[bot]'
-          git config user.email '4189826+github-actions[bot]@users.noreply.github.com'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/lua-syntax-latest.txt
           if ! git diff --cached --quiet; then
             git commit -m 'Update Lua syntax report [skip ci]'

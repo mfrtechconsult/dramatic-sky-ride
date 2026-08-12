@@ -54,6 +54,7 @@ local providerHooks = {
   prepareRaw = nil,
   prepareWrapper = nil,
   mat4 = nil,
+  voxelScene = nil,
 }
 
 local function isGold()
@@ -128,10 +129,40 @@ local function mountState()
   return nil
 end
 
+local function providerGroundHeight(ow, player)
+  if not (ow and ow.map and player) then return nil end
+  local _, ex = provider()
+  local lib = ex and ex.lib or nil
+  if not (lib and type(lib.require) == "function") then return nil end
+
+  local scene = providerHooks.voxelScene
+  if not scene then
+    local okScene, value = pcall(lib.require, "VoxelScene")
+    if okScene and type(value) == "table" then
+      scene = value
+      providerHooks.voxelScene = value
+    end
+  end
+  if not (scene and type(scene.groundAt) == "function") then return nil end
+
+  -- Randy's Gen2 groundAt() intentionally uses the full-resolution Gold tile
+  -- geometry. DSR's older terrainGroundHeight() indexes map:cellTile(), which
+  -- is a collision class in Gold and can disagree around roofs/cliffs. Using
+  -- Randy's exact answer keeps Player billboard lift and Stadium mount altitude
+  -- on one common vertical reference instead of separating over raised art.
+  local ok, value = pcall(scene.groundAt, ow.map, player.cellX, player.cellY)
+  value = ok and tonumber(value) or nil
+  if value == nil then return nil end
+  return math.max(0, value)
+end
+
 local function floorHeight(ow, player)
   if not (ow and ow.map and player) then return 0 end
+  local providerGround = providerGroundHeight(ow, player)
+  if providerGround ~= nil then return providerGround end
   local ok, value = pcall(terrainGroundHeight, ow.map, player.cellX, player.cellY)
-  return ok and tonumber(value) or 0
+  value = ok and tonumber(value) or nil
+  return math.max(0, value or 0)
 end
 
 local function flightLift(ow, player)

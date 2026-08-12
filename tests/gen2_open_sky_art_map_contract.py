@@ -7,6 +7,8 @@ src = root / 'src'
 parts = [line.strip() for line in (src / 'parts.txt').read_text(encoding='utf-8').splitlines() if line.strip()]
 name = 'main_53f_gen2_open_sky_art_map.lua'
 text = (src / name).read_text(encoding='utf-8')
+# Strip Lua line comments before assertions that target executable calls.
+code_only = '\n'.join(line.split('--', 1)[0] for line in text.splitlines())
 asset_parts = [root/'assets'/'open_sky_map'/name for name in ('part01.b64','part02.b64','part03a.b64','part03b.b64','part04.b64')]
 errors=[]
 def require(c,m):
@@ -34,7 +36,7 @@ require('state.drawWidescreen = function' in text and 'drawWidescreen(self, winW
 require('state.wantsFillScale = function() return true end' in text, 'Open Sky widescreen state does not request Gold full-page scaling')
 require('emergencyWidescreen' in text, 'Open Sky has no primitive-only emergency widescreen renderer')
 require('local fallback = state.draw' in text and 'pcall(fallback, self)' in text, 'nested-state draw does not preserve the safe renderer fallback')
-require('G.clear(' not in text, 'Open Sky 2D should not erase the active Game2 presentation canvas')
+require('G.clear(' not in code_only, 'Open Sky 2D should not erase the active Game2 presentation canvas')
 require('lastIllustratedDrawError' in text, 'illustrated draw failures are not exposed for diagnostics')
 require('disabled = true' in text and 'Open Sky 3D temporarily disabled' in text, 'Open Sky 3D diagnostic state is not explicitly disabled')
 if errors:

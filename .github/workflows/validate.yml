@@ -29,12 +29,16 @@ jobs:
         run: python3 tests/gen2_open_sky_playable_contract.py dramatic_sky_ride
       - name: Validate illustrated Gen2 Open Sky map
         run: python3 tests/gen2_open_sky_art_map_contract.py dramatic_sky_ride
+      - name: Validate Gen2-3D-Sprites Open Sky bridge
+        run: python3 tests/gen2_open_sky_stadium2_3d_contract.py dramatic_sky_ride
       - name: Validate Gen1 Surf transition syntax
         run: luac -p dramatic_sky_ride/src/main_26b_gen1_surf_runtime.lua
       - name: Validate Gen2 runtime bridge syntax
         run: luac -p dramatic_sky_ride/src/main_21b_gen2_runtime.lua
       - name: Validate Gen2 progression syntax
         run: luac -p dramatic_sky_ride/src/main_22b_gen2_progression.lua
+      - name: Validate Gen2 Open Sky 3D syntax
+        run: luac -p dramatic_sky_ride/src/main_53g_gen2_open_sky_stadium2_3d.lua
       - name: Rebuild and validate Lua syntax
         id: lua_syntax
         shell: bash

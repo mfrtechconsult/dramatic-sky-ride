@@ -2,26 +2,21 @@
 -- -------------------------------------------------------------------------
 -- Gen 2 Open Sky illustrated regional map.
 --
--- The supplied artwork is treated ONLY as a geographic backdrop. Its printed
--- labels/numbers are never used for game logic. Real Gold landmark/fly-point
--- data remains authoritative and is projected onto the corresponding Johto
--- and Kanto halves of the picture.
+-- The supplied artwork is only a geographic backdrop. Its visual landmarks
+-- are never trusted as game data: real Gold/Silver landmark and visited Fly
+-- Point records remain authoritative and are projected onto the picture.
 -- -------------------------------------------------------------------------
 local playable = mod.exports.openSkyPlayable or {}
 local patchedStates = setmetatable({}, { __mode = "k" })
 local mapImage = nil
 local mapImageTried = false
-local MAP_ASSET = "assets/open_sky_region_map.jpg.b64"
+local MAP_ASSET = "assets/open_sky_region_map.jpg"
 
--- Gold's town-map coordinates are full-screen coordinates for EACH region.
--- Project each 160x144 regional coordinate space onto the matching half of the
--- combined artwork. These bounds follow the geography in the supplied image,
--- not any text/number printed on it.
 local SOURCE_X0, SOURCE_X1 = 6, 154
 local SOURCE_Y0, SOURCE_Y1 = 22, 138
 local REGION_RECT = {
-  johto = { x0 = 7,  x1 = 83,  y0 = 26, y1 = 105 },
-  kanto = { x0 = 95, x1 = 151, y0 = 24, y1 = 105 },
+  johto = { x0 = 5,  x1 = 85,  y0 = 22, y1 = 106 },
+  kanto = { x0 = 90, x1 = 154, y0 = 22, y1 = 106 },
 }
 
 local function clampMap(v, lo, hi)
@@ -33,24 +28,35 @@ local function cleanMapName(value)
     :gsub("^LANDMARK_", ""):gsub("_", " ")
 end
 
-local function loadMapImage()
-  if mapImageTried then return mapImage end
-  mapImageTried = true
-  if not (love and love.data and love.filesystem and love.graphics) then return nil end
-
-  local encoded = mod.read and mod:read(MAP_ASSET) or nil
-  if type(encoded) ~= "string" or encoded == "" then return nil end
-  encoded = encoded:gsub("%s", "")
-
-  local okDecode, decoded = pcall(love.data.decode, "string", "base64", encoded)
-  if not okDecode or type(decoded) ~= "string" then return nil end
-  local okData, fileData = pcall(love.filesystem.newFileData,
-    decoded, "open_sky_region_map.jpg")
+local function loadImageFromRaw(raw, filename)
+  if type(raw) ~= "string" or raw == "" then return nil end
+  if not (love and love.graphics and love.filesystem
+      and love.filesystem.newFileData) then return nil end
+  local okData, fileData = pcall(love.filesystem.newFileData, raw, filename)
   if not okData or not fileData then return nil end
   local okImage, image = pcall(love.graphics.newImage, fileData)
   if not okImage or not image then return nil end
-  pcall(image.setFilter, image, "linear", "linear")
-  mapImage = image
+  return image
+end
+
+local function loadMapImage()
+  if mapImageTried then return mapImage end
+  mapImageTried = true
+  if not (love and love.graphics) then return nil end
+
+  -- Prefer the installed file path. Some launcher/filesystem layouts do not
+  -- expose that path directly, so mod:read + FileData is the guaranteed
+  -- package fallback.
+  local direct = mod.path and (tostring(mod.path) .. "/" .. MAP_ASSET) or nil
+  if direct then
+    local okImage, image = pcall(love.graphics.newImage, direct)
+    if okImage and image then mapImage = image end
+  end
+  if not mapImage and mod.read then
+    local okRead, raw = pcall(mod.read, mod, MAP_ASSET)
+    if okRead then mapImage = loadImageFromRaw(raw, "open_sky_region_map.jpg") end
+  end
+  if mapImage then pcall(mapImage.setFilter, mapImage, "linear", "linear") end
   return mapImage
 end
 
@@ -80,10 +86,9 @@ local function drawBackdrop(G)
 
   G.setColor(1, 1, 1, 1)
   local iw, ih = image:getDimensions()
-  local scale = 160 / math.max(1, iw)
-  -- Keep the full supplied composition visible. The 16:9 map occupies the
-  -- centre of Gold's 160x144 panel, leaving room for the Open Sky HUD.
-  G.draw(image, 0, 18, 0, scale, scale)
+  local scale = math.min(160 / math.max(1, iw), 106 / math.max(1, ih))
+  local dw, dh = iw * scale, ih * scale
+  G.draw(image, (160 - dw) * 0.5, 18 + (106 - dh) * 0.5, 0, scale, scale)
   return true
 end
 
@@ -112,26 +117,19 @@ local function drawMountMiniature(G, state, x, y)
   if sprite and type(sprite.draw) == "function" then
     G.push()
     G.translate(math.floor(x), math.floor(y))
-    -- Open Sky uses a screen-space miniature, independent of the mount's
-    -- overworld/Pokedex size multiplier. This keeps even very large species
-    -- readable without covering half the regional map.
     G.scale(0.42, 0.42)
     G.setColor(1, 1, 1, 1)
     local phase = (tonumber(state.anim) or 0) >= 16 and 1 or 0
-    local ok = pcall(sprite.draw, sprite, -8, -8, 0, 0,
+    drawn = pcall(sprite.draw, sprite, -8, -8, 0, 0,
       state.facing or "right", phase, false)
     G.pop()
-    drawn = ok
   end
 
   if not drawn then
-    -- Last-resort marker only. Normal DSR 2D mounts use the actual selected
-    -- mount sprite above.
     G.setColor(1, 1, 1, 1)
     G.polygon("fill", x, y - 4, x + 4, y + 4,
       x, y + 2, x - 4, y + 4)
   end
-
   G.setColor(1, 1, 1, 0.95)
   G.circle("line", x, y, 5.5)
 end
@@ -141,8 +139,8 @@ local function drawHud(G, state)
   G.rectangle("fill", 0, 0, 160, 18)
   G.rectangle("fill", 0, 124, 160, 20)
   G.setColor(1, 1, 1, 1)
-
   if type(G.print) ~= "function" then return end
+
   local region = state.region == "kanto" and "KANTO" or "JOHTO"
   local altitude = math.floor((tonumber(state.virtualAltitude) or 88) + 0.5)
   G.print("OPEN SKY - " .. region .. "  ALT " .. tostring(altitude), 4, 4)
@@ -151,14 +149,9 @@ local function drawHud(G, state)
   if not bottom then
     local name = state.nearest and state.nearest.row
       and (state.nearest.row.name or state.nearest.row.landmark)
-    if name then
-      bottom = "A DESCEND - " .. cleanMapName(name)
-    else
-      bottom = "NO VISITED LANDING POINT"
-    end
+    bottom = name and ("A DESCEND - " .. cleanMapName(name))
+      or "NO VISITED LANDING POINT"
   end
-  -- The source artwork's annotations are ignored; this label comes from the
-  -- real Fly Point/landmark record in Gold.
   if #bottom > 28 then bottom = bottom:sub(1, 28) end
   G.print(bottom, 4, 128)
 end
@@ -168,8 +161,9 @@ local function drawIllustratedMap(state)
   local G = love.graphics
   local pushed = false
   local ok, err = pcall(function()
-    G.push()
+    G.push("all")
     pushed = true
+    G.clear(0.58, 0.80, 0.96, 1)
     drawBackdrop(G)
     drawLandingPoints(G, state)
     local x, y = project(state.region, state.x, state.y)
@@ -178,18 +172,14 @@ local function drawIllustratedMap(state)
   end)
   if pushed then pcall(G.pop) end
   if not ok then
-    pcall(function()
-      log("Open Sky illustrated map draw failed: %s", tostring(err))
-    end)
+    pcall(function() log("Open Sky illustrated map draw failed: %s", tostring(err)) end)
   end
 end
 
 local function patchState(state)
   if type(state) ~= "table" or patchedStates[state] then return end
   patchedStates[state] = true
-  state.draw = function(self)
-    drawIllustratedMap(self)
-  end
+  state.draw = function(self) drawIllustratedMap(self) end
   state._dsrOpenSkyIllustratedMap = true
 end
 
@@ -199,9 +189,6 @@ local function patchCurrentState()
   if ok and state then patchState(state) end
 end
 
--- This loads after the runtime guard and input latch. On the transition frame
--- those layers first make the state safe, then this final wrapper replaces only
--- its presentation. Navigation, altitude hysteresis and landing remain theirs.
 local previousIllustratedOpenSkyUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = previousIllustratedOpenSkyUpdate(self, dt, ...)
@@ -217,6 +204,7 @@ end)
 playable.illustratedMap = function() return true end
 playable.mapAsset = function() return MAP_ASSET end
 playable.projectMapPoint = project
+playable.drawIllustratedMap = drawIllustratedMap
 
 log("Gen2 Open Sky illustrated regional map loaded")
 end)();

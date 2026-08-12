@@ -106,7 +106,7 @@ jobs:
               if token not in followup:
                   raise SystemExit(f'Stadium motion audit token missing: {token}')
 
-          for token in ('canRenderEntity', 'companionSupport', 'api = 5'):
+          for token in ('canRenderEntity', 'companionSupport', 'api = 7'):
               if token not in compat:
                   raise SystemExit(f'provider capability token missing: {token}')
           for token in ('STADIUM_OVERWORLD_MODELS', 'BATTLE_ART_VOXEL_FORK',

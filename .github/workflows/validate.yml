@@ -73,11 +73,11 @@ jobs:
           ARCHIVE="/tmp/dramatic_sky_ride-$VERSION.zip"
           zip -qr "$ARCHIVE" dramatic_sky_ride
           unzip -t "$ARCHIVE"
-      - name: Upload Gen2 voxel test archive
-        if: github.event_name == 'push' && github.ref_name == 'agent/gen2-stadium2-voxel-interop'
+      - name: Upload Gen2 PokeMMO test archive
+        if: github.event_name == 'push' && github.ref_name == 'agent/gen2-pokemmo-sprite-style'
         uses: actions/upload-artifact@v4
         with:
-          name: dramatic-sky-ride-gen2-voxel-test
+          name: dramatic-sky-ride-gen2-pokemmo-test
           path: /tmp/dramatic_sky_ride-*.zip
           if-no-files-found: error
           retention-days: 7

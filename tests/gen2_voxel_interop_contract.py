@@ -48,14 +48,48 @@ require("_stadiumSkyRideMount = true" in interop
 require("proxy.stadiumModel = stadium and true or false" in interop
         and "proxy.pokemonModel = stadium and true or false" in interop,
         "2D renderer opt-out is not propagated to the voxel proxy")
+
+# The provider's Wilds/native party follower must never become a second copy of
+# the Pokemon currently owned by DSR as the visual mount.
+require("isCurrentMountFollower" in interop
+        and "filteredMountFollowers" in interop
+        and "suppressedFollowers" in interop,
+        "active mount follower deduplication is missing")
+require("entity.stadiumModel = false" in interop
+        and "entity.pokemonModel = false" in interop,
+        "suppressed native followers can still be rescued as Stadium models")
 require("bridge.extraEntitiesProvider" in interop
         and "previousExtraProvider" in interop
         and "pcall(previous, world)" in interop,
         "existing Wilds/voxel extra-entity provider is not preserved")
 require("appendUnique" in interop,
         "composed extra entities are not deduplicated")
-require("nativePlayerSprite" in interop,
-        "Gold rider is not restored as a separate actor in voxel mode")
+
+# Voxel composition must use the same cropped rider as normal DSR instead of a
+# complete standing Gold/red_3d_player actor.
+require('id = "DSR_GEN2_VOXEL_RIDER"' in interop
+        and "mountedRiderPose" in interop
+        and "groundRiderPose" in interop,
+        "DSR cropped rider pose is not reused in Gen2 voxel mode")
+require("_dramaticSkyRideVoxelRider" in interop
+        and "safeDrawPlayerSkin" in interop,
+        "full red_3d_player skin is not suppressed while DSR owns the rider")
+require("rawset(player, \"pose\", wrapper)" in interop
+        and "restoreRiderPose" in interop,
+        "player pose override is not reversible")
+
+# Stadium 2 mount models must follow DSR's own Pokedex/user size contract rather
+# than Randy's compressed generic overworld model scale.
+require("desiredModelWorldHeight" in interop
+        and "mountVisualScale" in interop
+        and "return 16 * scale" in interop,
+        "Stadium model height does not follow DSR mount sizing")
+require("Mat4.scale(factor, factor, factor)" in interop
+        and "p.stadiumTargetHeight = wanted" in interop,
+        "Stadium model matrix is not rescaled to DSR target height")
+require("modelScaleFrames" in interop and "modelTargetHeight" in interop,
+        "Stadium size diagnostics are missing")
+
 require("flightLift" in interop and "_stadiumSkyRideAltitude" in interop,
         "Flight altitude is not propagated to the voxel mount")
 require("gen2VoxelInterop" in interop

@@ -32,7 +32,8 @@ require('input:isDown("right")' in text and 'input:isDown("left")' in text
         "Open Sky does not provide free directional regional navigation")
 require('altitudeInputDirection' in text and 'OPEN_SKY_EXIT_ALTITUDE' in text,
         "DSR altitude controls cannot descend back out of Open Sky")
-require('FieldMoves.flyPoints' in text,
+require(('fieldMoves.flyPoints' in text or 'FieldMoves.flyPoints' in text)
+        and 'pcall(fieldMoves.flyPoints' in text,
         "Open Sky landing points are not derived from Gold's visited Fly Points")
 require('OPEN_SKY_LAND_RADIUS' in text and 'nearestVisited' in text,
         "Open Sky has no proximity-based landing selection")

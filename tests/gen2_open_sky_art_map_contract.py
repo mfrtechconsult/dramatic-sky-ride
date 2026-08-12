@@ -13,6 +13,7 @@ def require(c,m):
     if not c: errors.append(m)
 require(name in parts, 'illustrated Open Sky map layer is not loaded')
 require('main_53e_gen2_open_sky_input_latch.lua' in parts and parts.index('main_53e_gen2_open_sky_input_latch.lua') < parts.index(name), 'illustrated map must load after runtime/input safety layers')
+require('main_53g_gen2_open_sky_stadium2_3d.lua' not in parts, 'Open Sky 3D must stay disabled while the 2D renderer is stabilized')
 require(all(p.exists() for p in asset_parts), 'Open Sky regional artwork fragments are missing')
 if all(p.exists() for p in asset_parts):
     try:
@@ -24,13 +25,18 @@ if all(p.exists() for p in asset_parts):
     except Exception as exc:
         errors.append(f'Open Sky artwork fragments cannot be decoded: {exc}')
 require('MAP_ASSET_PARTS' in text and 'love.data.decode' in text, 'Open Sky does not reconstruct the packaged artwork fragments')
-require('openSkyMapImage = loadMapImage' in text, 'Open Sky does not expose the decoded image to the 3D bridge')
+require('openSkyMapImage = loadMapImage' in text, 'Open Sky does not expose its decoded image for diagnostics/future rendering')
 require('REGION_RECT' in text and 'project(state.region' in text, 'Gold regional coordinates are not projected onto artwork')
 require('visitedPoints(state.region)' in text, 'landing markers are no longer driven by visited Fly Points')
 require('flight.sprite' in text and 'sprite.draw' in text, 'moving icon is not the active DSR mount sprite')
-require('local fallback = state.draw' in text and 'pcall(fallback, self)' in text, 'illustrated map does not preserve the known-good safe renderer underneath')
-require('G.clear(' not in text, 'illustrated map can erase the safe renderer before artwork succeeds')
+require('state.drawsWidescreen = function() return true end' in text, 'Open Sky is not opting into Gold native widescreen rendering')
+require('state.drawWidescreen = function' in text and 'drawWidescreen(self, winW, winH)' in text, 'Open Sky does not provide the widescreen renderer Game2 calls directly')
+require('state.wantsFillScale = function() return true end' in text, 'Open Sky widescreen state does not request Gold full-page scaling')
+require('emergencyWidescreen' in text, 'Open Sky has no primitive-only emergency widescreen renderer')
+require('local fallback = state.draw' in text and 'pcall(fallback, self)' in text, 'nested-state draw does not preserve the safe renderer fallback')
+require('G.clear(' not in text, 'Open Sky 2D should not erase the active Game2 presentation canvas')
 require('lastIllustratedDrawError' in text, 'illustrated draw failures are not exposed for diagnostics')
+require('disabled = true' in text and 'Open Sky 3D temporarily disabled' in text, 'Open Sky 3D diagnostic state is not explicitly disabled')
 if errors:
     print('Gen2 Open Sky illustrated map contract FAILED')
     for e in errors: print(' -',e)

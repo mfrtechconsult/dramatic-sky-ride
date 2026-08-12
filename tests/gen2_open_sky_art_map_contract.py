@@ -18,7 +18,9 @@ if asset.exists():
     raw=asset.read_bytes()
     require(raw.startswith(b'\xff\xd8\xff'), 'Open Sky artwork is not a JPEG')
     require(raw.endswith(b'\xff\xd9'), 'Open Sky artwork JPEG is truncated')
-    require(len(raw)>20000, 'Open Sky artwork unexpectedly small')
+    # Native Open Sky renders at 160 px wide; a 320 px optimized source is
+    # intentionally compact while retaining 2x source resolution.
+    require(len(raw)>8000, 'Open Sky artwork unexpectedly small')
 require('MAP_ASSET = "assets/open_sky_region_map.jpg"' in text, 'Open Sky does not reference the packaged JPG')
 require('mod.read' in text and 'newFileData' in text, 'Open Sky artwork lacks package-read fallback')
 require('REGION_RECT' in text and 'project(state.region' in text, 'Gold regional coordinates are not projected onto artwork')

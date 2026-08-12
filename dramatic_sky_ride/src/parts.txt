@@ -92,3 +92,4 @@ main_55_gen2_test_gift.lua
 main_59_gen2_voxel_visual_fixes.lua
 main_61_gen2_voxel_single_owner.lua
 main_62_gen2_voxel_draw_guard.lua
+main_63_gen2_voxel_battle_handoff.lua

@@ -2,15 +2,12 @@
 -- -------------------------------------------------------------------------
 -- Gen2-3D-Sprites / STADIUM2_OVERWORLD_MODELS interoperability.
 --
--- Gold's native DSR bridge temporarily makes the live Player wear the mount
--- sprite because the flat renderer has only one player draw. Randy's Gen-2
--- voxel renderer has a better contract: it can merge additional entities into
--- VoxelScene. In that renderer keep the real Player as the rider and publish a
--- separate passable Pokemon proxy for Flight, Ground Ride and Visible Surf.
---
--- Gameplay ownership never moves: DSR still controls movement, collisions,
--- altitude, progression, battles and mount lifecycle. This file is presentation
--- only and is completely dormant without STADIUM2_OVERWORLD_MODELS.
+-- Gold's flat DSR bridge temporarily makes the live Player wear the mount
+-- sprite because the normal renderer has only one player draw. Randy's Gen-2
+-- voxel renderer can merge extra entities, so in voxel views we instead expose
+-- a separate passable Pokemon proxy and turn the player pose into DSR's normal
+-- cropped rider. This keeps the established DSR composition in both 2D and
+-- Stadium modes while leaving gameplay ownership entirely inside DSR.
 -- -------------------------------------------------------------------------
 
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
@@ -25,6 +22,13 @@ local providerState = {
   providerCalls = 0,
   preservedCalls = 0,
   proxyFrames = 0,
+  filteredMountFollowers = 0,
+  suppressedMountFollowers = 0,
+  riderPoseFrames = 0,
+  modelScaleFrames = 0,
+  lastModelScale = 1,
+  lastModelTargetHeight = nil,
+  lastProviderTargetHeight = nil,
   lastError = nil,
 }
 
@@ -34,6 +38,31 @@ local proxy = {
   passable = true,
   dramaticSkyRideVoxelProxy = true,
   _stadiumSkyRideMount = true,
+}
+
+local riderProxy = {
+  id = "DSR_GEN2_VOXEL_RIDER",
+  name = "DSR_GEN2_VOXEL_RIDER",
+  passable = true,
+}
+
+local riderState = {
+  player = nil,
+  world = nil,
+  rawPose = nil,
+  nativePose = nil,
+  wrapper = nil,
+  oldMarker = nil,
+}
+
+local suppressedFollowers = setmetatable({}, { __mode = "k" })
+local providerHooks = {
+  stadium = nil,
+  skinRaw = nil,
+  skinWrapper = nil,
+  prepareRaw = nil,
+  prepareWrapper = nil,
+  mat4 = nil,
 }
 
 local function isGold()
@@ -144,7 +173,7 @@ local function configureProxy(world, kind, species, sprite)
 
   local stadium = externalStadiumRequested()
   local lift = kind == "flight" and flightLift(world, player) or 0
-  local ground = terrainFloor(world, player)
+  local groundHeight = terrainFloor(world, player)
 
   proxy.sprite = sprite
   proxy.spriteDef = sprite.def
@@ -162,10 +191,12 @@ local function configureProxy(world, kind, species, sprite)
   proxy._stadiumSkyRideAnchorPx = player.px
   proxy._stadiumSkyRideAnchorPy = player.py
   proxy._stadiumSkyRideAnchorFacing = player.facing
-  proxy._stadiumSkyRideGround = ground
+  proxy._stadiumSkyRideGround = groundHeight
   proxy._stadiumSkyRideLift = lift
-  proxy._stadiumSkyRideAltitude = ground + lift
+  proxy._stadiumSkyRideAltitude = groundHeight + lift
   proxy._stadiumSkyRideKind = kind
+  -- Explicitly opt out when DSR says 2D. OverworldStadium checks these flags
+  -- before species tags/cache, so a previous 3D frame cannot leak into 2D.
   proxy.stadiumModel = stadium and true or false
   proxy.pokemonModel = stadium and true or false
   return true
@@ -198,6 +229,53 @@ local function shouldPublishProxy(world)
   return configureProxy(world, kind, species, sprite)
 end
 
+local function cleanSpecies(value)
+  if type(value) == "table" then
+    value = value.species or value.pokemonSpecies or value.stadiumSpecies
+      or value.dex or value.pokemonDex
+  end
+  if value == nil then return nil end
+  local s = tostring(value):upper():gsub("[^A-Z0-9]", "")
+  return s ~= "" and s or nil
+end
+
+local function followerSpecies(entity)
+  if type(entity) ~= "table" then return nil end
+  local values = {
+    entity._wildsFollowerSpecies,
+    entity._pokepcFollowerSpecies,
+    entity.pokepcFollowerSpecies,
+    entity.followerSpecies,
+    entity.pokemonSpecies,
+    entity.stadiumSpecies,
+    type(entity.pokepcMon) == "table" and entity.pokepcMon.species or nil,
+    entity.species,
+  }
+  for _, value in ipairs(values) do
+    local s = cleanSpecies(value)
+    if s then return s end
+  end
+  return nil
+end
+
+local function followerLike(entity)
+  return type(entity) == "table" and entity ~= proxy and (
+    entity.wildsFollower == true
+    or entity.pikachuFollower == true
+    or entity._wildsFollowerSpecies ~= nil
+    or entity._pokepcFollowerSpecies ~= nil
+    or entity.pokepcFollowerSpecies ~= nil
+    or entity.pokepcMon ~= nil
+    or entity.followerSpecies ~= nil)
+end
+
+local function isCurrentMountFollower(entity)
+  if not followerLike(entity) then return false end
+  local _, species = mountState()
+  local current = cleanSpecies(species)
+  return current ~= nil and followerSpecies(entity) == current
+end
+
 local function restorePreviousProviderMarker(bridge)
   local marker = bridge and bridge._dramaticSkyRideGen2VoxelProvider or nil
   if type(marker) ~= "table" or marker.owner ~= mod.id then return end
@@ -223,7 +301,17 @@ local function installExtraProvider()
       local ok, extra = pcall(previous, world)
       if ok and type(extra) == "table" then
         providerState.preservedCalls = providerState.preservedCalls + 1
-        for _, entity in ipairs(extra) do appendUnique(out, seen, entity) end
+        for _, entity in ipairs(extra) do
+          -- Randy's embedded Wilds/provider can publish the party follower as
+          -- an extra voxel entity. While that Pokemon is the active DSR mount,
+          -- the DSR proxy is the single visual owner; keeping the follower is
+          -- exactly what produced a second Ho-Oh/Suicune at ground level.
+          if isCurrentMountFollower(entity) then
+            providerState.filteredMountFollowers = providerState.filteredMountFollowers + 1
+          else
+            appendUnique(out, seen, entity)
+          end
+        end
       elseif not ok then
         providerState.lastError = "previous extra entity provider failed: " .. tostring(extra)
       end
@@ -256,27 +344,294 @@ local function installExtraProvider()
   return true
 end
 
--- main_56 intentionally replaces Gold's player sprite with the mount for the
--- flat renderer. After that update, expose its remembered native player sprite
--- again only while Randy's voxel compose path is active. The separate proxy is
--- then the Pokemon actor. Flat fallback still uses main_56 on the next tick.
-local function exposeNativeRider(world)
-  if not (world and world.player and shouldPublishProxy(world)) then return false end
-  local api = mod.exports and mod.exports.gen2PlayerBridge or nil
-  local nativeFn = api and api.nativePlayerSprite or nil
-  if type(nativeFn) ~= "function" then return false end
+-- Native Gold party followers are already part of GoldVoxelBridge's base
+-- entity set, so filtering the extra provider is not sufficient. Temporarily
+-- make ONLY the active mount's follower pose invisible and opt it out of
+-- Stadium rescue. Its movement/trail state keeps running and is restored on
+-- dismount, so normal following resumes without a teleport or reset.
+local function suppressFollower(entity)
+  if type(entity) ~= "table" or suppressedFollowers[entity] then return end
+  local nativePose = entity.pose
+  if type(nativePose) ~= "function" then return end
+  local rawPose = rawget(entity, "pose")
+  local oldStadium = entity.stadiumModel
+  local oldPokemon = entity.pokemonModel
+  local wrapper = function(self)
+    if voxelActive() and isCurrentMountFollower(self) then
+      return nil, self.px or 0, self.py or 0, self.facing or "down", 0,
+        self.stepFlip == true, false
+    end
+    return nativePose(self)
+  end
+  suppressedFollowers[entity] = {
+    rawPose = rawPose,
+    wrapper = wrapper,
+    stadiumModel = oldStadium,
+    pokemonModel = oldPokemon,
+  }
+  rawset(entity, "pose", wrapper)
+  entity.stadiumModel = false
+  entity.pokemonModel = false
+  providerState.suppressedMountFollowers = providerState.suppressedMountFollowers + 1
+end
 
-  local ok, native, nativeDef = pcall(nativeFn, world.player)
-  if not (ok and native) then return false end
-  world.player.sprite = native
-  world.player.spriteDef = nativeDef or native.def or world.player.spriteDef
+local function restoreFollower(entity, state)
+  if type(entity) ~= "table" or type(state) ~= "table" then return end
+  if rawget(entity, "pose") == state.wrapper then rawset(entity, "pose", state.rawPose) end
+  entity.stadiumModel = state.stadiumModel
+  entity.pokemonModel = state.pokemonModel
+  suppressedFollowers[entity] = nil
+end
 
-  local kind = select(1, mountState())
-  local lift = kind == "flight" and flightLift(world, world.player) or 0
-  -- Full Gold/red_3d_player rider stays above the Pokemon body. Species-specific
-  -- model seating remains owned by Randy's Stadium transform; this offset only
-  -- carries the rider through DSR's vertical Flight state.
-  world.player.spriteYOffset = -math.floor(lift + 0.5)
+local function restoreSuppressedFollowers()
+  for entity, state in pairs(suppressedFollowers) do restoreFollower(entity, state) end
+end
+
+local function scanCollection(collection, found)
+  if type(collection) ~= "table" then return end
+  for _, entity in pairs(collection) do
+    if type(entity) == "table" and isCurrentMountFollower(entity) then
+      found[entity] = true
+      suppressFollower(entity)
+    end
+  end
+end
+
+local function syncNativeMountFollowers(world)
+  if not (world and shouldPublishProxy(world)) then
+    restoreSuppressedFollowers()
+    return
+  end
+  local found = {}
+  scanCollection(world.npcs, found)
+  scanCollection(world.entities, found)
+  for entity, state in pairs(suppressedFollowers) do
+    if not found[entity] or not isCurrentMountFollower(entity) then
+      restoreFollower(entity, state)
+    end
+  end
+end
+
+-- Reuse exactly the same rider crops/seat calculations as Gold's flat DSR
+-- bridge. The voxel player pose is only a presentation view; the real Player
+-- coordinates and gameplay sprite remain owned by main_56.
+local function mountedRiderPose(kind)
+  if kind == "flight" then
+    if not (showRiderEnabled() and flight.riderSprite) or isFirstPerson() then return nil end
+    riderProxy.sprite = flight.riderSprite
+    return riderPose(riderProxy)
+  end
+  if kind == "ground" then
+    if not (ground and ground.riderSprite) or isFirstPerson() then return nil end
+    riderProxy.sprite = ground.riderSprite
+    return groundRiderPose(riderProxy)
+  end
+  if kind == "water" then
+    if isFirstPerson() then return nil end
+    local waterPose = mod.exports and mod.exports._waterRideRiderPose or nil
+    if type(waterPose) ~= "function" then return nil end
+    local ok, sprite, px, py, facing, phase, flip, hopping = pcall(waterPose, riderProxy)
+    if ok then return sprite, px, py, facing, phase, flip, hopping end
+  end
+  return nil
+end
+
+local function restoreRiderPose()
+  local player = riderState.player
+  if player then
+    if rawget(player, "pose") == riderState.wrapper then
+      rawset(player, "pose", riderState.rawPose)
+    end
+    if rawget(player, "_dramaticSkyRideVoxelRider") == true then
+      rawset(player, "_dramaticSkyRideVoxelRider", riderState.oldMarker)
+    end
+  end
+  riderState.player = nil
+  riderState.world = nil
+  riderState.rawPose = nil
+  riderState.nativePose = nil
+  riderState.wrapper = nil
+  riderState.oldMarker = nil
+end
+
+local function installRiderPose(world)
+  if not (world and world.player and shouldPublishProxy(world)) then
+    restoreRiderPose()
+    return false
+  end
+  local player = world.player
+  if riderState.player == player and riderState.world == world
+     and rawget(player, "pose") == riderState.wrapper then
+    return true
+  end
+
+  restoreRiderPose()
+  local nativePose = player.pose
+  if type(nativePose) ~= "function" then return false end
+  local rawPose = rawget(player, "pose")
+  local wrapper = function(self)
+    if voxelActive() and self == world.player then
+      local kind = select(1, mountState())
+      if kind then
+        local sprite, px, py, facing, phase, flip, hopping = mountedRiderPose(kind)
+        providerState.riderPoseFrames = providerState.riderPoseFrames + 1
+        if sprite then
+          return sprite, px or self.px, py or self.py, facing or self.facing,
+            phase or 0, flip == true, hopping == true
+        end
+        -- SHOW RIDER off / first-person: a successful nil-sprite pose is the
+        -- provider's supported way to keep the player actor out of the cast.
+        return nil, self.px or 0, self.py or 0, self.facing or "down", 0,
+          self.stepFlip == true, false
+      end
+    end
+    return nativePose(self)
+  end
+
+  riderState.player = player
+  riderState.world = world
+  riderState.rawPose = rawPose
+  riderState.nativePose = nativePose
+  riderState.wrapper = wrapper
+  riderState.oldMarker = rawget(player, "_dramaticSkyRideVoxelRider")
+  rawset(player, "pose", wrapper)
+  rawset(player, "_dramaticSkyRideVoxelRider", true)
+  return true
+end
+
+local function providerMat4(ex)
+  if providerHooks.mat4 then return providerHooks.mat4 end
+  local lib = ex and ex.lib or nil
+  if not (lib and type(lib.require) == "function") then return nil end
+  local ok, Mat4 = pcall(lib.require, "Mat4")
+  if ok and type(Mat4) == "table" and type(Mat4.mul) == "function"
+     and type(Mat4.scale) == "function" then
+    providerHooks.mat4 = Mat4
+    return Mat4
+  end
+  return nil
+end
+
+local function desiredModelWorldHeight(species)
+  local scale = 1
+  local sizeFn = mod.exports and mod.exports.mountVisualScale or nil
+  if type(sizeFn) == "function" then
+    local ok, value = pcall(sizeFn, species)
+    value = ok and tonumber(value) or nil
+    if value and value > 0 then scale = value end
+  end
+  -- DSR's 2D sizing contract defines a 1.70 m reference mount as one 16 px
+  -- overworld card. Matching that exact visual height keeps Stadium and 2D
+  -- renderer choices consistent and honours every SIZE <SPECIES> option.
+  return 16 * scale, scale
+end
+
+local function applyProxyModelScale(posed, ex)
+  if not externalStadiumRequested() then
+    providerState.lastModelScale = 1
+    return
+  end
+  local Mat4 = providerMat4(ex)
+  if not Mat4 then return end
+
+  for _, p in ipairs(posed or {}) do
+    if p and p.entity == proxy and p.stadiumMatrix and p.stadiumMon then
+      local species = select(2, mountState())
+      local wanted = species and desiredModelWorldHeight(species) or nil
+      local current = tonumber(p.stadiumTargetHeight)
+      if not current and type(p.stadiumMon.worldHeight) == "function" then
+        local ok, value = pcall(p.stadiumMon.worldHeight, p.stadiumMon)
+        if ok then current = tonumber(value) end
+      end
+      if wanted and current and current > 0 then
+        local factor = wanted / current
+        -- The DSR user scale is already clamped. This second guard is only for
+        -- malformed third-party model bounds and prevents a bad pack from
+        -- exploding to an unusable scene size.
+        factor = math.max(0.35, math.min(4.50, factor))
+        local okScale, scaled = pcall(function()
+          return Mat4.mul(p.stadiumMatrix, Mat4.scale(factor, factor, factor))
+        end)
+        if okScale and scaled then
+          p.stadiumMatrix = scaled
+          p.stadiumMon.model_matrix = scaled
+          p.stadiumTargetHeight = wanted
+          p.dramaticSkyRideModelScale = factor
+          providerState.lastModelScale = factor
+          providerState.lastModelTargetHeight = wanted
+          providerState.lastProviderTargetHeight = current
+          providerState.modelScaleFrames = providerState.modelScaleFrames + 1
+        end
+      end
+    end
+  end
+end
+
+-- VoxelScene gives red_3d_player first refusal for p.isPlayer. While mounted,
+-- DSR deliberately owns the rider presentation so a full standing trainer mesh
+-- cannot replace the cropped seated rider. The selector resumes immediately on
+-- dismount because this wrapper only checks the per-player DSR marker.
+local function installPlayerSkinGuard(stadium)
+  if not (stadium and type(stadium.safeDrawPlayerSkin) == "function") then return false end
+  local marker = stadium._dramaticSkyRidePlayerSkinGuard
+  if type(marker) == "table" and marker.owner == mod.id
+     and stadium.safeDrawPlayerSkin == marker.wrapper then
+    providerHooks.skinRaw = marker.raw
+    providerHooks.skinWrapper = marker.wrapper
+    return true
+  end
+
+  local raw = stadium.safeDrawPlayerSkin
+  local wrapper = function(p, ...)
+    local entity = p and p.entity or nil
+    if type(entity) == "table" and entity._dramaticSkyRideVoxelRider == true then
+      return false
+    end
+    return raw(p, ...)
+  end
+  stadium.safeDrawPlayerSkin = wrapper
+  stadium._dramaticSkyRidePlayerSkinGuard = {
+    owner = mod.id, raw = raw, wrapper = wrapper,
+  }
+  providerHooks.skinRaw = raw
+  providerHooks.skinWrapper = wrapper
+  return true
+end
+
+local function installModelSizeHook(stadium, ex)
+  if not (stadium and type(stadium.prepare) == "function") then return false end
+  local marker = stadium._dramaticSkyRideMountSizeHook
+  if type(marker) == "table" and marker.owner == mod.id
+     and stadium.prepare == marker.wrapper then
+    providerHooks.prepareRaw = marker.raw
+    providerHooks.prepareWrapper = marker.wrapper
+    providerMat4(ex)
+    return true
+  end
+
+  local raw = stadium.prepare
+  local wrapper = function(posed, ...)
+    local result = raw(posed, ...)
+    if result ~= false then applyProxyModelScale(posed, ex) end
+    return result
+  end
+  stadium.prepare = wrapper
+  stadium._dramaticSkyRideMountSizeHook = {
+    owner = mod.id, raw = raw, wrapper = wrapper,
+  }
+  providerHooks.prepareRaw = raw
+  providerHooks.prepareWrapper = wrapper
+  providerMat4(ex)
+  return true
+end
+
+local function installProviderHooks()
+  local _, ex = providerExports()
+  local stadium = ex and ex.overworld or nil
+  if type(stadium) ~= "table" then return false end
+  providerHooks.stadium = stadium
+  installPlayerSkinGuard(stadium)
+  installModelSizeHook(stadium, ex)
   return true
 end
 
@@ -285,23 +640,39 @@ function OverworldState:update(dt, ...)
   local result = previousUpdate(self, dt, ...)
   if isGold() then
     installExtraProvider()
-    if voxelActive() and Game.overworld == self then exposeNativeRider(self) end
+    installProviderHooks()
+    if voxelActive() and Game.overworld == self then
+      syncNativeMountFollowers(self)
+      installRiderPose(self)
+    else
+      restoreRiderPose()
+      restoreSuppressedFollowers()
+    end
+  else
+    restoreRiderPose()
+    restoreSuppressedFollowers()
   end
   return result
 end
 
 mod.events:on("game.ready", function()
-  if isGold() then installExtraProvider() end
+  if isGold() then
+    installExtraProvider()
+    installProviderHooks()
+  end
 end)
 
 mod.events:on("mod.options_changed", function()
-  -- The proxy reads renderer/voxel settings lazily each compose frame. This
-  -- event only ensures a provider installed after startup is picked up quickly.
-  if isGold() then installExtraProvider() end
+  -- Renderer/size values are read lazily every compose frame; this event only
+  -- refreshes hooks when either mod was hot-loaded after startup.
+  if isGold() then
+    installExtraProvider()
+    installProviderHooks()
+  end
 end)
 
 mod.exports.gen2VoxelInterop = {
-  api = 1,
+  api = 2,
   providerId = PROVIDER_ID,
   installed = function() return providerState.installed end,
   active = function()
@@ -316,14 +687,11 @@ mod.exports.gen2VoxelInterop = {
     end
     return nil
   end,
-  mountProxyActive = function()
-    return shouldPublishProxy(liveWorld())
-  end,
-  mountSpecies = function()
-    return select(2, mountState())
-  end,
-  mountKind = function()
-    return select(1, mountState())
+  mountProxyActive = function() return shouldPublishProxy(liveWorld()) end,
+  mountSpecies = function() return select(2, mountState()) end,
+  mountKind = function() return select(1, mountState()) end,
+  riderCropActive = function()
+    return riderState.player ~= nil and rawget(riderState.player, "pose") == riderState.wrapper
   end,
   rendererRequested = function()
     local rendering = mod.exports and mod.exports.flightRendering or nil
@@ -344,17 +712,30 @@ mod.exports.gen2VoxelInterop = {
   existingExtraProviderPreserved = function()
     return providerState.previousExtraProvider ~= nil
   end,
+  modelScale = function()
+    return providerState.lastModelScale,
+      providerState.lastModelTargetHeight,
+      providerState.lastProviderTargetHeight
+  end,
   status = function()
     return {
       installed = providerState.installed,
       voxelActive = voxelActive(),
       proxyActive = shouldPublishProxy(liveWorld()),
+      riderCropActive = riderState.player ~= nil,
       mountKind = select(1, mountState()),
       mountSpecies = select(2, mountState()),
       stadiumRequested = externalStadiumRequested(),
       providerCalls = providerState.providerCalls,
       preservedCalls = providerState.preservedCalls,
       proxyFrames = providerState.proxyFrames,
+      filteredMountFollowers = providerState.filteredMountFollowers,
+      suppressedMountFollowers = providerState.suppressedMountFollowers,
+      riderPoseFrames = providerState.riderPoseFrames,
+      modelScaleFrames = providerState.modelScaleFrames,
+      modelScale = providerState.lastModelScale,
+      modelTargetHeight = providerState.lastModelTargetHeight,
+      providerTargetHeight = providerState.lastProviderTargetHeight,
       installs = providerState.installs,
       previousProvider = providerState.previousExtraProvider ~= nil,
       lastError = providerState.lastError,
@@ -363,7 +744,8 @@ mod.exports.gen2VoxelInterop = {
 }
 
 if installExtraProvider() then
-  log("Gen2 voxel interop loaded (%s extra-entity composition + DSR mount proxy)", PROVIDER_ID)
+  installProviderHooks()
+  log("Gen2 voxel interop loaded (%s + cropped rider + single mount owner + DSR-sized Stadium models)", PROVIDER_ID)
 else
   log("Gen2 voxel interop idle; %s not available", PROVIDER_ID)
 end

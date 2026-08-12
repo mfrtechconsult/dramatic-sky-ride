@@ -2,6 +2,14 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.7
+
+### Generation II Flight presentation
+
+- Suppressed Gold's ground-level grass rustle animation while an airborne Flight mount crosses tall grass.
+- Preserved native grass state, encounters, collisions and all movement outside Flight.
+- Added regression coverage for the Generation II Flight terrain-effect guard.
+
 ## 0.2.6
 
 ### Generation II post-battle mount restoration

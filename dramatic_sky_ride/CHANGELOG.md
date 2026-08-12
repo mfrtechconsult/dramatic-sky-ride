@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7
+
+- Suppressed Gold's ground-level grass rustle animation while Flight is active.
+- Kept native grass state, encounters, collisions and all non-Flight movement behavior unchanged.
+- Added regression coverage for the Generation II Flight terrain-effect guard.
+
 ## 0.2.6
 
 - Restored Flight, Ground Ride and Visible Surf mounts only after Gold has fully returned to free roam following a battle.

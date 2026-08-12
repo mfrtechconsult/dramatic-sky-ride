@@ -47,6 +47,10 @@ require("riderPlayerSprite = function(player)" in bridge
         and 'id == "SPRITE_SURF"' in bridge
         and "world.sprites.SPRITE_CHRIS" in bridge,
         "Gold's generic Surf sheet can still become the rider on a custom mount")
+require("suppressFlightTerrainFx" in bridge
+        and "player.grassShake = nil" in bridge
+        and "suppressFlightTerrainFx(self)" in bridge,
+        "Gold can still draw its ground-level grass rustle over Flight")
 require("player.sprite ~= visual.installedSprite" in bridge
         and "visual.originalSprite = player.sprite" in bridge,
         "Surf -> Flight can crop Gold's stale native Surf sheet as its rider")

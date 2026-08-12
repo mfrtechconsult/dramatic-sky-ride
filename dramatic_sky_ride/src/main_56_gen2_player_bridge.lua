@@ -209,6 +209,18 @@ local function reconcilePlayerVisual(world)
   end
 end
 
+local function suppressFlightTerrainFx(world)
+  local player = world and world.player or nil
+  if not (flight.active and player) then return end
+
+  -- Gold arms ShakeGrass at the beginning of every ordinary grid step. Flight
+  -- deliberately reuses that native step path for movement, but the airborne
+  -- mount must not disturb vegetation underneath it. Clear only the transient
+  -- visual marker after the engine tick; encounters, collision and the native
+  -- inGrass state used again after landing remain untouched.
+  player.grassShake = nil
+end
+
 local function restoreFlightGuards()
   local world, state = guardedWorld, guardState
   if world and state then
@@ -388,6 +400,7 @@ function OverworldState:update(dt, ...)
   local result = previousUpdate(self, dt, ...)
   if isGold() and Game.overworld == self then
     if flight.active then installFlightGuards(self) else restoreFlightGuards() end
+    suppressFlightTerrainFx(self)
     reconcilePlayerVisual(self)
   else
     restoreFlightGuards()

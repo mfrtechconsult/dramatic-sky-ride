@@ -11,6 +11,7 @@ water = (src / "main_17_polish_04.lua").read_text(encoding="utf-8")
 water_state = (src / "main_17_polish_03.lua").read_text(encoding="utf-8")
 ground = (src / "main_19_ground_final_01.lua").read_text(encoding="utf-8")
 flight = (src / "main_13b.lua").read_text(encoding="utf-8")
+ground_base = (src / "main_15_ground.lua").read_text(encoding="utf-8")
 errors = []
 
 
@@ -54,6 +55,17 @@ require("flightBattleResume.ended = true" in flight
         and "tryFlightBattleResume" in flight
         and "mod.exports._mountFreeRoam(Game, self)" in flight,
         "Flight is restored before Gold actually returns to free roam")
+require('environment == "TOWN"' in ground_base
+        and 'environment == "ROUTE"' in ground_base
+        and 'environment == "CAVE"' in ground_base
+        and 'environment == "GATE"' in ground_base,
+        "Ground Ride does not use Gold's Bicycle environment allowlist")
+require('stopGroundRide(Game, "incompatible_map")' in ground_base
+        and "if not groundAreaAllowed(self) then" in ground_base,
+        "native Gold building warps can keep Ground Ride active indoors")
+require("if not groundAreaAllowed(self) or self.player.surfing then"
+            not in ground_base,
+        "the building guard would incorrectly dismount amphibious Suicune")
 
 if errors:
     print("Gen2 Ground/Water bridge contract FAILED")

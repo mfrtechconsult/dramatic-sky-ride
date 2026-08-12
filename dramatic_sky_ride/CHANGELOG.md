@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.8
+
+- Aligned Generation II Ground Ride map restrictions with Gold's native Bicycle environments.
+- Automatically dismounted terrestrial mounts after entering indoor buildings or dungeons through native Gold warps.
+- Preserved Ground Ride through towns, routes, caves, gatehouses and seamless inter-map passages.
+- Kept amphibious Suicune mounted on water while applying the new building guard.
+- Added regression coverage for the Generation II Ground Ride environment policy.
+
 ## 0.2.7
 
 - Suppressed Gold's ground-level grass rustle animation while Flight is active.

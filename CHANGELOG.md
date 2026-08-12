@@ -2,6 +2,16 @@
 
 All notable changes to Dramatic Sky Ride are documented here.
 
+## 0.2.8
+
+### Generation II Ground Ride map restrictions
+
+- Matched Ground Ride permissions to Gold's native Bicycle environments.
+- Terrestrial mounts now dismount automatically when entering indoor buildings or dungeons.
+- Towns, routes, caves, gatehouses and seamless map passages preserve the active Ground Ride mount.
+- Amphibious Suicune remains mounted on water and is not affected by the building-only guard.
+- Added regression coverage for native Gold warps and the rideable environment allowlist.
+
 ## 0.2.7
 
 ### Generation II Flight presentation

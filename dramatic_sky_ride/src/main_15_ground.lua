@@ -37,6 +37,20 @@ end
 
 local function groundAreaAllowed(ow)
   if not (ow and ow.map and ow.map.def) then return false end
+  local generation = mod.exports and mod.exports.runtimeGeneration or nil
+  if generation and type(generation.isGen2) == "function"
+     and generation.isGen2(Game) == true then
+    -- Match Gold's Bicycle CheckEnvironment rule. GATE is deliberately
+    -- rideable: gatehouses and authored inter-map passages must preserve the
+    -- mount, while INDOOR / ENVIRONMENT_5 / DUNGEON destinations remove it.
+    local environment = tostring(ow.map.def.environment or ""):upper()
+    return environment == "TOWN" or environment == "ROUTE"
+      or environment == "CAVE" or environment == "GATE"
+  end
+  if type(ow.bikeAllowed) == "function" then
+    local ok, allowed = pcall(ow.bikeAllowed, ow, ow.map.id)
+    if ok then return allowed == true end
+  end
   if Map.isOutdoor(ow.map.def) then return true end
   local tileset = tostring(ow.map.def.tileset or ""):upper()
   return tileset == "CAVERN" or tileset == "UNDERGROUND"
@@ -307,8 +321,16 @@ local groundUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = groundUpdate(self, dt, ...)
   if ground.active and Game.overworld == self then
-    purgeFollowersDuringFlight(self)
-    ensureGroundRiderEntity(self)
+    -- Gold's native World:takeWarp calls World:setMap directly and therefore
+    -- bypasses the Gen 1-compatible setMap facade wrapped above. Re-check the
+    -- destination after every native tick so entering a building behaves like
+    -- the Bicycle, without treating seamless route/gate connections as doors.
+    if not groundAreaAllowed(self) then
+      stopGroundRide(Game, "incompatible_map")
+    else
+      purgeFollowersDuringFlight(self)
+      ensureGroundRiderEntity(self)
+    end
   elseif ground.resumeAfterBattle and Game.overworld == self
       and Game.stack and Game.stack:top() == self then
     local mon = ground.resumeAfterBattle

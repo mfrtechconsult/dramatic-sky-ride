@@ -9,7 +9,7 @@ name='main_53g_gen2_open_sky_stadium2_3d.lua'
 text=(src/name).read_text(encoding='utf-8') if (src/name).exists() else ''
 manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
 height=root/'assets'/'open_sky_region_height.png'
-texparts=[root/'assets'/'open_sky_map'/f'part{i:02d}.b64' for i in range(1,5)]
+texparts=[root/'assets'/'open_sky_map'/name for name in ('part01.b64','part02.b64','part03a.b64','part03b.b64','part04.b64')]
 errors=[]
 def require(c,m):
     if not c: errors.append(m)

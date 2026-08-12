@@ -7,7 +7,7 @@ src = root / 'src'
 parts = [line.strip() for line in (src / 'parts.txt').read_text(encoding='utf-8').splitlines() if line.strip()]
 name = 'main_53f_gen2_open_sky_art_map.lua'
 text = (src / name).read_text(encoding='utf-8')
-asset_parts = [root/'assets'/'open_sky_map'/f'part{i:02d}.b64' for i in range(1,5)]
+asset_parts = [root/'assets'/'open_sky_map'/name for name in ('part01.b64','part02.b64','part03a.b64','part03b.b64','part04.b64')]
 errors=[]
 def require(c,m):
     if not c: errors.append(m)

@@ -14,7 +14,8 @@ local MAP_ASSET = "assets/open_sky_region_map.jpg"
 local MAP_ASSET_PARTS = {
   "assets/open_sky_map/part01.b64",
   "assets/open_sky_map/part02.b64",
-  "assets/open_sky_map/part03.b64",
+  "assets/open_sky_map/part03a.b64",
+  "assets/open_sky_map/part03b.b64",
   "assets/open_sky_map/part04.b64",
 }
 

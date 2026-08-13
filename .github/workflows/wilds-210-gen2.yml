@@ -1,0 +1,98 @@
+name: Wilds 2.1 Gen2 compatibility
+
+on:
+  push:
+    branches:
+      - agent/wilds-kanto-2.1-compat
+      - agent/wilds-kanto-2.1-compat-fix
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wilds-210-gen2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Dramatic Sky Ride
+        uses: actions/checkout@v4
+        with:
+          path: sky
+
+      - name: Checkout Wilds of Kanto v2.1.0
+        uses: actions/checkout@v4
+        with:
+          repository: YoDrehDenSwagAuf/overworld-spawn-mod
+          ref: v2.1.0
+          path: wilds
+
+      - name: Install LuaJIT
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit
+          luajit -v
+
+      - name: Verify exact Wilds release API
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('wilds/manifest.json').read_text(encoding='utf-8'))
+          main = Path('wilds/main.lua').read_text(encoding='utf-8')
+          sprite = Path('wilds/lib/follower/sprite_service.lua').read_text(encoding='utf-8')
+          assert manifest['id'] == 'overworld_wild_spawns'
+          assert manifest['version'] == '2.1.0'
+          assert set(manifest['games']) >= {'gen1', 'gen2'}
+          assert 'mod.exports.resolveFollowerSprite' in main
+          assert 'mod.exports.resolveWaterSprite' in main
+          for field in ('frameWidth', 'frameHeight', 'anchorX', 'anchorY', 'trueColor'):
+              assert field in sprite
+          print('Wilds v2.1.0 public API: PASS')
+          PY
+
+      - name: Run Wilds upstream Gen2 follower tests
+        working-directory: wilds
+        run: luajit tests/gen2_followers_unit_test.lua
+
+      - name: Run Wilds upstream surface sprite tests
+        working-directory: wilds
+        run: luajit tests/follower_surface_sprite_unit_test.lua
+
+      - name: Run Wilds upstream True Size geometry tests
+        working-directory: wilds
+        run: luajit tests/true_size_def_geometry_unit_test.lua
+
+      - name: Run Wilds upstream voxel geometry tests
+        working-directory: wilds
+        run: luajit tests/voxel_provider_variable_geometry_unit_test.lua
+
+      - name: Validate DSR Wilds 2.1 contract
+        run: python3 sky/tests/wilds_210_gen2_contract.py sky/dramatic_sky_ride
+
+      - name: Compile Wilds compatibility chunks
+        run: |
+          luajit -b sky/dramatic_sky_ride/src/main_40c_wilds_210.lua /tmp/wilds210.luac
+          luajit -b sky/dramatic_sky_ride/src/main_60a_wilds_210_voxel.lua /tmp/wilds210_voxel.luac
+
+      - name: Compile complete DSR runtime
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('sky/dramatic_sky_ride/src')
+          parts = [x.strip() for x in (root / 'parts.txt').read_text().splitlines() if x.strip()]
+          chunks = []
+          previous_ends_semicolon = False
+          for part in parts:
+              text = (root / part).read_text(encoding='utf-8')
+              if previous_ends_semicolon:
+                  i = 0
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+                  if i < len(text) and text[i] == ';':
+                      text = text[:i] + text[i + 1:]
+              chunks.append(text)
+              previous_ends_semicolon = text.rstrip().endswith(';')
+          Path('/tmp/dsr.lua').write_text(''.join(chunks), encoding='utf-8')
+          PY
+          luajit -b /tmp/dsr.lua /tmp/dsr.luac

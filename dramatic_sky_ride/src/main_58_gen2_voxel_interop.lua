@@ -22,7 +22,9 @@ local state = {
   riderFrames = 0,
   filteredFollowers = 0,
   modelScaleFrames = 0,
+  seatScaleFrames = 0,
   lastModelScale = 1,
+  lastSeatScaleDelta = 0,
   lastError = nil,
 }
 
@@ -145,11 +147,6 @@ local function providerGroundHeight(ow, player)
   end
   if not (scene and type(scene.groundAt) == "function") then return nil end
 
-  -- Randy's Gen2 groundAt() intentionally uses the full-resolution Gold tile
-  -- geometry. DSR's older terrainGroundHeight() indexes map:cellTile(), which
-  -- is a collision class in Gold and can disagree around roofs/cliffs. Using
-  -- Randy's exact answer keeps Player billboard lift and Stadium mount altitude
-  -- on one common vertical reference instead of separating over raised art.
   local ok, value = pcall(scene.groundAt, ow.map, player.cellX, player.cellY)
   value = ok and tonumber(value) or nil
   if value == nil then return nil end
@@ -236,8 +233,6 @@ local function configureProxy(ow, kind, species, sprite)
   proxy._stadiumSkyRideSpecies = species
   proxy._stadiumSkyRideKind = kind
 
-  -- Randy's special Sky Ride transform is authored for an airborne follower
-  -- anchor. Applying it to Ground Ride/Surf is what sank Suicune into the floor.
   proxy._stadiumSkyRideMount = kind == "flight"
   proxy._stadiumSkyRideAnchorPx = player.px
   proxy._stadiumSkyRideAnchorPy = player.py
@@ -441,6 +436,19 @@ local function desiredModelHeight(species)
   return 16 * scale
 end
 
+-- Randy's OverworldStadium places flying mounts from an upper-back/saddle
+-- anchor before DSR applies its final Pokédex scale. Preserve that same saddle
+-- point when the model height changes instead of adding rider trims afterwards.
+local function stadiumSeatFraction(dex)
+  dex = tonumber(dex)
+  if dex == 6 then return 0.50 end
+  if dex == 18 or dex == 22 then return 0.58 end
+  if dex == 42 or dex == 142 or dex == 149 then return 0.50 end
+  if dex == 144 or dex == 145 or dex == 146 then return 0.56 end
+  if dex == 148 then return 0.48 end
+  return 0.52
+end
+
 local function mat4(ex)
   if providerHooks.mat4 then return providerHooks.mat4 end
   local lib = ex and ex.lib or nil
@@ -481,7 +489,7 @@ local function installProviderHooks()
         if M and type(M.mul) == "function" and type(M.scale) == "function" then
           for _, p in ipairs(posed or {}) do
             if p and p.entity == proxy and p.stadiumMatrix and p.stadiumMon then
-              local _, species = mountState()
+              local kind, species = mountState()
               local wanted = species and desiredModelHeight(species) or nil
               local current = tonumber(p.stadiumTargetHeight)
               if not current and type(p.stadiumMon.worldHeight) == "function" then
@@ -494,10 +502,23 @@ local function installProviderHooks()
                   return M.mul(p.stadiumMatrix, M.scale(factor, factor, factor))
                 end)
                 if okScale and scaled then
+                  local seatDelta = 0
+                  if kind == "flight" and type(M.translate) == "function" then
+                    seatDelta = -(wanted - current) * stadiumSeatFraction(p.stadiumDex)
+                    if math.abs(seatDelta) > 0.0001 then
+                      local okMove, moved = pcall(function()
+                        return M.mul(M.translate(0, seatDelta, 0), scaled)
+                      end)
+                      if okMove and moved then scaled = moved end
+                    end
+                    state.lastSeatScaleDelta = seatDelta
+                    state.seatScaleFrames = state.seatScaleFrames + 1
+                  end
                   p.stadiumMatrix = scaled
                   p.stadiumMon.model_matrix = scaled
                   p.stadiumTargetHeight = wanted
                   p.dramaticSkyRideModelScale = factor
+                  p.dramaticSkyRideSeatScaleDelta = seatDelta
                   state.lastModelScale = factor
                   state.modelScaleFrames = state.modelScaleFrames + 1
                 end
@@ -515,9 +536,6 @@ local function installProviderHooks()
   return true
 end
 
--- Randy installs the native Gold party follower before DSR (DSR priority 900).
--- Chain that exact engine gate once: while any DSR mount is active the party
--- follower simply does not exist. No per-frame pose/draw surgery is required.
 local function installFollowerGate()
   local ok, Follower = pcall(require, "src.world.gen2.Follower")
   if not ok or type(Follower) ~= "table" or type(Follower.setShouldSpawn) ~= "function" then
@@ -571,7 +589,7 @@ mod.events:on("mod.options_changed", function()
 end)
 
 mod.exports.gen2VoxelInterop = {
-  api = 3,
+  api = 4,
   providerId = PROVIDER_ID,
   active = function() return shouldPublish(world()) end,
   mountKind = function() return select(1, mountState()) end,
@@ -597,6 +615,8 @@ mod.exports.gen2VoxelInterop = {
       filteredFollowers = state.filteredFollowers,
       modelScaleFrames = state.modelScaleFrames,
       modelScale = state.lastModelScale,
+      seatScaleFrames = state.seatScaleFrames,
+      seatScaleDelta = state.lastSeatScaleDelta,
       installs = state.installs,
       lastError = state.lastError,
     }
@@ -606,5 +626,5 @@ mod.exports.gen2VoxelInterop = {
 installExtraProvider()
 installProviderHooks()
 installFollowerGate()
-log("Clean Gen2 voxel interop loaded (Randy compositor preserved, one mount proxy, one rider, no battle ownership)")
+log("Clean Gen2 voxel interop loaded (one proxy/rider; Stadium saddle preserved during scaling)")
 end)();

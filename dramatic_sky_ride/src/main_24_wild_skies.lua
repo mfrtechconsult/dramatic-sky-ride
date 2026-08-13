@@ -109,23 +109,16 @@ local function configureWildSkiesSpriteSource()
     return false
   end
 
-  -- Hot reloads and older DSR builds may have left our source registered.
-  -- Always remove it first so Wild Skies regains its intended source order.
   if type(exports.unregisterSpriteSource) == "function" then
     pcall(exports.unregisterSpriteSource, WILD_SKIES_SOURCE_ID)
   end
   wildSkies.registered = false
 
-  -- Gold/Gen 2 is entirely Wild Skies-owned. Its 1.9 source chain knows how
-  -- to resolve native Gold, Wilds/HGSS and Stadium 2 art and should never be
-  -- overridden by DSR's follower fallback.
   if isGen2Runtime(Game) then
     setSpriteMode("gen2_wild_skies_native")
     return true
   end
 
-  -- Gen 1 keeps the established behaviour: Wilds remains authoritative when
-  -- present, otherwise an enabled follower provider can supply species art.
   if wildsEnabled() then
     setSpriteMode("gen1_wild_skies_native_wilds")
     return true
@@ -222,7 +215,7 @@ local function configureDoubleBattlesPartnerSource()
       if not p then return nil end
       local okMate, mate = pcall(takeFlockmate, p.cellX, p.cellY, 8)
       if not (okMate and mate and mate.species) then return nil end
-      return mate
+      return mate.species, mate.level
     end,
   })
   wildSkies.doubleBattlesRegistered = ok and accepted ~= false
@@ -285,9 +278,6 @@ local function tryWildSkiesIntercept(ow)
   end
 end
 
--- Wild Skies recognises Free Fly's export or the legacy player.freeFlying
--- marker. DSR and free_fly are declared conflicting flight engines, so DSR can
--- safely advertise its airborne state through that stable compatibility seam.
 local wildSkiesUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local frameDt = tonumber(dt) or 1 / 60
@@ -299,9 +289,6 @@ function OverworldState:update(dt, ...)
   return result
 end
 
--- Ordinary terrain encounters are never allowed while DSR owns airborne
--- movement. Wild Skies encounters are script-launched after takeFlyer(), so no
--- temporary random-encounter exception is required on either generation.
 if mod.hooks and mod.hooks.wrap then
   mod.hooks:wrap("encounter.species", function(next, encounter, ctx)
     if flight.active then return nil end
@@ -313,7 +300,6 @@ mod.events:on("battle.ended", function()
   wildSkies.lastIntercept = nil
 end)
 
--- Stable inter-mod surface matching the shape Shane already uses for Free Fly.
 mod.exports.altitude = function() return flight.active and flight.altitude or 0 end
 mod.exports.mount = function()
   if not (flight.active and flight.mon) then return nil end

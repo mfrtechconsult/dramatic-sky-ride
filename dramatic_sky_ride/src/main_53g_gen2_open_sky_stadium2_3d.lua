@@ -1,19 +1,21 @@
 ;(function()
 -- -------------------------------------------------------------------------
--- Gen2 Open Sky 3D overlay for randyadr/Gen2-3D-Sprites.
+-- Gen2 Open Sky 3D navigation for randyadr/Gen2-3D-Sprites.
 --
--- The proven 2D widescreen page always draws first. The 3D pass renders into
--- its own Voxel3D canvas, then explicitly restores Gold's presentation target
--- before compositing. This matters because Voxel3D.endScene() deliberately
--- unbinds its canvas; without restoring the caller target the 3D image can be
--- drawn to the window while Game2 later presents its still-2D frame over it.
+-- Open Sky's Gold town-map coordinates remain authoritative for progression,
+-- visited Fly Points and regional transitions. In 3D those coordinates become
+-- the mount's real position over the Meshy-derived terrain: the camera chases
+-- the current mount from behind and above, so moving Open Sky makes the world
+-- scroll underneath instead of sliding an icon across a static diorama.
+--
+-- Safety rule: the proven 2D widescreen page is still rendered first. The 3D
+-- pass owns only a temporary Voxel3D canvas and is composited after that canvas
+-- is complete. Any provider/GPU failure leaves the playable 2D Open Sky intact.
 -- -------------------------------------------------------------------------
 local playable = mod.exports.openSkyPlayable or {}
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
 local HEIGHT_ASSET = "assets/open_sky_region_height.png"
 local SCREEN_W, SCREEN_H = 160, 144
-local MAP_TOP, MAP_BOTTOM = 18, 124
-local MAP_H = MAP_BOTTOM - MAP_TOP
 local SX0, SX1, SY0, SY1 = 6, 154, 22, 138
 local MX0, MX1, MZ0, MZ1 = 8, 152, 24, 112
 local RECT = {
@@ -21,7 +23,17 @@ local RECT = {
   kanto = { 90, 154, 25, 104 },
 }
 
+-- ORAS-style regional soaring camera. These are world-pixel distances in the
+-- compact Open Sky terrain, not local-map tile distances.
+local CHASE_DISTANCE = 38
+local CHASE_HEIGHT = 27
+local LOOK_AHEAD = 16
+local MOUNT_CLEARANCE = 9
+local CAMERA_TURN_RATE = 7.5
+local BANK_MAX = math.rad(18)
+
 local patched = setmetatable({}, { __mode = "k" })
+local navigation = setmetatable({}, { __mode = "k" })
 local cache = {}
 
 local function resetCache()
@@ -66,10 +78,8 @@ local function provider()
     return cache.provider
   end
 
-  -- Do NOT gate on exports.active, rendererInstalled, voxelStatus().active or
-  -- voxelComposeHook. Open Sky is an opaque state, so Randy's normal overworld
-  -- compose frame is expected to be inactive while this screen owns the frame.
-  -- The only capability required here is the provider's public renderer loader.
+  -- Open Sky is an opaque state, so Randy's ordinary overworld compositor is
+  -- expected to be idle here. Only the provider's public library is required.
   if type(mod.find) ~= "function" then
     setStage("NOAPI", "mod.find unavailable")
     return nil
@@ -254,13 +264,76 @@ local function fitScale(winW, winH)
   return math.max(0.01, raw)
 end
 
+local function facingHeading(facing)
+  if facing == "left" then return math.pi end
+  if facing == "up" then return -math.pi * 0.5 end
+  if facing == "down" then return math.pi * 0.5 end
+  return 0
+end
+
+local function angleDelta(target, current)
+  local d = (target - current + math.pi) % (math.pi * 2) - math.pi
+  return d
+end
+
+local function navFor(state)
+  local n = navigation[state]
+  if n then return n end
+  local heading = facingHeading(state and state.facing)
+  n = {
+    heading = heading,
+    targetHeading = heading,
+    bank = 0,
+    lastX = tonumber(state and state.x) or 80,
+    lastY = tonumber(state and state.y) or 78,
+    lastRegion = state and state.region or "johto",
+  }
+  navigation[state] = n
+  return n
+end
+
+local function updateNavigation(state, dt)
+  if type(state) ~= "table" then return end
+  local n = navFor(state)
+  dt = clamp(dt or 1 / 60, 0, 0.1)
+
+  if n.lastRegion ~= state.region then
+    n.lastRegion = state.region
+    n.lastX, n.lastY = state.x, state.y
+    n.heading = facingHeading(state.facing)
+    n.targetHeading = n.heading
+    n.bank = 0
+    return
+  end
+
+  local oldWX, oldWZ = worldPoint(state.region, n.lastX, n.lastY)
+  local newWX, newWZ = worldPoint(state.region, state.x, state.y)
+  local dx, dz = newWX - oldWX, newWZ - oldWZ
+  local moved = dx * dx + dz * dz
+  if moved > 0.00001 then
+    n.targetHeading = math.atan(dz, dx)
+  end
+
+  local delta = angleDelta(n.targetHeading, n.heading)
+  local step = CAMERA_TURN_RATE * dt
+  if math.abs(delta) <= step then
+    n.heading = n.targetHeading
+  else
+    n.heading = n.heading + (delta > 0 and step or -step)
+  end
+  n.bank = clamp(delta * 0.55, -BANK_MAX, BANK_MAX)
+  n.lastX, n.lastY = state.x, state.y
+end
+
 local function drawMount(G, state, x, y, scale)
   local sprite = flight.sprite
   local drawn = false
+  local n = navFor(state)
   if sprite and type(sprite.draw) == "function" then
     G.push()
     G.translate(math.floor(x), math.floor(y))
-    G.scale(0.34 * clamp(scale or 1, 0.7, 1.4))
+    G.rotate((n.bank or 0) * 0.45)
+    G.scale(0.42 * clamp(scale or 1, 0.72, 1.35))
     G.setColor(1, 1, 1, 1)
     local phase = (tonumber(state.anim) or 0) >= 16 and 1 or 0
     drawn = pcall(sprite.draw, sprite, -8, -8, 0, 0,
@@ -269,8 +342,37 @@ local function drawMount(G, state, x, y, scale)
   end
   if not drawn then
     G.setColor(1, 1, 1, 1)
-    G.circle("fill", x, y, 3)
+    G.polygon("fill", x, y - 4, x + 4, y + 4,
+      x, y + 2, x - 4, y + 4)
   end
+end
+
+local function mountWorld(state)
+  local wx, wz = worldPoint(state.region, state.x, state.y)
+  local altitude = clamp((tonumber(state.virtualAltitude) or 88) - 76, 0, 20)
+  local wy = heightAt(wx, wz) + MOUNT_CLEARANCE + altitude * 0.16
+  return wx, wy, wz
+end
+
+local function cameraFor(state)
+  local n = navFor(state)
+  local wx, wy, wz = mountWorld(state)
+  local fx, fz = math.cos(n.heading), math.sin(n.heading)
+  return {
+    eye = {
+      wx - fx * CHASE_DISTANCE,
+      wy + CHASE_HEIGHT,
+      wz - fz * CHASE_DISTANCE,
+    },
+    focus = {
+      wx + fx * LOOK_AHEAD,
+      wy + 1.5,
+      wz + fz * LOOK_AHEAD,
+    },
+    fov = math.rad(46),
+    curve = 0,
+    up = { 0, 1, 0 },
+  }
 end
 
 local function drawProjectedOverlays(G, state, Voxel3D)
@@ -279,23 +381,23 @@ local function drawProjectedOverlays(G, state, Voxel3D)
   for _, point in ipairs(visitedPoints(state.region)) do
     if point.anchor then
       local wx, wz = worldPoint(state.region, point.anchor.x, point.anchor.y)
-      local x, y = Voxel3D.project(wx, heightAt(wx, wz) + 1.2, wz)
-      if x and y then
+      local x, y = Voxel3D.project(wx, heightAt(wx, wz) + 1.4, wz)
+      if x and y and x >= -8 and x <= SCREEN_W + 8 and y >= -8 and y <= SCREEN_H + 8 then
         local selected = nearestSpawn ~= nil and point.row
           and point.row.spawn == nearestSpawn
-        G.setColor(1, 1, 1, 0.94)
-        G.circle("fill", x, y + MAP_TOP, selected and 2 or 1.25)
-        if selected then G.circle("line", x, y + MAP_TOP, 4.5) end
+        G.setColor(1, 1, 1, selected and 1 or 0.82)
+        G.circle("fill", x, y, selected and 2 or 1.25)
+        if selected then G.circle("line", x, y, 4.5) end
       end
     end
   end
 
-  local wx, wz = worldPoint(state.region, state.x, state.y)
-  local x, y, scale = Voxel3D.project(wx, heightAt(wx, wz) + 8, wz)
-  if x and y then drawMount(G, state, x, y + MAP_TOP, scale) end
+  local wx, wy, wz = mountWorld(state)
+  local x, y, scale = Voxel3D.project(wx, wy, wz)
+  if x and y then drawMount(G, state, x, y, scale) end
 end
 
-local function renderTerrainCanvas()
+local function renderTerrainCanvas(state)
   local r = ensureRenderer()
   if not r then return nil end
   local Voxel3D = r.Voxel3D
@@ -303,16 +405,10 @@ local function renderTerrainCanvas()
   local canvas, begun = nil, false
 
   local ok, err = pcall(function()
-    Voxel3D.camera = {
-      eye = { 80, 98, 168 },
-      focus = { 80, 4, 68 },
-      fov = math.rad(40),
-      curve = 0,
-      up = { 0, 1, 0 },
-    }
+    Voxel3D.camera = cameraFor(state)
     Voxel3D.tint = { 1, 1, 1 }
-    begun = Voxel3D.beginScene(SCREEN_W, MAP_H, 80, 68,
-      SCREEN_W, MAP_H, { 0.58, 0.80, 0.96, 1 }, "dsr_open_sky_region")
+    begun = Voxel3D.beginScene(SCREEN_W, SCREEN_H, 80, 72,
+      SCREEN_W, SCREEN_H, { 0.58, 0.80, 0.96, 1 }, "dsr_open_sky_navigation")
     if not begun then error("Voxel3D.beginScene failed") end
     Voxel3D.seams(false)
     Voxel3D.glass(false)
@@ -351,22 +447,32 @@ local function drawStatus(G, winW, winH)
   pcall(G.print, "3D:" .. tostring(cache.stage or "?"), 112, 4)
 end
 
+local function drawNavigationHud(G, state)
+  G.setColor(0, 0, 0, 0.54)
+  G.rectangle("fill", 0, 0, SCREEN_W, 13)
+  G.rectangle("fill", 0, SCREEN_H - 13, SCREEN_W, 13)
+  G.setColor(1, 1, 1, 1)
+  if type(G.print) == "function" then
+    pcall(G.print, "OPEN SKY - " .. tostring(state.region or "johto"):upper(), 4, 3)
+    local land = state.nearestDistance and state.nearestDistance <= 11
+    pcall(G.print, land and "A DESCEND" or "SOARING", 4, SCREEN_H - 11)
+    pcall(G.print, cache.flatFallback and "3D FLAT" or "3D NAV", 118, 3)
+  end
+end
+
 local function draw3dWidescreen(state, winW, winH)
   if not (love and love.graphics) then return false end
   local G = love.graphics
   winW = tonumber(winW) or select(1, G.getDimensions()) or SCREEN_W
   winH = tonumber(winH) or select(2, G.getDimensions()) or SCREEN_H
 
-  -- Game2 may already be drawing into a presentation target. Voxel3D owns an
-  -- off-screen canvas and endScene() unbinds it, so remember the caller target
-  -- and restore it BEFORE drawing the 3D result or diagnostics.
   local target = nil
   if type(G.getCanvas) == "function" then
     local okTarget, current = pcall(G.getCanvas)
     if okTarget then target = current end
   end
 
-  local canvas, Voxel3D = renderTerrainCanvas()
+  local canvas, Voxel3D = renderTerrainCanvas(state)
   restoreTarget(G, target)
 
   local pushed = false
@@ -381,10 +487,10 @@ local function draw3dWidescreen(state, winW, winH)
       G.translate(ox, oy)
       G.scale(scale, scale)
       G.setColor(1, 1, 1, 1)
-      G.draw(canvas, 0, MAP_TOP)
+      G.draw(canvas, 0, 0)
       drawProjectedOverlays(G, state, Voxel3D)
-      G.setColor(1, 1, 1, 1)
-      pcall(G.print, cache.flatFallback and "3D:FLAT" or "3D:LIVE", 108, 4)
+      drawNavigationHud(G, state)
+      setStage(cache.flatFallback and "FLAT" or "NAV")
     else
       drawStatus(G, winW, winH)
     end
@@ -405,6 +511,18 @@ local function patchState(state)
   if type(state.drawWidescreen) ~= "function" then return end
   patched[state] = true
 
+  -- Keep the original Open Sky movement/progression state machine. We observe
+  -- its regional position after each update to steer the chase camera, so the
+  -- same controls and landing rules work in both 2D and 3D.
+  if type(state.update) == "function" then
+    local baseUpdate = state.update
+    state.update = function(self, dt, ...)
+      local result = baseUpdate(self, dt, ...)
+      updateNavigation(self, dt)
+      return result
+    end
+  end
+
   local fallback = state.drawWidescreen
   state.drawWidescreen = function(self, winW, winH)
     local fallbackOk, fallbackErr = pcall(fallback, self, winW, winH)
@@ -415,6 +533,8 @@ local function patchState(state)
     draw3dWidescreen(self, winW, winH)
   end
   state._dsrOpenSkyGen2ThreeD = true
+  state._dsrOpenSky3DNavigation = true
+  navFor(state)
 end
 
 local function patchCurrentState()
@@ -443,7 +563,11 @@ playable.gen2ThreeD = {
   error = function() return cache.error end,
   projectWorld = worldPoint,
   sampleHeight = heightAt,
+  navigation = function(state)
+    state = state or (type(playable.state) == "function" and playable.state() or nil)
+    return state and navFor(state) or nil
+  end,
 }
 
-log("Gen2 Open Sky 3D overlay loaded with target restore (provider=%s)", PROVIDER_ID)
+log("Gen2 Open Sky navigable 3D soaring loaded (provider=%s)", PROVIDER_ID)
 end)();

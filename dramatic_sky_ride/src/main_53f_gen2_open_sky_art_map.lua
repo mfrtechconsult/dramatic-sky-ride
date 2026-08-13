@@ -188,8 +188,6 @@ local function drawMountMiniature(G, state, x, y)
     G.polygon("fill", x, y - 4, x + 4, y + 4,
       x, y + 2, x - 4, y + 4)
   end
-  G.setColor(1, 1, 1, 0.98)
-  G.circle("line", x, y, 5.5)
 end
 
 local function drawHud(G, state)
@@ -259,7 +257,6 @@ local function emergencyWidescreen(state, winW, winH)
     G.setColor(1, 1, 1, 1)
     G.polygon("fill", x, y - 5, x + 5, y + 5,
       x, y + 2, x - 5, y + 5)
-    G.circle("line", x, y, 7)
   end)
   if pushed then pcall(G.pop) end
 end

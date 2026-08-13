@@ -1,16 +1,13 @@
 ;(function()
 -- -------------------------------------------------------------------------
--- Gen2-3D-Sprites 0.2.22+ compatibility.
+-- Gen2-3D-Sprites 0.2.22+ HGSS/PokeMMO billboard compatibility.
 --
--- Randy's modern Gold voxel path owns Player:pose(), exact per-frame ground
--- height and its own SpriteBillboards module. Keep DSR on one visual contract:
---   * Randy keeps the native Gold player sprite; DSR's separate proxy is the
---     only mount actor in the voxel cast.
---   * spriteYOffset is not used for DSR Flight while Randy owns the voxel;
---     the mounted rider pose is anchored after VoxelScene has captured its
---     exact frame-local ground height.
---   * HGSS/PokeMMO 4x4 atlases get native UV/crop geometry inside Randy's own
---     SpriteBillboards module instead of being sampled as 16x96 sheets.
+-- IMPORTANT: this layer deliberately owns NO Player pose, NO Stadium prepare
+-- hook and NO OverworldState update hook.  main_58 is the sole mounted-rider
+-- pose owner and already compensates Randy's groundAt() against DSR's absolute
+-- flight altitude.  Keeping this file billboard-only prevents compatibility
+-- layers from wrapping one another every frame and growing an unbounded call
+-- chain.
 -- -------------------------------------------------------------------------
 
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
@@ -18,16 +15,14 @@ local generation = mod.exports.runtimeGeneration or {}
 local Assets = require("src.render.Assets")
 
 local state = {
-  playerNormalizations = 0,
-  riderAltitudeFrames = 0,
   billboardInstalls = 0,
   nativeCards = 0,
   lastProviderVersion = nil,
-  lastAbsoluteRiderY = nil,
   lastError = nil,
 }
 
 local nativeMeshes = {}
+local assetsCleanupRegistered = false
 
 local function isGold()
   return type(generation.isGen2) == "function"
@@ -35,49 +30,12 @@ local function isGold()
 end
 
 local function provider()
-  if type(mod.find) ~= "function" then return nil, nil, nil end
+  if type(mod.find) ~= "function" then return nil, nil end
   local ok, handle = pcall(mod.find, mod, PROVIDER_ID)
-  if not ok or not handle then return nil, nil, nil end
+  if not ok or not handle then return nil, nil end
   local ex = handle.exports
-  local bridge = ex and ex.voxelPipelineState or nil
   if ex then state.lastProviderVersion = ex.version or state.lastProviderVersion end
-  return handle, ex, type(bridge) == "table" and bridge or nil
-end
-
-local function voxelActive()
-  local _, ex, bridge = provider()
-  if not (ex and bridge) then return false end
-  if type(bridge.status) == "function" then
-    local ok, status = pcall(bridge.status)
-    if ok and type(status) == "table" and status.active ~= nil then
-      return status.active == true
-    end
-  end
-  if bridge.active ~= nil then return bridge.active == true end
-  if ex.voxelComposeHook ~= nil then return ex.voxelComposeHook == true end
-  return ex.rendererInstalled == true
-end
-
-local function mountState()
-  if flight and flight.active and flight.sprite then
-    return "flight", flight.species or (flight.mon and flight.mon.species), flight.sprite
-  end
-  if ground and ground.active and ground.sprite then
-    return "ground", ground.species or (ground.mon and ground.mon.species), ground.sprite
-  end
-  local ex = mod.exports or {}
-  if type(ex.isWaterRiding) == "function" and type(ex.waterMountSpecies) == "function"
-      and type(ex._waterRideVisual) == "function" then
-    local okActive, active = pcall(ex.isWaterRiding)
-    if okActive and active == true then
-      local okSpecies, species = pcall(ex.waterMountSpecies)
-      local okSprite, sprite = pcall(ex._waterRideVisual)
-      if okSpecies and okSprite and species and sprite then
-        return "water", species, sprite
-      end
-    end
-  end
-  return nil
+  return handle, ex
 end
 
 local function providerModule(ex, name)
@@ -190,6 +148,7 @@ local function buildNativeCard(voxel3D, def, frame)
 end
 
 local function installProviderBillboardHook()
+  if not isGold() then return false end
   local _, ex = provider()
   local billboards = providerModule(ex, "SpriteBillboards")
   local voxel3D = providerModule(ex, "Voxel3D")
@@ -198,8 +157,21 @@ local function installProviderBillboardHook()
 
   local marker = billboards._dramaticSkyRideNativePokeMMO022
   if type(marker) == "table" and marker.owner == mod.id
-      and billboards.mesh == marker.meshWrapper then
+      and billboards.mesh == marker.meshWrapper
+      and billboards.shadowQuad == marker.shadowWrapper then
     return true
+  end
+
+  -- If a previous hot-loaded copy of this exact adapter exists, unwrap it
+  -- before installing the new one.  Never wrap our own stale wrapper.
+  if type(marker) == "table" and marker.owner == mod.id then
+    if billboards.mesh == marker.meshWrapper and type(marker.rawMesh) == "function" then
+      billboards.mesh = marker.rawMesh
+    end
+    if billboards.shadowQuad == marker.shadowWrapper
+        and type(marker.rawShadow) == "function" then
+      billboards.shadowQuad = marker.rawShadow
+    end
   end
 
   local rawMesh = billboards.mesh
@@ -227,113 +199,14 @@ local function installProviderBillboardHook()
     shadowWrapper = shadowWrapper,
   }
   state.billboardInstalls = state.billboardInstalls + 1
-  if Assets.register then Assets.register(clearNativeMeshes) end
+  if not assetsCleanupRegistered and Assets.register then
+    Assets.register(clearNativeMeshes)
+    assetsCleanupRegistered = true
+  end
   return true
 end
 
-local RIDER_FOOT = {
-  LUGIA = 8.0, HOOH = 7.5, GYARADOS = 7.0, LAPRAS = 7.0,
-  MANTINE = 6.5, SUICUNE = 7.0, RAIKOU = 7.0, ENTEI = 7.2,
-  TYRANITAR = 8.0,
-}
-
-local function cleanSpecies(value)
-  if value == nil then return nil end
-  return tostring(value):upper():gsub("[^A-Z0-9]", "")
-end
-
-local function riderSeat(species)
-  return RIDER_FOOT[cleanSpecies(species)] or 7.0
-end
-
-local function stabilizeCapturedRider(posed)
-  if not (isGold() and voxelActive() and flight and flight.active == true) then return end
-  local ow = mod.exports._mountWorld and mod.exports._mountWorld(Game) or nil
-  local player = ow and ow.player or nil
-  if not player then return end
-  local _, species = mountState()
-  local absolute = tonumber(flight.altitude)
-  if not absolute then return end
-  local targetY = absolute + riderSeat(species)
-
-  for _, p in ipairs(posed or {}) do
-    if p and p.isPlayer and p.entity == player then
-      -- VoxelScene has already captured the exact ground height used for THIS
-      -- frame. Overwrite only its vertical lift so the final y = gh + lift is
-      -- identical to DSR's absolute mount altitude, even when Randy changes
-      -- groundAt() semantics or a roof/ledge lies below the rider.
-      local gh = tonumber(p.gh) or 0
-      p.lift = targetY - gh
-      p.dramaticSkyRideAbsoluteRiderY = targetY
-      state.lastAbsoluteRiderY = targetY
-      state.riderAltitudeFrames = state.riderAltitudeFrames + 1
-      return
-    end
-  end
-end
-
-local function installRiderPoseHook()
-  local _, ex = provider()
-  local stadium = ex and ex.overworld or nil
-  if not (type(stadium) == "table" and type(stadium.prepare) == "function") then
-    return false
-  end
-
-  local marker = stadium._dramaticSkyRideCapturedRider022
-  if type(marker) == "table" and marker.owner == mod.id
-      and stadium.prepare == marker.wrapper then return true end
-
-  local raw = stadium.prepare
-  local wrapper = function(posed, ...)
-    local result = raw(posed, ...)
-    stabilizeCapturedRider(posed)
-    return result
-  end
-  stadium.prepare = wrapper
-  stadium._dramaticSkyRideCapturedRider022 = {
-    owner = mod.id, raw = raw, wrapper = wrapper,
-  }
-  return true
-end
-
-local function normalizePlayerForProvider(ow)
-  if not (isGold() and voxelActive() and ow and ow.player and mountState()) then return end
-  local bridge = mod.exports and mod.exports.gen2PlayerBridge or nil
-  if not (bridge and type(bridge.nativePlayerSprite) == "function") then return end
-
-  local ok, sprite, def = pcall(bridge.nativePlayerSprite, ow.player)
-  if not (ok and sprite) then return end
-
-  -- main_56 predates the separate Gen2 voxel proxy and still installs the
-  -- Pokemon itself as player.sprite plus a terrain-derived spriteYOffset.
-  -- Randy 0.2.22 owns Player:pose() and can observe those fields directly.
-  -- Keep the real Gold player visually native; main_58's instance pose remains
-  -- the sole rider presentation while the proxy remains the sole mount.
-  ow.player.sprite = sprite
-  ow.player.spriteDef = def or sprite.def or ow.player.spriteDef
-  ow.player.spriteYOffset = 0
-  state.playerNormalizations = state.playerNormalizations + 1
-end
-
-local function installAll()
-  if not isGold() then return end
-  installProviderBillboardHook()
-  installRiderPoseHook()
-end
-
-local previousUpdate = OverworldState.update
-function OverworldState:update(dt, ...)
-  local result = previousUpdate(self, dt, ...)
-  if isGold() and Game.overworld == self then
-    installAll()
-    normalizePlayerForProvider(self)
-  end
-  return result
-end
-
-mod.events:on("game.ready", installAll)
-mod.events:on("mods.loaded", installAll)
-mod.events:on("mod.options_changed", function(payload)
+local function refresh(payload)
   if payload then
     local key = tostring(payload.key or "")
     if payload.mod == PROVIDER_ID and key == "sprite_style" then
@@ -343,26 +216,31 @@ mod.events:on("mod.options_changed", function(payload)
       clearNativeMeshes()
     end
   end
-  installAll()
-end)
+  installProviderBillboardHook()
+end
+
+mod.events:on("game.ready", refresh)
+mod.events:on("mods.loaded", refresh)
+mod.events:on("mod.options_changed", refresh)
 
 mod.exports.gen2Stadium2022Compat = {
-  api = 1,
+  api = 2,
   providerId = PROVIDER_ID,
   status = function()
     return {
       providerVersion = state.lastProviderVersion,
-      voxelActive = voxelActive(),
-      playerNormalizations = state.playerNormalizations,
-      riderAltitudeFrames = state.riderAltitudeFrames,
       billboardInstalls = state.billboardInstalls,
       nativeCards = state.nativeCards,
-      lastAbsoluteRiderY = state.lastAbsoluteRiderY,
+      cachedCards = (function()
+        local n = 0
+        for _ in pairs(nativeMeshes) do n = n + 1 end
+        return n
+      end)(),
       lastError = state.lastError,
     }
   end,
 }
 
-installAll()
-log("Gen2-3D-Sprites 0.2.22+ compat loaded (native rider ownership, exact captured altitude, native HGSS/PokeMMO billboards)")
+installProviderBillboardHook()
+log("Gen2-3D-Sprites 0.2.22+ HGSS/PokeMMO billboard compat loaded (no Player/prepare/update ownership)")
 end)();

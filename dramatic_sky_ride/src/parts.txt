@@ -95,3 +95,4 @@ main_59_gen2_voxel_visual_fixes.lua
 main_60_gen2_voxel_runtime_compat.lua
 main_61_gen2_voxel_single_owner_guard.lua
 main_62_ground_fx_retired.lua
+main_63_gen2_stadium2_022_compat.lua

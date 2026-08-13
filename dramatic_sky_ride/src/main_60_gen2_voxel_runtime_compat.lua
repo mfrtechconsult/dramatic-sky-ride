@@ -9,10 +9,11 @@
 --    world.stepped contact path converge on SpawnLogic:_startBattle(). While
 --    DSR is flying, those ground/water encounters are below the rider and must
 --    not start a battle. Wild Skies is a different mod/runtime and is untouched.
--- 2) Randy owns a separate SpriteBillboards module. Rebuild only the ACTIVE
---    DSR mount card at DSR's exact visual scale while MOUNT RENDERER is 2D.
---    Native HGSS/PokeMMO 4x4 atlases keep their real crop/UVs instead of being
---    forced through the provider's canonical 16x16 card contract.
+-- 2) Randy owns a separate SpriteBillboards module. Its default card is always
+--    16x16, bypassing DSR's Pokedex/per-species mount-size hook from main_21.
+--    Rebuild only the ACTIVE DSR mount card at DSR's exact visual scale while
+--    MOUNT RENDERER is 2D. Stadium geometry and every non-DSR sprite are left
+--    completely unchanged.
 -- -------------------------------------------------------------------------
 
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
@@ -83,6 +84,25 @@ local function mountScale(species)
   return 1
 end
 
+-- The canonical 16x96 Gyarados silhouette fills almost the entire square and
+-- reads substantially larger than the native HGSS crop at the same Pokédex
+-- scale. Reduce only that classic 2D card; native HGSS/PokeMMO keeps its exact
+-- existing size.
+local CLASSIC_2D_SCALE = { GYARADOS = 0.72 }
+local function classic2DScale(species)
+  local scale = mountScale(species)
+  local key = tostring(species or ""):upper():gsub("[^A-Z0-9]", "")
+  return scale * (CLASSIC_2D_SCALE[key] or 1)
+end
+
+-- -------------------------------------------------------------------------
+-- Randy embedded-Wilds battle gate.
+--
+-- SpawnLogic:onCollision() and SpawnLogic:onStepped() both call _startBattle.
+-- Hooking that single seam is important: DSR deliberately makes entity
+-- collision passable during Flight, so the player can enter a roaming mon's
+-- cell and onStepped would otherwise start the encounter one callback later.
+-- -------------------------------------------------------------------------
 local function installFlightBattleGate()
   local ex = providerExports()
   local wilds = ex and ex.wilds or nil
@@ -259,12 +279,14 @@ local function install2DBillboardSizeHook()
       return buildNativeHgssCard(voxel3D, def, frame, species) or fallback(def, frame)
     end
 
-    local scale = mountScale(species)
+    local scale = classic2DScale(species)
     state.last2DScale = scale
     if math.abs(scale - 1) < 0.0001 then return fallback(def, frame) end
 
-    local key = table.concat({ tostring(def.image), tostring(frame), tostring(species),
-      string.format("%.4f", scale) }, "#")
+    local key = table.concat({
+      tostring(def.image), tostring(frame), tostring(species),
+      string.format("%.4f", scale),
+    }, "#")
     if scaledMeshes[key] == nil then
       scaledMeshes[key] = buildScaledCard(voxel3D, def, frame, scale) or false
       if scaledMeshes[key] then state.scaled2DMeshes = state.scaled2DMeshes + 1 end
@@ -272,8 +294,12 @@ local function install2DBillboardSizeHook()
     return scaledMeshes[key] or fallback(def, frame)
   end
 
-  local meshWrapper = function(def, frame) return scaled(def, frame, rawMesh) end
-  local shadowWrapper = function(def, frame) return scaled(def, frame, rawShadow) end
+  local meshWrapper = function(def, frame)
+    return scaled(def, frame, rawMesh)
+  end
+  local shadowWrapper = function(def, frame)
+    return scaled(def, frame, rawShadow)
+  end
 
   billboards.mesh = meshWrapper
   billboards.shadowQuad = shadowWrapper
@@ -308,7 +334,9 @@ mod.events:on("mod.options_changed", function(payload)
   if payload and payload.mod == mod.id then
     local key = tostring(payload.key or "")
     if key == "pokedex_mount_sizes" or key:match("^mount_size_")
-       or key == "flight_mount_renderer" then clearScaledMeshes() end
+       or key == "flight_mount_renderer" then
+      clearScaledMeshes()
+    end
   elseif payload and payload.mod == PROVIDER_ID and payload.key == "sprite_style" then
     clearScaledMeshes()
   end
@@ -324,7 +352,7 @@ mod.exports.gen2VoxelRuntimeCompat = {
   status = function()
     return {
       battleGateInstalled = state.battleGateInstalled,
-      billboardHookInstalled = state.billboardHookInstalled,
+      billboardSizeHookInstalled = state.billboardHookInstalled,
       blockedGroundBattles = state.blockedGroundBattles,
       scaled2DMeshes = state.scaled2DMeshes,
       nativeHgssMeshes = state.nativeHgssMeshes,

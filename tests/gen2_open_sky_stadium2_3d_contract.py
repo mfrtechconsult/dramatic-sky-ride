@@ -1,32 +1,38 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import json, struct, sys
+import base64, json, struct, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('dramatic_sky_ride')
 src = root / 'src'
 parts = [line.strip() for line in (src / 'parts.txt').read_text(encoding='utf-8').splitlines() if line.strip()]
-name='main_53g_gen2_open_sky_stadium2_3d.lua'
-text=(src/name).read_text(encoding='utf-8') if (src/name).exists() else ''
-manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
-height=root/'assets'/'open_sky_region_height.png'
-texparts=[root/'assets'/'open_sky_map'/name for name in ('part01.b64','part02.b64','part03a.b64','part03b.b64','part04.b64')]
+name = 'main_53g_gen2_open_sky_stadium2_3d.lua'
+text = (src/name).read_text(encoding='utf-8') if (src/name).exists() else ''
+code_only = '\n'.join(line.split('--', 1)[0] for line in text.splitlines())
+manifest = json.loads((root/'manifest.json').read_text(encoding='utf-8'))
+height = root/'assets'/'open_sky_region_height.png'
+texparts = [root/'assets'/'open_sky_map'/n for n in ('part01.b64','part02.b64','part03a.b64','part03b.b64','part04.b64')]
 errors=[]
 def require(c,m):
     if not c: errors.append(m)
+
 require(name in parts, 'Gen2 Open Sky 3D bridge is not loaded')
-require('main_53f_gen2_open_sky_art_map.lua' in parts and name in parts and parts.index('main_53f_gen2_open_sky_art_map.lua') < parts.index(name), '3D bridge must load after 2D illustrated fallback')
+require('main_53f_gen2_open_sky_art_map.lua' in parts and parts.index('main_53f_gen2_open_sky_art_map.lua') < parts.index(name), '3D bridge must load after 2D illustrated fallback')
 require('STADIUM2_OVERWORLD_MODELS' in manifest.get('optional_dependencies',[]), 'Gen2-3D-Sprites mod id is not an optional dependency')
 require('PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"' in text, 'bridge does not detect randyadr Gen2-3D-Sprites by its manifest id')
-require('.lib.require' in text and '"Voxel3D"' in text and '"Mat4"' in text, 'bridge does not use Gen2-3D-Sprites public renderer library export')
-require('.beginScene' in text and '.draw' in text and '.project' in text, 'bridge does not render/project through Gen2-3D-Sprites Voxel3D')
+require('.lib.require' in text and '"Voxel3D"' in text, 'bridge does not use Gen2-3D-Sprites public Voxel3D export')
+require('.beginScene' in text and '.endScene' in text and '.draw' in text and '.project' in text, 'bridge does not render/project through Gen2-3D-Sprites Voxel3D')
 require('.newMesh' in text and 'love.image.newImageData' in text, 'Meshy height map is not rebuilt as a compact Voxel3D mesh')
 require('.seams(false)' in text, 'non-voxel Meshy terrain is not protected from voxel-grid seam shader')
-require('fallback' in text, '3D renderer has no safe 2D fallback')
-require('providerVoxelActive' in text and 'voxelPipelineState' in text, '3D bridge does not require the Gen2 voxel compositor to be active')
-require('pcall(fallback, state)' in text and text.index('pcall(fallback, state)') < text.index('local r = ensure()'), '3D bridge does not render the safe 2D fallback before attempting 3D')
-require('G.clear(' not in text, '3D bridge can erase the safe 2D map before its canvas is proven drawable')
-require('flight.sprite' in text and '.draw' in text, '3D view does not keep the selected flight mount miniature')
-require('points(state.region)' in text and 'worldPoint' in text, '3D landing beacons are not driven by real Gold Fly Points')
+require('providerVoxelActive' in text and 'rendererInstalled' in text and 'voxelStatus' in text, '3D bridge does not validate the Gen2-3D-Sprites renderer capability')
+require('status.active' in text and 'Do not use' in text, '3D bridge may incorrectly gate on provider frame activity while Open Sky owns the state')
+require('local fallback = state.drawWidescreen' in text, '3D renderer is not wrapping the proven 2D widescreen path')
+require('pcall(fallback, self, winW, winH)' in text and text.index('pcall(fallback, self, winW, winH)') < text.index('draw3dWidescreen(self, winW, winH)'), 'safe 2D renderer must draw before every 3D attempt')
+require('state.draw=function' not in code_only.replace(' ', ''), '3D bridge must not replace the normal state.draw path')
+require('G.clear(' not in code_only, '3D bridge can erase the safe 2D frame')
+require('G.push("all")' in text and 'G.draw(canvas, 0, MAP_TOP)' in text, '3D canvas is not composited as an isolated overlay')
+require('disableThreeD' in text and 'cache.disabled = true' in text, '3D failures are not fail-closed for the current session')
+require('flight.sprite' in text and 'sprite.draw' in text, '3D view does not keep the selected flight mount miniature')
+require('visitedPoints(state.region)' in text and 'worldPoint' in text, '3D landing beacons are not driven by real Gold Fly Points')
 require(height.exists(), 'optimized Meshy-derived Open Sky height map is missing')
 require(all(p.exists() for p in texparts), 'Open Sky 3D texture asset fragments are missing')
 if height.exists():
@@ -36,12 +42,12 @@ if height.exists():
         w,h=struct.unpack('>II',raw[16:24])
         require((w,h)==(128,99), f'Open Sky height map expected 128x99, got {w}x{h}')
 if all(p.exists() for p in texparts):
-    import base64
     raw=base64.b64decode(''.join(p.read_text(encoding='ascii').strip() for p in texparts), validate=True)
     require(raw.startswith(b'\xff\xd8\xff') and raw.endswith(b'\xff\xd9'), 'Open Sky 3D texture is not a complete JPEG')
 require('playable.openSkyMapImage' in text, '3D bridge does not reuse the verified Open Sky image loader')
+
 if errors:
-    print('Gen2 Open Sky Gen2-3D-Sprites contract FAILED')
+    print('Gen2 Open Sky safe Gen2-3D-Sprites overlay contract FAILED')
     for e in errors: print(' -',e)
     raise SystemExit(1)
-print('Gen2 Open Sky Gen2-3D-Sprites contract: PASS')
+print('Gen2 Open Sky safe Gen2-3D-Sprites overlay contract: PASS')

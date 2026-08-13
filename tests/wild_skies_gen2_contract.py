@@ -36,15 +36,18 @@ require('tagOrganic' in wild,
         "Aerial Wild Skies encounters should be tagged organic when Double Battles is present")
 require('registerPartnerSource' in wild and 'takeFlockmate' in wild,
         "Double Battles should be able to recruit a nearby Wild Skies flockmate")
+require('return mate.species, mate.level' in wild,
+        "Double Battles partner source must return species and level separately")
 require('lastIntercept' in wild and 'interceptCount' in wild
         and 'spriteIntegrationMode' in wild and 'integrationMode' in wild,
         "Wild Skies diagnostics must expose integration state and recent interceptions")
 require('local previous = bridge.extraEntitiesProvider' in voxel,
         "Gen2 voxel integration must preserve the previous extra-entities provider chain")
-require('previous(game' in voxel or 'previous(...)' in voxel,
+require('pcall(previous, ow)' in voxel,
         "The chained voxel provider must actually call the previous provider")
 require('follower' in single_owner.lower(),
         "The Stadium single-owner guard must remain follower-scoped rather than species-global")
+
 optional = manifest.get("optional_dependencies", [])
 require(any(x.startswith("wild_skies@>=1.4.1") for x in optional),
         "Wild Skies must remain optional and keep Gen1-compatible dependency range")

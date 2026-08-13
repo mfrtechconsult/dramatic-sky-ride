@@ -20,6 +20,8 @@ Use DSR with **one** primary Pokemon sprite/follower provider:
 - **Wilds of Kanto** (`overworld_wild_spawns`) — recommended for a living overworld and optional high-detail PokeMMO mount sprites; or
 - **mfrtechconsult/PokePCFollowers** (`PokePCFollowers_VoxelMerge`) — lighter follower/mount setup.
 
+**Wilds of Kanto 2.1.0 or newer is required for Wilds integration on Pokémon Gold/Gen 2.** On Gold, DSR consumes Wilds' public land/water SpriteDefs so HGSS/GSC presentation, colored swimming art, True Size geometry and provider changes remain owned by Wilds instead of being copied into DSR.
+
 Add **Wild Skies** for visible airborne Pokemon and aerial interceptions. **Wild Skies 1.9.0 or newer is required for Wild Skies on Pokémon Gold/Gen 2.** DSR owns the player's mount and flight state; Wild Skies independently owns sky ecology, time-of-day species, resident flocks, route-boundary persistence and its own flyer rendering. Add Crystal 251 or another compatible Gen II content provider if you want Johto Pokemon to exist in-game.
 
 ### Recommended voxel setup

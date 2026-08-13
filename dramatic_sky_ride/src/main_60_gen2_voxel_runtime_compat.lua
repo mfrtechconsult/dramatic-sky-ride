@@ -9,11 +9,10 @@
 --    world.stepped contact path converge on SpawnLogic:_startBattle(). While
 --    DSR is flying, those ground/water encounters are below the rider and must
 --    not start a battle. Wild Skies is a different mod/runtime and is untouched.
--- 2) Randy owns a separate SpriteBillboards module. Its default card is always
---    16x16, bypassing DSR's Pokedex/per-species mount-size hook from main_21.
---    Rebuild only the ACTIVE DSR mount card at DSR's exact visual scale while
---    MOUNT RENDERER is 2D. Stadium geometry and every non-DSR sprite are left
---    completely unchanged.
+-- 2) Randy owns a separate SpriteBillboards module. Rebuild only the ACTIVE
+--    DSR mount card at DSR's exact visual scale while MOUNT RENDERER is 2D.
+--    Native HGSS/PokeMMO 4x4 atlases keep their real crop/UVs instead of being
+--    forced through the provider's canonical 16x16 card contract.
 -- -------------------------------------------------------------------------
 
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
@@ -25,6 +24,7 @@ local state = {
   blockedGroundBattles = 0,
   billboardHookInstalled = false,
   scaled2DMeshes = 0,
+  nativeHgssMeshes = 0,
   last2DScale = 1,
   lastError = nil,
 }
@@ -83,14 +83,6 @@ local function mountScale(species)
   return 1
 end
 
--- -------------------------------------------------------------------------
--- Randy embedded-Wilds battle gate.
---
--- SpawnLogic:onCollision() and SpawnLogic:onStepped() both call _startBattle.
--- Hooking that single seam is important: DSR deliberately makes entity
--- collision passable during Flight, so the player can enter a roaming mon's
--- cell and onStepped would otherwise start the encounter one callback later.
--- -------------------------------------------------------------------------
 local function installFlightBattleGate()
   local ex = providerExports()
   local wilds = ex and ex.wilds or nil
@@ -108,8 +100,6 @@ local function installFlightBattleGate()
 
   local raw = logic._startBattle
   local wrapper = function(self, record, ...)
-    -- Randy's embedded Wilds only owns land/water roaming encounters. Airborne
-    -- encounters belong to Wild Skies and never pass through this function.
     if isGold() and flight and flight.active == true then
       state.blockedGroundBattles = state.blockedGroundBattles + 1
       return false
@@ -127,13 +117,6 @@ local function installFlightBattleGate()
   return true
 end
 
--- -------------------------------------------------------------------------
--- Randy 2D billboard sizing.
---
--- This mirrors main_21_mount_size.lua's Dramatic Shape card geometry exactly:
--- width grows around x=8, height grows upward from y=0 (the feet). Therefore
--- the rider seat offsets already produced by DSR remain correct.
--- -------------------------------------------------------------------------
 local function providerModule(ex, name)
   local lib = ex and ex.lib or nil
   if not (lib and type(lib.require) == "function") then return nil end
@@ -151,6 +134,71 @@ local function clearScaledMeshes()
     if mesh and mesh ~= false and mesh.release then pcall(mesh.release, mesh) end
   end
   scaledMeshes = {}
+end
+
+local function nativeHgssDef(def)
+  return type(def) == "table" and def.dramaticSkyRideNativePokeMMO == true
+end
+
+local function nativeRow(frame)
+  frame = tonumber(frame) or 0
+  if frame == 1 or frame == 4 then return 3 end
+  if frame == 2 or frame == 5 then return 1 end
+  return 0
+end
+
+local function nativeColumn(frame)
+  if (tonumber(frame) or 0) < 3 then return 0 end
+  local ow = mod.exports._mountWorld and mod.exports._mountWorld(Game) or nil
+  local player = ow and ow.player or nil
+  return math.floor((tonumber(player and player.animClock) or 0) / 8) % 4
+end
+
+local function buildNativeHgssCard(Voxel3D, def, frame, species)
+  local correction = mod.exports and mod.exports.nativePokeMMOSizeCorrection or nil
+  local crop = correction and type(correction.cropForDef) == "function"
+    and correction.cropForDef(def) or nil
+  if not crop then return nil end
+
+  local correctedScale = mountScale(species)
+  if correction and type(correction.scale) == "function" then
+    local ok, value = pcall(correction.scale, species)
+    value = ok and tonumber(value) or nil
+    if value and value > 0 then correctedScale = value end
+  end
+  local scale = (tonumber(crop.fit) or 1) * correctedScale
+  state.last2DScale = correctedScale
+
+  local row, col = nativeRow(frame), nativeColumn(frame)
+  local key = table.concat({ "hgss", tostring(def.image), tostring(frame),
+    tostring(row), tostring(col), tostring(species), string.format("%.5f", scale),
+    tostring(crop.left), tostring(crop.top), tostring(crop.width), tostring(crop.height) }, "#")
+  if scaledMeshes[key] ~= nil then return scaledMeshes[key] or nil end
+
+  local atlasW, atlasH = tonumber(crop.atlasW), tonumber(crop.atlasH)
+  local tileW, tileH = tonumber(crop.tileW), tonumber(crop.tileH)
+  local left, top = tonumber(crop.left) or 0, tonumber(crop.top) or 0
+  local width, height = tonumber(crop.width), tonumber(crop.height)
+  if not (atlasW and atlasH and tileW and tileH and width and height
+      and atlasW > 0 and atlasH > 0 and tileW > 0 and tileH > 0) then return nil end
+
+  local eps = 0.05
+  local u0 = (col * tileW + left + eps) / atlasW
+  local u1 = (col * tileW + left + width - eps) / atlasW
+  local v0 = (row * tileH + top + eps) / atlasH
+  local v1 = (row * tileH + top + height - eps) / atlasH
+  local drawnW, drawnH = width * scale, height * scale
+  local x0, x1 = 8 - drawnW / 2, 8 + drawnW / 2
+  local verts = {
+    { x0, 0,      0, u0, v1, 1 }, { x1, 0,      0, u1, v1, 1 },
+    { x1, drawnH, 0, u1, v0, 1 }, { x0, drawnH, 0, u0, v0, 1 },
+  }
+  local indices = {}
+  Voxel3D.pushQuad(indices, 0)
+  local ok, mesh = pcall(Voxel3D.newMesh, verts, indices)
+  scaledMeshes[key] = ok and mesh or false
+  if ok and mesh then state.nativeHgssMeshes = state.nativeHgssMeshes + 1 end
+  return ok and mesh or nil
 end
 
 local function buildScaledCard(Voxel3D, def, frame, scale)
@@ -203,20 +251,20 @@ local function install2DBillboardSizeHook()
   local function scaled(def, frame, fallback)
     if not (isGold() and renderer2D()) then return fallback(def, frame) end
     local species, activeDef = activeMountDef()
-    -- Identity check is intentional. A wild/follower of the same species may
-    -- share an image path, but only DSR's active mount definition is resized.
     if not (species and activeDef and def == activeDef) then
       return fallback(def, frame)
+    end
+
+    if nativeHgssDef(def) then
+      return buildNativeHgssCard(voxel3D, def, frame, species) or fallback(def, frame)
     end
 
     local scale = mountScale(species)
     state.last2DScale = scale
     if math.abs(scale - 1) < 0.0001 then return fallback(def, frame) end
 
-    local key = table.concat({
-      tostring(def.image), tostring(frame), tostring(species),
-      string.format("%.4f", scale),
-    }, "#")
+    local key = table.concat({ tostring(def.image), tostring(frame), tostring(species),
+      string.format("%.4f", scale) }, "#")
     if scaledMeshes[key] == nil then
       scaledMeshes[key] = buildScaledCard(voxel3D, def, frame, scale) or false
       if scaledMeshes[key] then state.scaled2DMeshes = state.scaled2DMeshes + 1 end
@@ -224,12 +272,8 @@ local function install2DBillboardSizeHook()
     return scaledMeshes[key] or fallback(def, frame)
   end
 
-  local meshWrapper = function(def, frame)
-    return scaled(def, frame, rawMesh)
-  end
-  local shadowWrapper = function(def, frame)
-    return scaled(def, frame, rawShadow)
-  end
+  local meshWrapper = function(def, frame) return scaled(def, frame, rawMesh) end
+  local shadowWrapper = function(def, frame) return scaled(def, frame, rawShadow) end
 
   billboards.mesh = meshWrapper
   billboards.shadowQuad = shadowWrapper
@@ -264,15 +308,15 @@ mod.events:on("mod.options_changed", function(payload)
   if payload and payload.mod == mod.id then
     local key = tostring(payload.key or "")
     if key == "pokedex_mount_sizes" or key:match("^mount_size_")
-       or key == "flight_mount_renderer" then
-      clearScaledMeshes()
-    end
+       or key == "flight_mount_renderer" then clearScaledMeshes() end
+  elseif payload and payload.mod == PROVIDER_ID and payload.key == "sprite_style" then
+    clearScaledMeshes()
   end
   installAll()
 end)
 
 mod.exports.gen2VoxelRuntimeCompat = {
-  api = 1,
+  api = 2,
   battleGateInstalled = function() return state.battleGateInstalled end,
   billboardSizeHookInstalled = function() return state.billboardHookInstalled end,
   blockedGroundBattles = function() return state.blockedGroundBattles end,
@@ -280,9 +324,10 @@ mod.exports.gen2VoxelRuntimeCompat = {
   status = function()
     return {
       battleGateInstalled = state.battleGateInstalled,
-      billboardSizeHookInstalled = state.billboardHookInstalled,
+      billboardHookInstalled = state.billboardHookInstalled,
       blockedGroundBattles = state.blockedGroundBattles,
       scaled2DMeshes = state.scaled2DMeshes,
+      nativeHgssMeshes = state.nativeHgssMeshes,
       current2DScale = state.last2DScale,
       lastError = state.lastError,
     }
@@ -290,5 +335,5 @@ mod.exports.gen2VoxelRuntimeCompat = {
 }
 
 installAll()
-log("Gen2 voxel runtime compat loaded (Flight ignores Randy ground Wilds; 2D mount sizes follow DSR)")
+log("Gen2 voxel runtime compat loaded (ground battle gate; 2D sizing; native HGSS cards)")
 end)();

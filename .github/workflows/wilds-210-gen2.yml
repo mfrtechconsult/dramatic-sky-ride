@@ -72,8 +72,10 @@ jobs:
 
       - name: Compile Wilds compatibility chunks
         run: |
-          luajit -b sky/dramatic_sky_ride/src/main_40c_wilds_210.lua /tmp/wilds210.luac
-          luajit -b sky/dramatic_sky_ride/src/main_60a_wilds_210_voxel.lua /tmp/wilds210_voxel.luac
+          sed '1s/^;//' sky/dramatic_sky_ride/src/main_40c_wilds_210.lua > /tmp/wilds210.lua
+          sed '1s/^;//' sky/dramatic_sky_ride/src/main_60a_wilds_210_voxel.lua > /tmp/wilds210_voxel.lua
+          luajit -b /tmp/wilds210.lua /tmp/wilds210.luac
+          luajit -b /tmp/wilds210_voxel.lua /tmp/wilds210_voxel.luac
 
       - name: Compile complete DSR runtime
         run: |

@@ -46,22 +46,17 @@ end
 
 local function providerVoxelActive(ex)
   if type(ex) ~= "table" then return false end
-  if ex.active == false or ex.rendererInstalled ~= true then return false end
-  if ex.voxelComposeHook == false then return false end
 
-  -- `status.active` means "the provider is composing THIS world frame" and
-  -- naturally becomes false while Open Sky owns the opaque state. Do not use
-  -- it as the gate here. Only an explicit user/config enable flag may veto the
-  -- Open Sky overlay.
-  if type(ex.voxelStatus) == "function" then
-    local ok, status = pcall(ex.voxelStatus)
-    if ok and type(status) == "table" then
-      if status.enabled ~= nil then return status.enabled == true end
-      if status.optionEnabled ~= nil then return status.optionEnabled == true end
-      if status.voxel3d ~= nil then return status.voxel3d == true end
-    end
-  end
-  return true
+  -- Open Sky owns an opaque Gold state, so Randy's normal world compositor is
+  -- expected to report inactive while this screen is open. For this dedicated
+  -- off-screen pass we only need the installed renderer LIBRARY, not an active
+  -- compose frame. Treat explicit bootstrap failures as unavailable, but do not
+  -- require rendererInstalled/voxelComposeHook/status.active to already be true.
+  -- Do not use voxelStatus().status.active here: that flag describes the normal
+  -- Gold world compose frame, which is deliberately suspended by Open Sky.
+  if ex.active == false then return false end
+  if ex.rendererInstalled == false then return false end
+  return type(ex.lib) == "table" and type(ex.lib.require) == "function"
 end
 
 local function provider()
@@ -70,13 +65,17 @@ local function provider()
   end
   cache.provider = nil
   if type(mod.find) ~= "function" then return nil end
+
+  -- Both call shapes exist in the Gen1Recomp mod ecosystem. Randy currently
+  -- works with the method form; keep the plain form as a compatibility retry.
   local ok, handle = pcall(mod.find, mod, PROVIDER_ID)
+  if not ok or not handle then
+    ok, handle = pcall(function() return mod.find(PROVIDER_ID) end)
+  end
   if not ok or not handle then return nil end
+
   local ex = handle.exports
   if not providerVoxelActive(ex) then return nil end
-  if type(ex.lib) ~= "table" or type(ex.lib.require) ~= "function" then
-    return nil
-  end
   cache.provider = ex
   return ex
 end
@@ -105,9 +104,26 @@ local function readHeight()
   return image
 end
 
+local function buildFlatTerrain(Voxel3D)
+  local verts = {
+    { MX0, 0, MZ0, 0, 0, 1 },
+    { MX1, 0, MZ0, 1, 0, 1 },
+    { MX0, 0, MZ1, 0, 1, 1 },
+    { MX1, 0, MZ1, 1, 1, 1 },
+  }
+  local mesh = Voxel3D.newMesh(verts, { 1, 3, 2, 2, 3, 4 })
+  if not mesh then return nil, "Voxel3D flat fallback mesh creation failed" end
+  return { mesh = mesh, w = 2, h = 2, heights = { 0, 0, 0, 0 }, flat = true }
+end
+
 local function buildTerrain(Voxel3D)
   local image, imageErr = readHeight()
-  if not image then return nil, imageErr end
+  if not image then
+    -- Height decoding is optional for activation. A tilted textured plane is
+    -- enough to prove the provider/camera path and keeps 3D visible even on a
+    -- runtime that cannot decode the Meshy-derived PNG.
+    return buildFlatTerrain(Voxel3D)
+  end
   local w, h = image:getDimensions()
   if w < 2 or h < 2 then return nil, "height map is too small" end
 
@@ -181,6 +197,7 @@ local function ensureRenderer()
   cache.mesh = built.mesh
   cache.w, cache.h = built.w, built.h
   cache.heights = built.heights
+  cache.flatFallback = built.flat == true
   cache.texture = texture
   cache.ready = true
   cache.error = nil
@@ -243,8 +260,6 @@ local function drawMount(G, state, x, y, scale)
     G.setColor(1, 1, 1, 1)
     G.circle("fill", x, y, 3)
   end
-  G.setColor(1, 1, 1, 0.96)
-  G.circle("line", x, y, 5)
 end
 
 local function drawProjectedOverlays(G, state, Voxel3D)
@@ -331,6 +346,10 @@ local function draw3dWidescreen(state, winW, winH)
     G.setColor(1, 1, 1, 1)
     G.draw(canvas, 0, MAP_TOP)
     drawProjectedOverlays(G, state, Voxel3D)
+    if type(G.print) == "function" then
+      G.setColor(1, 1, 1, 1)
+      pcall(G.print, cache.flatFallback and "3D FLAT" or "3D", 126, 4)
+    end
   end)
   if pushed then pcall(G.pop) end
   if not ok then

@@ -110,8 +110,6 @@ local function decorate(renderer, species)
     return renderer
   end
 
-  -- Gold's World:applySpritePalette() expects the ordinary SpriteRenderer
-  -- interface even though the HGSS/PokeMMO atlas must remain true-colour.
   if type(renderer.setObjPalette) ~= "function" then
     function renderer:setObjPalette(colors, group)
       self.objColors = colors
@@ -172,6 +170,45 @@ local function decorate(renderer, species)
   end
   return renderer
 end
+
+-- Keep Flight and Ground on the same embedded HGSS resolver. Their normal
+-- builders remain the exact fallback when HGSS is unavailable or not selected.
+local previousFlightBuilder = buildMountSprite
+if type(previousFlightBuilder) == "function" then
+  buildMountSprite = function(species, ...)
+    local native = decorate(resolveRaw(species), species)
+    return native or previousFlightBuilder(species, ...)
+  end
+end
+
+local previousGroundBuilder = buildGroundMountSprite
+if type(previousGroundBuilder) == "function" then
+  buildGroundMountSprite = function(species, ...)
+    local native = decorate(resolveRaw(species), species)
+    return native or previousGroundBuilder(species, ...)
+  end
+end
+
+local function refreshActive2D()
+  if not requested2D() then return end
+  if flight and flight.active and flight.species and type(buildMountSprite) == "function" then
+    local ok, sprite = pcall(buildMountSprite, flight.species)
+    if ok and sprite then flight.sprite = sprite end
+  end
+  if ground and ground.active and ground.species and type(buildGroundMountSprite) == "function" then
+    local ok, sprite = pcall(buildGroundMountSprite, ground.species)
+    if ok and sprite then ground.sprite = sprite end
+  end
+end
+
+mod.events:on("mod.options_changed", function(payload)
+  if not payload then return end
+  if payload.mod == PROVIDER_ID and payload.key == "sprite_style" then
+    refreshActive2D()
+  elseif payload.mod == mod.id and payload.key == "flight_mount_renderer" then
+    refreshActive2D()
+  end
+end)
 
 mod.exports.gen2EmbeddedPokeMMOMounts = {
   api = 2,

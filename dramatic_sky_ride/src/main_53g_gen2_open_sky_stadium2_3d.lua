@@ -2,11 +2,11 @@
 -- -------------------------------------------------------------------------
 -- Gen2 Open Sky 3D overlay for randyadr/Gen2-3D-Sprites.
 --
--- Safety rule: the proven 2D widescreen renderer always draws first. This
--- module only composites a 3D terrain canvas over the 2D map viewport after
--- Voxel3D has produced a valid canvas. It never replaces state.draw, never
--- clears the Game2 presentation target, and disables itself for the current
--- session after any 3D runtime failure.
+-- The proven 2D widescreen page always draws first. The 3D pass renders into
+-- its own Voxel3D canvas, then explicitly restores Gold's presentation target
+-- before compositing. This matters because Voxel3D.endScene() deliberately
+-- unbinds its canvas; without restoring the caller target the 3D image can be
+-- drawn to the window while Game2 later presents its still-2D frame over it.
 -- -------------------------------------------------------------------------
 local playable = mod.exports.openSkyPlayable or {}
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
@@ -27,15 +27,17 @@ local cache = {}
 local function resetCache()
   cache = {
     provider = nil,
-    ready = false,
-    disabled = false,
-    error = nil,
     Voxel3D = nil,
     mesh = nil,
     texture = nil,
     heights = nil,
     w = 0,
     h = 0,
+    ready = false,
+    flatFallback = false,
+    disabled = false,
+    stage = "INIT",
+    error = nil,
   }
 end
 resetCache()
@@ -44,53 +46,63 @@ local function clamp(v, lo, hi)
   return math.max(lo, math.min(hi, tonumber(v) or lo))
 end
 
-local function providerVoxelActive(ex)
-  if type(ex) ~= "table" then return false end
+local function setStage(stage, err)
+  cache.stage = tostring(stage or "?")
+  cache.error = err and tostring(err) or nil
+end
 
-  -- Open Sky owns an opaque Gold state, so Randy's normal world compositor is
-  -- expected to report inactive while this screen is open. For this dedicated
-  -- off-screen pass we only need the installed renderer LIBRARY, not an active
-  -- compose frame. Treat explicit bootstrap failures as unavailable, but do not
-  -- require rendererInstalled/voxelComposeHook/status.active to already be true.
-  -- Do not use voxelStatus().status.active here: that flag describes the normal
-  -- Gold world compose frame, which is deliberately suspended by Open Sky.
-  if ex.active == false then return false end
-  if ex.rendererInstalled == false then return false end
-  return type(ex.lib) == "table" and type(ex.lib.require) == "function"
+local function disableThreeD(stage, err)
+  cache.disabled = true
+  cache.ready = false
+  setStage(stage or "ERR", err or "unknown Open Sky 3D error")
+  pcall(function()
+    log("Open Sky 3D disabled for session [%s]: %s", cache.stage, cache.error)
+  end)
 end
 
 local function provider()
-  if cache.provider and providerVoxelActive(cache.provider) then
+  if cache.provider and type(cache.provider.lib) == "table"
+      and type(cache.provider.lib.require) == "function" then
     return cache.provider
   end
-  cache.provider = nil
-  if type(mod.find) ~= "function" then return nil end
 
-  -- Both call shapes exist in the Gen1Recomp mod ecosystem. Randy currently
-  -- works with the method form; keep the plain form as a compatibility retry.
+  -- Do NOT gate on exports.active, rendererInstalled, voxelStatus().active or
+  -- voxelComposeHook. Open Sky is an opaque state, so Randy's normal overworld
+  -- compose frame is expected to be inactive while this screen owns the frame.
+  -- The only capability required here is the provider's public renderer loader.
+  if type(mod.find) ~= "function" then
+    setStage("NOAPI", "mod.find unavailable")
+    return nil
+  end
+
   local ok, handle = pcall(mod.find, mod, PROVIDER_ID)
   if not ok or not handle then
     ok, handle = pcall(function() return mod.find(PROVIDER_ID) end)
   end
-  if not ok or not handle then return nil end
+  if not ok or not handle then
+    setStage("NOMOD", "Gen2-3D-Sprites not found")
+    return nil
+  end
 
   local ex = handle.exports
-  if not providerVoxelActive(ex) then return nil end
-  cache.provider = ex
-  return ex
-end
+  if type(ex) ~= "table" then
+    setStage("NOEXP", "provider exports unavailable")
+    return nil
+  end
+  if type(ex.lib) ~= "table" or type(ex.lib.require) ~= "function" then
+    setStage("NOLIB", "provider lib.require unavailable")
+    return nil
+  end
 
-local function disableThreeD(err)
-  cache.disabled = true
-  cache.ready = false
-  cache.error = tostring(err or "unknown Open Sky 3D error")
-  pcall(function() log("Open Sky 3D disabled for session: %s", cache.error) end)
+  cache.provider = ex
+  setStage("PROVIDER")
+  return ex
 end
 
 local function readHeight()
   if not (mod.read and love and love.image and love.image.newImageData
       and love.filesystem and love.filesystem.newFileData) then
-    return nil, "height-map decoder unavailable"
+    return nil, "height decoder unavailable"
   end
   local okRead, raw = pcall(mod.read, mod, HEIGHT_ASSET)
   if not okRead or type(raw) ~= "string" or raw == "" then
@@ -98,9 +110,9 @@ local function readHeight()
   end
   local okData, data = pcall(love.filesystem.newFileData,
     raw, "open_sky_region_height.png")
-  if not okData or not data then return nil, "height-map FileData failed" end
+  if not okData or not data then return nil, "height FileData failed" end
   local okImage, image = pcall(love.image.newImageData, data)
-  if not okImage or not image then return nil, "height-map ImageData failed" end
+  if not okImage or not image then return nil, "height ImageData failed" end
   return image
 end
 
@@ -112,22 +124,18 @@ local function buildFlatTerrain(Voxel3D)
     { MX1, 0, MZ1, 1, 1, 1 },
   }
   local mesh = Voxel3D.newMesh(verts, { 1, 3, 2, 2, 3, 4 })
-  if not mesh then return nil, "Voxel3D flat fallback mesh creation failed" end
+  if not mesh then return nil, "flat mesh failed" end
   return { mesh = mesh, w = 2, h = 2, heights = { 0, 0, 0, 0 }, flat = true }
 end
 
 local function buildTerrain(Voxel3D)
-  local image, imageErr = readHeight()
-  if not image then
-    -- Height decoding is optional for activation. A tilted textured plane is
-    -- enough to prove the provider/camera path and keeps 3D visible even on a
-    -- runtime that cannot decode the Meshy-derived PNG.
-    return buildFlatTerrain(Voxel3D)
-  end
-  local w, h = image:getDimensions()
-  if w < 2 or h < 2 then return nil, "height map is too small" end
+  local image = readHeight()
+  if not image then return buildFlatTerrain(Voxel3D) end
 
+  local w, h = image:getDimensions()
+  if w < 2 or h < 2 then return buildFlatTerrain(Voxel3D) end
   local verts, indices, heights = {}, {}, {}
+
   for z = 0, h - 1 do
     local tz = z / (h - 1)
     for x = 0, w - 1 do
@@ -159,8 +167,8 @@ local function buildTerrain(Voxel3D)
   end
 
   local mesh = Voxel3D.newMesh(verts, indices)
-  if not mesh then return nil, "Voxel3D mesh creation failed" end
-  return { mesh = mesh, w = w, h = h, heights = heights }
+  if not mesh then return buildFlatTerrain(Voxel3D) end
+  return { mesh = mesh, w = w, h = h, heights = heights, flat = false }
 end
 
 local function ensureRenderer()
@@ -169,27 +177,33 @@ local function ensureRenderer()
 
   local ex = provider()
   if not ex then return nil end
+
   local okVoxel, Voxel3D = pcall(ex.lib.require, "Voxel3D")
   if not okVoxel or type(Voxel3D) ~= "table" then
-    disableThreeD("Gen2-3D-Sprites Voxel3D export unavailable")
+    disableThreeD("NOVOX", "Voxel3D export unavailable")
     return nil
   end
   if type(Voxel3D.available) == "function" then
     local okAvailable, available = pcall(Voxel3D.available)
-    if not okAvailable or not available then
-      disableThreeD("Gen2-3D-Sprites 3D renderer unavailable")
+    if not okAvailable or available ~= true then
+      disableThreeD("GPU", "Voxel3D.available() is false")
       return nil
     end
   end
 
   local built, buildErr = buildTerrain(Voxel3D)
+  if not built then
+    disableThreeD("MESH", buildErr or "terrain build failed")
+    return nil
+  end
+
   local texture = nil
   if type(playable.openSkyMapImage) == "function" then
     local okTexture, image = pcall(playable.openSkyMapImage)
     if okTexture then texture = image end
   end
-  if not built or not texture then
-    disableThreeD(buildErr or "Open Sky map texture unavailable")
+  if not texture then
+    disableThreeD("TEX", "Open Sky map texture unavailable")
     return nil
   end
 
@@ -200,7 +214,7 @@ local function ensureRenderer()
   cache.flatFallback = built.flat == true
   cache.texture = texture
   cache.ready = true
-  cache.error = nil
+  setStage(cache.flatFallback and "FLAT" or "READY")
   return cache
 end
 
@@ -219,12 +233,9 @@ local function heightAt(wx, wz)
   local gx = clamp((wx - MX0) / (MX1 - MX0) * (cache.w - 1), 0, cache.w - 1)
   local gz = clamp((wz - MZ0) / (MZ1 - MZ0) * (cache.h - 1), 0, cache.h - 1)
   local x0, z0 = math.floor(gx), math.floor(gz)
-  local x1 = math.min(cache.w - 1, x0 + 1)
-  local z1 = math.min(cache.h - 1, z0 + 1)
+  local x1, z1 = math.min(cache.w - 1, x0 + 1), math.min(cache.h - 1, z0 + 1)
   local tx, tz = gx - x0, gz - z0
-  local function at(x, z)
-    return cache.heights[z * cache.w + x + 1] or 0
-  end
+  local function at(x, z) return cache.heights[z * cache.w + x + 1] or 0 end
   local a = at(x0, z0) * (1 - tx) + at(x1, z0) * tx
   local b = at(x0, z1) * (1 - tx) + at(x1, z1) * tx
   return a * (1 - tz) + b * tz
@@ -270,12 +281,11 @@ local function drawProjectedOverlays(G, state, Voxel3D)
       local wx, wz = worldPoint(state.region, point.anchor.x, point.anchor.y)
       local x, y = Voxel3D.project(wx, heightAt(wx, wz) + 1.2, wz)
       if x and y then
-        y = y + MAP_TOP
         local selected = nearestSpawn ~= nil and point.row
           and point.row.spawn == nearestSpawn
         G.setColor(1, 1, 1, 0.94)
-        G.circle("fill", x, y, selected and 2 or 1.25)
-        if selected then G.circle("line", x, y, 4.5) end
+        G.circle("fill", x, y + MAP_TOP, selected and 2 or 1.25)
+        if selected then G.circle("line", x, y + MAP_TOP, 4.5) end
       end
     end
   end
@@ -290,8 +300,7 @@ local function renderTerrainCanvas()
   if not r then return nil end
   local Voxel3D = r.Voxel3D
   local oldCamera, oldTint = Voxel3D.camera, Voxel3D.tint
-  local canvas = nil
-  local begun = false
+  local canvas, begun = nil, false
 
   local ok, err = pcall(function()
     Voxel3D.camera = {
@@ -316,47 +325,78 @@ local function renderTerrainCanvas()
   if begun then pcall(Voxel3D.endScene) end
   Voxel3D.camera, Voxel3D.tint = oldCamera, oldTint
   if not ok then
-    disableThreeD(err)
+    disableThreeD("SCENE", err)
     return nil
   end
   return canvas, Voxel3D
 end
 
+local function restoreTarget(G, target)
+  if target then
+    local ok = pcall(G.setCanvas, target)
+    if ok then return end
+  end
+  pcall(G.setCanvas)
+end
+
+local function drawStatus(G, winW, winH)
+  if type(G.print) ~= "function" then return end
+  local scale = fitScale(winW, winH)
+  local ox = math.floor((winW - SCREEN_W * scale) * 0.5)
+  local oy = math.floor((winH - SCREEN_H * scale) * 0.5)
+  G.origin()
+  G.translate(ox, oy)
+  G.scale(scale, scale)
+  G.setColor(1, 1, 1, 1)
+  pcall(G.print, "3D:" .. tostring(cache.stage or "?"), 112, 4)
+end
+
 local function draw3dWidescreen(state, winW, winH)
-  if cache.disabled or not provider() then return false end
   if not (love and love.graphics) then return false end
   local G = love.graphics
   winW = tonumber(winW) or select(1, G.getDimensions()) or SCREEN_W
   winH = tonumber(winH) or select(2, G.getDimensions()) or SCREEN_H
 
+  -- Game2 may already be drawing into a presentation target. Voxel3D owns an
+  -- off-screen canvas and endScene() unbinds it, so remember the caller target
+  -- and restore it BEFORE drawing the 3D result or diagnostics.
+  local target = nil
+  if type(G.getCanvas) == "function" then
+    local okTarget, current = pcall(G.getCanvas)
+    if okTarget then target = current end
+  end
+
+  local canvas, Voxel3D = renderTerrainCanvas()
+  restoreTarget(G, target)
+
   local pushed = false
   local ok, err = pcall(function()
     G.push("all")
     pushed = true
-    local canvas, Voxel3D = renderTerrainCanvas()
-    if not canvas then return end
-
-    -- Only now, after the 3D canvas is complete, touch the visible frame.
-    G.origin()
-    local scale = fitScale(winW, winH)
-    local ox = math.floor((winW - SCREEN_W * scale) * 0.5)
-    local oy = math.floor((winH - SCREEN_H * scale) * 0.5)
-    G.translate(ox, oy)
-    G.scale(scale, scale)
-    G.setColor(1, 1, 1, 1)
-    G.draw(canvas, 0, MAP_TOP)
-    drawProjectedOverlays(G, state, Voxel3D)
-    if type(G.print) == "function" then
+    if canvas and Voxel3D then
+      G.origin()
+      local scale = fitScale(winW, winH)
+      local ox = math.floor((winW - SCREEN_W * scale) * 0.5)
+      local oy = math.floor((winH - SCREEN_H * scale) * 0.5)
+      G.translate(ox, oy)
+      G.scale(scale, scale)
       G.setColor(1, 1, 1, 1)
-      pcall(G.print, cache.flatFallback and "3D FLAT" or "3D", 126, 4)
+      G.draw(canvas, 0, MAP_TOP)
+      drawProjectedOverlays(G, state, Voxel3D)
+      G.setColor(1, 1, 1, 1)
+      pcall(G.print, cache.flatFallback and "3D:FLAT" or "3D:LIVE", 108, 4)
+    else
+      drawStatus(G, winW, winH)
     end
   end)
   if pushed then pcall(G.pop) end
+  restoreTarget(G, target)
+
   if not ok then
-    disableThreeD(err)
+    disableThreeD("COMPOSE", err)
     return false
   end
-  return cache.ready == true and cache.disabled ~= true
+  return canvas ~= nil
 end
 
 local function patchState(state)
@@ -367,12 +407,9 @@ local function patchState(state)
 
   local fallback = state.drawWidescreen
   state.drawWidescreen = function(self, winW, winH)
-    -- The 2D page is the permanent base layer. Even a Voxel3D driver error can
-    -- only prevent this frame's 3D overlay; it cannot erase the already-drawn
-    -- map or send Game2 back through its white opaque-page fallback.
     local fallbackOk, fallbackErr = pcall(fallback, self, winW, winH)
     if not fallbackOk then
-      cache.error = "2D fallback failed before 3D: " .. tostring(fallbackErr)
+      setStage("2DERR", fallbackErr)
       return
     end
     draw3dWidescreen(self, winW, winH)
@@ -402,10 +439,11 @@ playable.gen2ThreeD = {
   detected = function() return provider() ~= nil end,
   ready = function() return ensureRenderer() ~= nil end,
   disabled = function() return cache.disabled == true end,
+  stage = function() return cache.stage end,
   error = function() return cache.error end,
   projectWorld = worldPoint,
   sampleHeight = heightAt,
 }
 
-log("Gen2 Open Sky safe 3D overlay loaded (provider=%s)", PROVIDER_ID)
+log("Gen2 Open Sky 3D overlay loaded with target restore (provider=%s)", PROVIDER_ID)
 end)();

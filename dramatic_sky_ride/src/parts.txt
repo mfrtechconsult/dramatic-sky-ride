@@ -97,3 +97,4 @@ main_61_gen2_voxel_single_owner_guard.lua
 main_62_ground_fx_retired.lua
 main_63_gen2_stadium2_022_compat.lua
 main_64_gen2_rider_absolute_height.lua
+main_65_gen2_stadium_rider_calibration.lua

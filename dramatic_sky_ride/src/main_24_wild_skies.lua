@@ -1,13 +1,13 @@
 (function()
--- alpha.16 optional Wild Skies integration.
--- Wild Skies remains an independent mod and owns its flyers. DSR only uses
--- documented Wild Skies exports for sprite-source fallback and flyer consume.
--- When Wilds of Kanto is enabled, Wild Skies' own native Wilds adapter is
--- authoritative for airborne species art; DSR does not override it.
+-- Optional Wild Skies integration.
+-- Wild Skies remains an independent mod and owns its flyers, ecology,
+-- persistence and rendering. DSR only advertises its airborne state and uses
+-- documented Wild Skies exports to consume a flyer for an aerial encounter.
 
 local WILD_SKIES_SOURCE_ID = "dramatic_sky_ride_followers"
 local WILDS_MOD_ID = "overworld_wild_spawns"
-local WILD_SKIES_INTERCEPT_RADIUS = 2
+local WILD_SKIES_INTERCEPT_RADIUS = 1
+local DOUBLE_BATTLES_SOURCE_ID = "dramatic_sky_ride_flock"
 local FALLBACK_PROVIDER_IDS = {
   "PokePCFollowers_VoxelMerge",
   "pokepcfollowers",
@@ -15,8 +15,16 @@ local FALLBACK_PROVIDER_IDS = {
   "followers_ex",
 }
 
-local wildSkies = { handle = nil, take = nil, registered = false,
-                    spriteMode = "native", cooldown = 0, expectedBattle = 0 }
+local wildSkies = {
+  handle = nil,
+  take = nil,
+  registered = false,
+  spriteMode = "native",
+  cooldown = 0,
+  lastIntercept = nil,
+  interceptCount = 0,
+  doubleBattlesRegistered = false,
+}
 
 local function enabledModHandle(id)
   if not mod.find then return nil end
@@ -28,6 +36,14 @@ local function wildSkiesHandle()
   if wildSkies.handle ~= nil then return wildSkies.handle or nil end
   wildSkies.handle = enabledModHandle("wild_skies") or false
   return wildSkies.handle or nil
+end
+
+local function isGen2Runtime(game)
+  local runtime = mod.exports.runtimeGeneration
+  local check = runtime and runtime.isGen2
+  if type(check) ~= "function" then return false end
+  local ok, value = pcall(check, game or Game)
+  return ok and value == true
 end
 
 local function wildsEnabled()
@@ -45,10 +61,9 @@ local function fallbackProvider()
   return nil
 end
 
--- DSR's Wild Skies sprite source is deliberately only a fallback for setups
--- without Wilds of Kanto. It consumes the enabled provider's public export and
--- never scans the mods directory, so a disabled/stale install cannot influence
--- Wild Skies rendering.
+-- Gen 1 compatibility only. Wild Skies 1.9 owns the full Gold sprite-source
+-- ladder (native Gold, Wilds/HGSS, embedded Wilds/Stadium 2, registered packs),
+-- so DSR must not outrank it with follower land art on Gen 2.
 local function fallbackAirSprite(game, species, dex)
   local providerId, exports = fallbackProvider()
   if not exports then return nil end
@@ -94,33 +109,37 @@ local function configureWildSkiesSpriteSource()
     return false
   end
 
-  -- Hot reloads and old DSR builds can leave our source registered. Remove it
-  -- first so Wild Skies' own built-in sources regain their normal priority.
+  -- Hot reloads and older DSR builds may have left our source registered.
+  -- Always remove it first so Wild Skies regains its intended source order.
   if type(exports.unregisterSpriteSource) == "function" then
     pcall(exports.unregisterSpriteSource, WILD_SKIES_SOURCE_ID)
   end
   wildSkies.registered = false
 
-  -- Preferred path: Wild Skies already has a first-class Wilds of Kanto
-  -- adapter that resolves the style-independent levitates registry and strips
-  -- the water splash. Do not duplicate or outrank that integration in DSR.
-  if wildsEnabled() then
-    setSpriteMode("wild_skies_native_wilds")
+  -- Gold/Gen 2 is entirely Wild Skies-owned. Its 1.9 source chain knows how
+  -- to resolve native Gold, Wilds/HGSS and Stadium 2 art and should never be
+  -- overridden by DSR's follower fallback.
+  if isGen2Runtime(Game) then
+    setSpriteMode("gen2_wild_skies_native")
     return true
   end
 
-  -- Without Wilds, retain species-specific art when a compatible follower
-  -- provider is actually enabled. This is intentionally secondary to Wild
-  -- Skies' own source chain and disappears as soon as Wilds becomes available.
+  -- Gen 1 keeps the established behaviour: Wilds remains authoritative when
+  -- present, otherwise an enabled follower provider can supply species art.
+  if wildsEnabled() then
+    setSpriteMode("gen1_wild_skies_native_wilds")
+    return true
+  end
+
   local providerId = fallbackProvider()
   if not providerId then
-    setSpriteMode("wild_skies_native_generic")
+    setSpriteMode("gen1_wild_skies_native")
     return true
   end
 
   local register = exports.registerSpriteSource
   if type(register) ~= "function" then
-    setSpriteMode("wild_skies_no_sprite_api")
+    setSpriteMode("gen1_wild_skies_no_sprite_api")
     return false
   end
 
@@ -133,24 +152,19 @@ local function configureWildSkiesSpriteSource()
   local ok, accepted = pcall(register, source)
   wildSkies.registered = ok and accepted ~= false
   if wildSkies.registered then
-    setSpriteMode("dsr_fallback_" .. tostring(providerId))
+    setSpriteMode("gen1_dsr_fallback_" .. tostring(providerId))
   else
-    setSpriteMode("wild_skies_fallback_rejected")
+    setSpriteMode("gen1_wild_skies_fallback_rejected")
   end
   return wildSkies.registered
 end
 
-configureWildSkiesSpriteSource()
-mod.events:on("mods.loaded", function()
-  wildSkies.handle = nil
-  wildSkies.take = nil
-  configureWildSkiesSpriteSource()
-end)
-mod.events:on("game.ready", function()
-  wildSkies.handle = nil
-  wildSkies.take = nil
-  configureWildSkiesSpriteSource()
-end)
+local function clearWildSkiesAirborneMarker(ow)
+  local p = ow and ow.player
+  if not (p and p.dramaticSkyRideFreeFlying) then return end
+  p.freeFlying = nil
+  p.dramaticSkyRideFreeFlying = nil
+end
 
 local function syncWildSkiesAirborneMarker(ow)
   local p = ow and ow.player
@@ -158,9 +172,8 @@ local function syncWildSkiesAirborneMarker(ow)
   if flight.active then
     p.freeFlying = true
     p.dramaticSkyRideFreeFlying = true
-  elseif p.dramaticSkyRideFreeFlying then
-    p.freeFlying = nil
-    p.dramaticSkyRideFreeFlying = nil
+  else
+    clearWildSkiesAirborneMarker(ow)
   end
 end
 
@@ -172,12 +185,70 @@ local function wildSkiesTakeFlyer()
   return wildSkies.take or nil
 end
 
+local function now()
+  if love and love.timer and love.timer.getTime then
+    return love.timer.getTime()
+  end
+  return os.clock()
+end
+
+local function tagOrganicDoubleBattle()
+  local db = enabledModHandle("double_battles")
+  local tag = db and db.exports and db.exports.tagOrganic
+  if type(tag) == "function" then pcall(tag) end
+end
+
+local function configureDoubleBattlesPartnerSource()
+  if wildSkies.doubleBattlesRegistered then return true end
+  local db = enabledModHandle("double_battles")
+  local exports = db and db.exports
+  local register = exports and exports.registerPartnerSource
+  if type(register) ~= "function" then return false end
+
+  local ok, accepted = pcall(register, {
+    id = DOUBLE_BATTLES_SOURCE_ID,
+    priority = 40,
+    provide = function(game, battle)
+      local it = wildSkies.lastIntercept
+      if not it or now() - (it.at or 0) > 10 then return nil end
+      local enemy = battle and battle.enemy
+      if not (enemy and enemy.mon and enemy.mon.species == it.species) then
+        return nil
+      end
+      local skies = wildSkiesHandle()
+      local takeFlockmate = skies and skies.exports and skies.exports.takeFlockmate
+      if type(takeFlockmate) ~= "function" then return nil end
+      local p = game and game.overworld and game.overworld.player
+      if not p then return nil end
+      local okMate, mate = pcall(takeFlockmate, p.cellX, p.cellY, 8)
+      if not (okMate and mate and mate.species) then return nil end
+      return mate
+    end,
+  })
+  wildSkies.doubleBattlesRegistered = ok and accepted ~= false
+  return wildSkies.doubleBattlesRegistered
+end
+
+local function resetIntegrationHandles()
+  wildSkies.handle = nil
+  wildSkies.take = nil
+  wildSkies.doubleBattlesRegistered = false
+  configureWildSkiesSpriteSource()
+  configureDoubleBattlesPartnerSource()
+end
+
+configureWildSkiesSpriteSource()
+configureDoubleBattlesPartnerSource()
+mod.events:on("mods.loaded", resetIntegrationHandles)
+mod.events:on("game.ready", resetIntegrationHandles)
+
 local function tryWildSkiesIntercept(ow)
-  if not (flight.active and flight.phase == "cruise" and mod.exports.flightRules.airEncountersEnabled()) then
+  if not (flight.active and flight.phase == "cruise"
+      and mod.exports.flightRules.airEncountersEnabled()) then
     return
   end
   if not (Game.stack and Game.stack:top() == ow) then return end
-  if wildSkies.cooldown > 0 or wildSkies.expectedBattle > 0 then return end
+  if wildSkies.cooldown > 0 then return end
   local take = wildSkiesTakeFlyer()
   if not take then return end
   local p = ow.player
@@ -185,29 +256,38 @@ local function tryWildSkiesIntercept(ow)
   local ok, hit = pcall(take, p.cellX, p.cellY, WILD_SKIES_INTERCEPT_RADIUS)
   if not (ok and hit and hit.species) then return end
 
+  local level = hit.level or 5
   wildSkies.cooldown = 2
-  wildSkies.expectedBattle = 4
+  wildSkies.interceptCount = wildSkies.interceptCount + 1
+  wildSkies.lastIntercept = {
+    species = hit.species,
+    level = level,
+    altitude = flight.altitude,
+    mount = flight.species,
+    at = now(),
+  }
   pcall(function() require("src.core.Sound").playCry(Game.data, hit.species) end)
-  log("intercepted Wild Skies %s Lv.%s", tostring(hit.species), tostring(hit.level or 5))
+  log("intercepted Wild Skies %s Lv.%s", tostring(hit.species), tostring(level))
   pcall(function()
     mod.events:emit("mod.dramatic_sky_ride.flyer_intercepted", {
       species = hit.species,
-      level = hit.level or 5,
+      level = level,
       altitude = flight.altitude,
       mount = flight.species,
     })
   end)
+
+  tagOrganicDoubleBattle()
   if mod.world and mod.world.queueScript then
     mod.world:queueScript({
-      { "start_battle", "wild", hit.species, hit.level or 5 },
+      { "start_battle", "wild", hit.species, level },
     })
   end
 end
 
--- Wild Skies currently recognises Free Fly's export or the legacy
--- player.freeFlying marker. Because DSR and free_fly are declared conflicting
--- flight engines, stamping that marker is safe and gives Wild Skies the exact
--- airborne/grounded answer it needs without reaching into its internals.
+-- Wild Skies recognises Free Fly's export or the legacy player.freeFlying
+-- marker. DSR and free_fly are declared conflicting flight engines, so DSR can
+-- safely advertise its airborne state through that stable compatibility seam.
 local wildSkiesUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local frameDt = tonumber(dt) or 1 / 60
@@ -215,28 +295,22 @@ function OverworldState:update(dt, ...)
   local result = wildSkiesUpdate(self, dt, ...)
   syncWildSkiesAirborneMarker(self)
   wildSkies.cooldown = math.max(0, (wildSkies.cooldown or 0) - frameDt)
-  wildSkies.expectedBattle = math.max(0, (wildSkies.expectedBattle or 0) - frameDt)
   if Game.overworld == self then tryWildSkiesIntercept(self) end
   return result
 end
 
--- Suppress ordinary overworld encounters while DSR owns airborne movement.
--- encounter.species is a shared Gen 1/Gen 2 seam: returning nil cancels the
--- already-rolled encounter before repel/battle startup. The Wild Skies battle
--- DSR explicitly queues above does not pass through this random-encounter seam,
--- so expectedBattle remains only a short compatibility allowance for providers
--- that intentionally enter through the shared encounter pipeline.
+-- Ordinary terrain encounters are never allowed while DSR owns airborne
+-- movement. Wild Skies encounters are script-launched after takeFlyer(), so no
+-- temporary random-encounter exception is required on either generation.
 if mod.hooks and mod.hooks.wrap then
   mod.hooks:wrap("encounter.species", function(next, encounter, ctx)
-    if flight.active and (wildSkies.expectedBattle or 0) <= 0 then
-      return nil
-    end
+    if flight.active then return nil end
     return next(encounter, ctx)
   end, 90)
 end
 
-mod.events:on("battle.started", function()
-  wildSkies.expectedBattle = 0
+mod.events:on("battle.ended", function()
+  wildSkies.lastIntercept = nil
 end)
 
 -- Stable inter-mod surface matching the shape Shane already uses for Free Fly.
@@ -248,9 +322,23 @@ mod.exports.mount = function()
 end
 mod.exports.wildSkies = {
   installed = function() return wildSkiesHandle() ~= nil end,
+  integrationMode = function()
+    if not wildSkiesHandle() then return "absent" end
+    return isGen2Runtime(Game) and "gen2" or "gen1"
+  end,
+  isPlayerAdvertisedAirborne = function()
+    local ow = Game and Game.overworld
+    local p = ow and ow.player
+    return p ~= nil and p.dramaticSkyRideFreeFlying == true and p.freeFlying == true
+  end,
+  lastIntercept = function() return wildSkies.lastIntercept end,
+  interceptCount = function() return wildSkies.interceptCount end,
   spriteSourceRegistered = function() return wildSkies.registered == true end,
   spriteIntegrationMode = function() return wildSkies.spriteMode end,
+  doubleBattlesPartnerRegistered = function()
+    return wildSkies.doubleBattlesRegistered == true
+  end,
 }
 
-log("alpha.16 optional Wild Skies integration loaded")
+log("Wild Skies Gen1/Gen2 integration loaded")
 end)()

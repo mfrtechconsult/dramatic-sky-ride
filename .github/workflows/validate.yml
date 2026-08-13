@@ -23,12 +23,16 @@ jobs:
         run: python3 tests/gen1_surf_contract.py dramatic_sky_ride
       - name: Validate Gen2 engine compatibility contract
         run: python3 tests/gen2_engine_compat_contract.py dramatic_sky_ride
+      - name: Validate Wild Skies Gen2 contract
+        run: python3 tests/wild_skies_gen2_contract.py dramatic_sky_ride
       - name: Validate Gen1 Surf transition syntax
         run: luac -p dramatic_sky_ride/src/main_26b_gen1_surf_runtime.lua
       - name: Validate Gen2 runtime bridge syntax
         run: luac -p dramatic_sky_ride/src/main_21b_gen2_runtime.lua
       - name: Validate Gen2 progression syntax
         run: luac -p dramatic_sky_ride/src/main_22b_gen2_progression.lua
+      - name: Validate Wild Skies integration syntax
+        run: luac -p dramatic_sky_ride/src/main_24_wild_skies.lua
       - name: Rebuild and validate Lua syntax
         id: lua_syntax
         shell: bash

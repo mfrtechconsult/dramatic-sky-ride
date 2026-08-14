@@ -1,0 +1,35 @@
+name: Package Open Sky base
+
+on:
+  push:
+    branches:
+      - ci/open-sky-0.2.13-base-package
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build launcher-ready stable base
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="$GITHUB_WORKSPACE/dramatic-sky-ride-0.2.13-stable-base-launcher-ready.zip"
+          (
+            cd dramatic_sky_ride
+            zip -qr "$ARCHIVE" . -x "*/__pycache__/*" "*.pyc" "*.pyo" ".DS_Store" "Thumbs.db"
+          )
+          unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
+          unzip -t "$ARCHIVE"
+      - name: Upload stable base
+        uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-0.2.13-stable-base-launcher-ready
+          path: dramatic-sky-ride-0.2.13-stable-base-launcher-ready.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 2

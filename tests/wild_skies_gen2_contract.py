@@ -6,6 +6,7 @@ import sys
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dramatic_sky_ride")
 src = root / "src"
 wild = (src / "main_24_wild_skies.lua").read_text(encoding="utf-8")
+free_flight = (src / "main_63_gen2_free_flight.lua").read_text(encoding="utf-8")
 voxel = (src / "main_58_gen2_voxel_interop.lua").read_text(encoding="utf-8")
 single_owner = (src / "main_61_gen2_voxel_single_owner_guard.lua").read_text(encoding="utf-8")
 manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
@@ -20,6 +21,8 @@ require('WILD_SKIES_INTERCEPT_RADIUS = 1' in wild,
         "Wild Skies interception should match the one-cell Free Fly seam")
 require('exports.takeFlyer' in wild and 'pcall(take, p.cellX, p.cellY' in wild,
         "DSR must consume airborne encounters only through Wild Skies takeFlyer")
+require('mod.exports._mountFreeRoam' in wild and 'pcall(freeRoam, Game, ow)' in wild,
+        "Wild Skies interception must use DSR's Gen1/Gen2 free-roam predicate")
 require('expectedBattle' not in wild,
         "The obsolete expectedBattle random-encounter allowance must stay removed")
 require('mod.hooks:wrap("encounter.species"' in wild and 'if flight.active then return nil end' in wild,
@@ -41,6 +44,22 @@ require('return mate.species, mate.level' in wild,
 require('lastIntercept' in wild and 'interceptCount' in wild
         and 'spriteIntegrationMode' in wild and 'integrationMode' in wild,
         "Wild Skies diagnostics must expose integration state and recent interceptions")
+
+require('dramaticFirstPerson.moveVector()' in free_flight
+        and 'dramaticFirstPerson.moveWorld(mx, mz)' in free_flight,
+        "Gold 1ST/3RD Flight must reuse the provider camera-relative analog vector")
+require('rawset(world, "pollInput", bridge.pollWrapper)' in free_flight
+        and 'self.heldDir = nil' in free_flight,
+        "Gold free Flight must suppress the native four-direction heldDir poll")
+require('dramaticFirstPerson.onTop = function()' in free_flight
+        and 'return freeRoam(liveWorld())' in free_flight,
+        "Gold empty-stack free roam must keep FirstPerson look/move input driving")
+require('p.px, p.py = bridge.posX - 8, bridge.posZ - 8' in free_flight
+        and 'p.cellX, p.cellY = math.floor(bridge.posX / 16)' in free_flight,
+        "Gold free Flight must keep continuous world position and logical cells synchronized")
+require('world.tryConnection' in free_flight,
+        "Gold free Flight must preserve authored route connection handling")
+
 require('local previous = bridge.extraEntitiesProvider' in voxel,
         "Gen2 voxel integration must preserve the previous extra-entities provider chain")
 require('pcall(previous, ow)' in voxel,

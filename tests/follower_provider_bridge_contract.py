@@ -26,7 +26,7 @@ require('provided.walker ~= false' in compat and 'width < 16 or height < 96' in 
 require('usableProviderDefinition(id, ex, species, role, "followers")' in compat,
         "Wilds must retain its dedicated followers-style fallback")
 require(compat.index('usableProviderDefinition(id, ex, species, role, "followers")')
-        < compat.index('usableLegacyProviderDefinition(id, ex, species)'),
+        < compat.index('def, provider = usableLegacyProviderDefinition(id, ex, species)'),
         "Wilds canonical style fallback must outrank the legacy provider seam")
 require('love.filesystem' not in compat,
         "provider compatibility must not restore raw cross-mod filesystem access")

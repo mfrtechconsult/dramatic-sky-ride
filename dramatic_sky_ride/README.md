@@ -15,12 +15,9 @@ No third-party mod is required for native 2D Flight.
 
 ### Recommended 2D setup
 
-Use DSR with **one** primary Pokemon sprite/follower provider:
+For the currently validated setup, use **mfrtechconsult/PokePCFollowers** (`PokePCFollowers_VoxelMerge`) as the primary Pokemon sprite/follower provider.
 
-- **Wilds of Kanto** (`overworld_wild_spawns`) — recommended for a living overworld and optional high-detail PokeMMO mount sprites; or
-- **mfrtechconsult/PokePCFollowers** (`PokePCFollowers_VoxelMerge`) — lighter follower/mount setup.
-
-**Wilds of Kanto 2.1.0 or newer is required for Wilds integration on Pokémon Gold/Gen 2.** On Gold, DSR consumes Wilds' public land/water SpriteDefs so HGSS/GSC presentation, colored swimming art, True Size geometry and provider changes remain owned by Wilds instead of being copied into DSR.
+**Wilds of Kanto is not part of the validated Dramatic Sky Ride support matrix yet.** Compatibility work is ongoing and will be released separately once the complete Gold/Gen2 path is verified.
 
 Add **Wild Skies** for visible airborne Pokemon and aerial interceptions. **Wild Skies 1.9.0 or newer is required for Wild Skies on Pokémon Gold/Gen 2.** DSR owns the player's mount and flight state; Wild Skies independently owns sky ecology, time-of-day species, resident flocks, route-boundary persistence and its own flyer rendering. Add Crystal 251 or another compatible Gen II content provider if you want Johto Pokemon to exist in-game.
 
@@ -30,6 +27,11 @@ Add **Wild Skies** for visible airborne Pokemon and aerial interceptions. **Wild
 - **Dramaless Shape** `>=1.6.4 <2.0.0` — supported alternative and the easiest current Stadium 2 import host.
 
 Native 2D Flight does not require either renderer.
+
+### Known issues
+
+- HGSS-style overworld sprites can currently fail to display on the Generation II path. This is a known issue and a fix is planned for an upcoming release.
+- Wilds of Kanto compatibility is still under development and is not currently supported.
 
 ## Controls
 

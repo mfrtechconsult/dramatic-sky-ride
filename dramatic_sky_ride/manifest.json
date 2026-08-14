@@ -17,7 +17,7 @@
     "STADIUM_OVERWORLD_MODELS",
     "STADIUM2_OVERWORLD_MODELS",
     "CRYSTAL_251@>=0.9.13 <1.0.0",
-    "wild_skies@>=1.9.0 <2.0.0",
+    "wild_skies@>=1.4.1 <2.0.0",
     "otf-player-switcher"
   ],
   "conflicts": ["free_fly"],

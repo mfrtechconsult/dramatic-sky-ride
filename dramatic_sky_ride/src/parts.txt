@@ -70,7 +70,6 @@ main_39_flat_building_altitude.lua
 main_40_pokemmo_size_fix.lua
 main_40a_gen2_embedded_hgss.lua
 main_40b_gen2_hgss_surf_visual.lua
-main_40c_wilds_210.lua
 main_41_stadium2_3d.lua
 main_42_stadium2_hardening.lua
 main_42b_stadium2_dual_guard.lua
@@ -94,7 +93,6 @@ main_55_gen2_test_gift.lua
 main_58_gen2_voxel_interop.lua
 main_59_gen2_voxel_visual_fixes.lua
 main_60_gen2_voxel_runtime_compat.lua
-main_60a_wilds_210_voxel.lua
 main_61_gen2_voxel_single_owner_guard.lua
 main_61a_gen2_2d_height_sync.lua
 main_62_ground_fx_retired.lua

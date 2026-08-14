@@ -25,6 +25,8 @@ jobs:
         run: python3 tests/gen2_engine_compat_contract.py dramatic_sky_ride
       - name: Validate Wild Skies Gen2 contract
         run: python3 tests/wild_skies_gen2_contract.py dramatic_sky_ride
+      - name: Validate follower provider bridge contract
+        run: python3 tests/follower_provider_bridge_contract.py dramatic_sky_ride
       - name: Validate Gen1 Surf transition syntax
         run: luac -p dramatic_sky_ride/src/main_26b_gen1_surf_runtime.lua
       - name: Validate Gen2 runtime bridge syntax

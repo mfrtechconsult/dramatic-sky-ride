@@ -27,6 +27,8 @@ jobs:
         run: python3 tests/wild_skies_gen2_contract.py dramatic_sky_ride
       - name: Validate follower provider bridge contract
         run: python3 tests/follower_provider_bridge_contract.py dramatic_sky_ride
+      - name: Validate Open Sky release contract
+        run: python3 tests/gen2_open_sky_release_contract.py dramatic_sky_ride
       - name: Validate Gen1 Surf transition syntax
         run: luac -p dramatic_sky_ride/src/main_26b_gen1_surf_runtime.lua
       - name: Validate Gen2 runtime bridge syntax
@@ -35,6 +37,14 @@ jobs:
         run: luac -p dramatic_sky_ride/src/main_22b_gen2_progression.lua
       - name: Validate Wild Skies integration syntax
         run: luac -p dramatic_sky_ride/src/main_24_wild_skies.lua
+      - name: Validate Open Sky module syntax
+        run: |
+          luac -p dramatic_sky_ride/src/main_53b_gen2_open_sky.lua
+          luac -p dramatic_sky_ride/src/main_53c_gen2_open_sky_playable.lua
+          luac -p dramatic_sky_ride/src/main_53d_gen2_open_sky_runtime_guard.lua
+          luac -p dramatic_sky_ride/src/main_53e_gen2_open_sky_input_latch.lua
+          luac -p dramatic_sky_ride/src/main_53f_gen2_open_sky_art_map.lua
+          luac -p dramatic_sky_ride/src/main_53g_gen2_open_sky_stadium2_3d.lua
       - name: Rebuild and validate Lua syntax
         id: lua_syntax
         shell: bash
@@ -42,6 +52,7 @@ jobs:
           set +e
           : > /tmp/dramatic_sky_ride.lua
           while IFS= read -r part; do
+            [ -z "$part" ] && continue
             cat "dramatic_sky_ride/src/$part" >> /tmp/dramatic_sky_ride.lua
           done < dramatic_sky_ride/src/parts.txt
           luac -p dramatic_sky_ride/main.lua dramatic_sky_ride/mod.card /tmp/dramatic_sky_ride.lua \
@@ -75,15 +86,30 @@ jobs:
       - name: Build and validate install archive
         shell: bash
         run: |
+          set -euo pipefail
           VERSION=$(python -c 'import json; print(json.load(open("dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
-          ARCHIVE="/tmp/dramatic_sky_ride-$VERSION.zip"
-          zip -qr "$ARCHIVE" dramatic_sky_ride
+          ARCHIVE="/tmp/dramatic-sky-ride-open-sky-$VERSION-launcher-ready.zip"
+          (
+            cd dramatic_sky_ride
+            zip -qr "$ARCHIVE" . -x "*/__pycache__/*" "*.pyc" "*.pyo" ".DS_Store" "Thumbs.db"
+          )
+          unzip -Z1 "$ARCHIVE" | grep -qx 'manifest.json'
           unzip -t "$ARCHIVE"
+          cp "$ARCHIVE" "$GITHUB_WORKSPACE/"
+      - name: Upload Open Sky launcher-ready candidate
+        if: github.event_name == 'push' && github.ref_name == 'release/0.2.14-open-sky'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-open-sky-0.2.14-launcher-ready
+          path: dramatic-sky-ride-open-sky-0.2.14-launcher-ready.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
       - name: Upload Gen2 voxel test archive
         if: github.event_name == 'push' && github.ref_name == 'agent/gen2-stadium2-voxel-interop'
         uses: actions/upload-artifact@v4
         with:
           name: dramatic-sky-ride-gen2-voxel-test
-          path: /tmp/dramatic_sky_ride-*.zip
+          path: /tmp/dramatic-sky-ride-open-sky-*.zip
           if-no-files-found: error
           retention-days: 7

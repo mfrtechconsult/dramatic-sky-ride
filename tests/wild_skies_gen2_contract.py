@@ -18,9 +18,19 @@ def require(condition, message):
         errors.append(message)
 
 require('WILD_SKIES_INTERCEPT_RADIUS = 1' in wild,
-        "Wild Skies interception should match the one-cell Free Fly seam")
+        "Wild Skies bold interception should match the one-cell Free Fly seam")
 require('exports.takeFlyer' in wild and 'pcall(take, p.cellX, p.cellY' in wild,
-        "DSR must consume airborne encounters only through Wild Skies takeFlyer")
+        "DSR must prefer Wild Skies takeFlyer for normal battleable flyers")
+require('sharedSkyFieldSnapshot' in wild and 'removeSharedSkyFieldSpawn' in wild,
+        "DSR must be able to promote a physically-hit scenery flyer through supported Wild Skies 1.9+ seams")
+require('row.bold ~= true' in wild and 'field.revision' in wild
+        and 'WILD_SKIES_PHYSICAL_RADIUS = 14' in wild
+        and 'WILD_SKIES_ALTITUDE_RADIUS = 20' in wild,
+        "Scenery fallback must be exact, non-bold and guarded away from revisioned shared-sky providers")
+require('WILD_SKIES_BATTLE_REST = 25' in wild and 'wildSkies.battleRest' in wild,
+        "DSR-promoted scenery battles must keep Wild Skies-style battle rest")
+require('src.battle.gen2.Mon' in wild and 'ow.startBattle' in wild,
+        "Gold must have a native battle handoff if mod.world queueScript rejects the consumed flyer")
 require('mod.exports._mountFreeRoam' in wild and 'pcall(freeRoam, Game, ow)' in wild,
         "Wild Skies interception must use DSR's Gen1/Gen2 free-roam predicate")
 require('expectedBattle' not in wild,
@@ -42,8 +52,10 @@ require('registerPartnerSource' in wild and 'takeFlockmate' in wild,
 require('return mate.species, mate.level' in wild,
         "Double Battles partner source must return species and level separately")
 require('lastIntercept' in wild and 'interceptCount' in wild
-        and 'spriteIntegrationMode' in wild and 'integrationMode' in wild,
-        "Wild Skies diagnostics must expose integration state and recent interceptions")
+        and 'sceneryInterceptCount' in wild and 'lastBattleStartError' in wild
+        and 'battleRest' in wild and 'spriteIntegrationMode' in wild
+        and 'integrationMode' in wild,
+        "Wild Skies diagnostics must expose integration, collision and battle-start state")
 
 require('dramaticFirstPerson.moveVector()' in free_flight
         and 'dramaticFirstPerson.moveWorld(mx, mz)' in free_flight,

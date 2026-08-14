@@ -23,6 +23,25 @@ local function compatExports(id)
   return ok and handle and handle.exports or nil
 end
 
+-- Every compatibility path ends at the same strict mount-sheet validation.
+-- Consumers may expose the modern definition API or the older assetPath seam,
+-- but neither path is trusted until the engine can load a six-frame 16x96+
+-- walker sheet. This keeps legacy support sandbox-safe without reading another
+-- mod's directory directly.
+local function validatedProviderDefinition(id, provided)
+  local frames = provided and tonumber(provided.frames) or 0
+  if not (provided and type(provided.image) == "string"
+      and provided.image ~= "" and frames >= 6
+      and provided.walker ~= false) then
+    return nil
+  end
+  local okImage, image = pcall(Assets.image, provided.image)
+  if not (okImage and image) then return nil end
+  local width, height = image:getDimensions()
+  if width < 16 or height < 96 then return nil end
+  return provided, provided.providerId or id
+end
+
 local function usableProviderDefinition(id, ex, species, role, style)
   if not (ex and type(ex.resolveFollowerSprite) == "function") then return nil end
   local opts = {
@@ -33,20 +52,34 @@ local function usableProviderDefinition(id, ex, species, role, style)
   }
   if style then opts.style = style end
   local okDef, provided = pcall(ex.resolveFollowerSprite, opts)
-  local frames = provided and tonumber(provided.frames) or 0
-  if not (okDef and provided and provided.image and frames >= 6) then return nil end
-  local okImage, image = pcall(Assets.image, provided.image)
-  if not (okImage and image) then return nil end
-  local width, height = image:getDimensions()
-  if width < 16 or height < 96 then return nil end
-  return provided, provided.providerId or id
+  if not okDef then return nil end
+  return validatedProviderDefinition(id, provided)
+end
+
+-- Temporary compatibility for providers that have not migrated to
+-- resolveFollowerSprite yet. assetPath is already a public export used by old
+-- PokéPC releases, so calling it through mod.find(...).exports respects the
+-- 0.1.86 sandbox while avoiding any dependency on another mod's filesystem.
+local function usableLegacyProviderDefinition(id, ex, species)
+  if not (ex and type(ex.assetPath) == "function") then return nil end
+  local okPath, path = pcall(ex.assetPath, species)
+  if not okPath or type(path) ~= "string" or path == "" then return nil end
+  return validatedProviderDefinition(id, {
+    image = path,
+    frames = 6,
+    walker = true,
+    providerId = id,
+  })
 end
 
 local function compatibleSpriteDefinition(species, role)
   for _, id in ipairs(SPRITE_PROVIDER_IDS) do
     local ex = compatExports(id)
+
+    -- Preferred modern contract for PokéPC, Wilds and future providers.
     local def, provider = usableProviderDefinition(id, ex, species, role, nil)
     if def then return def, provider end
+
     if id == WILDS_MOD_ID then
       -- Wilds' Pokédex style may resolve to a static front image. The built-in
       -- follower/GSC style is always the safe walking-sheet fallback for a
@@ -54,6 +87,12 @@ local function compatibleSpriteDefinition(species, role)
       def, provider = usableProviderDefinition(id, ex, species, role, "followers")
       if def then return def, provider end
     end
+
+    -- Keep older PokéPC-compatible providers working while they migrate. This
+    -- is deliberately after Wilds' canonical style fallback so newer providers
+    -- always retain control of their own sprite selection policy.
+    def, provider = usableLegacyProviderDefinition(id, ex, species)
+    if def then return def, provider end
   end
   return nil
 end

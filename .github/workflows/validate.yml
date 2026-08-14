@@ -37,14 +37,14 @@ jobs:
         run: luac -p dramatic_sky_ride/src/main_22b_gen2_progression.lua
       - name: Validate Wild Skies integration syntax
         run: luac -p dramatic_sky_ride/src/main_24_wild_skies.lua
-      - name: Validate Open Sky module syntax
+      - name: Validate Open Sky bundle syntax
+        shell: bash
         run: |
-          luac -p dramatic_sky_ride/src/main_53b_gen2_open_sky.lua
-          luac -p dramatic_sky_ride/src/main_53c_gen2_open_sky_playable.lua
-          luac -p dramatic_sky_ride/src/main_53d_gen2_open_sky_runtime_guard.lua
-          luac -p dramatic_sky_ride/src/main_53e_gen2_open_sky_input_latch.lua
-          luac -p dramatic_sky_ride/src/main_53f_gen2_open_sky_art_map.lua
-          luac -p dramatic_sky_ride/src/main_53g_gen2_open_sky_stadium2_3d.lua
+          : > /tmp/open_sky.lua
+          grep '^main_53[b-g]_gen2_open_sky' dramatic_sky_ride/src/parts.txt | while IFS= read -r part; do
+            cat "dramatic_sky_ride/src/$part" >> /tmp/open_sky.lua
+          done
+          luac -p /tmp/open_sky.lua
       - name: Rebuild and validate Lua syntax
         id: lua_syntax
         shell: bash

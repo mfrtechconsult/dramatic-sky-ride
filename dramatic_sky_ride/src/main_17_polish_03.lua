@@ -78,22 +78,29 @@ local function monKnowsMove(mon, moveId)
 end
 
 local function genericFollowerPath(cfg)
-  if not cfg or not (love and love.filesystem and love.filesystem.getDirectoryItems) then return nil end
-  local filename = string.format("follower_%03d.png", cfg.dex)
-  local ok, names = pcall(love.filesystem.getDirectoryItems, "mods")
-  if not ok or type(names) ~= "table" then return nil end
-  local fallback
-  for _, name in ipairs(names) do
-    local root = "mods/" .. name
-    local asset = root .. "/assets/sprites/" .. filename
-    if fileExists(asset) then
-      local raw = love.filesystem.read(root .. "/manifest.json")
-      local id = manifestId(raw)
-      if id and FOLLOWER_IDS[id] then return asset end
-      fallback = fallback or asset
+  if not cfg or type(mod.find) ~= "function" then return nil end
+  local ids = {
+    "overworld_wild_spawns", "PokePCFollowers_VoxelMerge",
+    "pokepcfollowers", "FOLLOWERS_EX", "followers_ex",
+  }
+  local species = WATER_BY_DEX[tonumber(cfg.dex)]
+  for _, id in ipairs(ids) do
+    local okHandle, handle = pcall(mod.find, mod, id)
+    local ex = okHandle and handle and handle.exports or nil
+    if ex and type(ex.resolveFollowerSprite) == "function" then
+      local opts = { species = species, surface = "water", role = "water_mount", game = Game }
+      local okDef, provided = pcall(ex.resolveFollowerSprite, opts)
+      if okDef and type(provided) == "table" and type(provided.image) == "string"
+          and (tonumber(provided.frames) or 0) >= 6 then
+        local okImage, image = pcall(Assets.image, provided.image)
+        if okImage and image then
+          local w, h = image:getDimensions()
+          if w >= 16 and h >= 96 then return provided.image end
+        end
+      end
     end
   end
-  return fallback
+  return nil
 end
 
 local function buildWaterRenderer(species, path, source, trueColor)
@@ -102,15 +109,9 @@ local function buildWaterRenderer(species, path, source, trueColor)
   if not okImage or not image then return nil, "image_load_failed" end
   setNearest(image)
   local w, h = image:getDimensions()
-
-  -- Visible Surf uses the same six 16x16 facing frames as Gen1Recomp's
-  -- SpriteRenderer. Providers may expose PokeMMO/other enlarged sheets for
-  -- ordinary followers; accepting one here turns the whole sheet into one
-  -- giant malformed Surf card. Use only the canonical mount-safe layout.
   if w ~= 16 or h ~= 96 then
     return nil, string.format("unsafe_sheet_%dx%d", tonumber(w) or 0, tonumber(h) or 0)
   end
-
   local def = {
     id = "WATER_RIDE_" .. species,
     image = path,
@@ -142,9 +143,6 @@ local function publicWaterMountSprite(species)
     local okFind, handle = pcall(mod.find, mod, providerId)
     local exports = okFind and handle and handle.exports or nil
     if exports and type(exports.resolveFollowerSprite) == "function" then
-      -- Water art is preferred when a provider has a dedicated canonical
-      -- follower sheet. Land/follower is a safe second request because many
-      -- providers expose only one six-frame overworld strip.
       local requests = {
         { surface = "water" },
         { surface = "land", style = providerId == "overworld_wild_spawns" and "followers" or nil },
@@ -178,12 +176,7 @@ local function buildWaterSprite(species)
     water.lastFailure = nil
     return waterSpriteCache[species]
   end
-
   local cfg = WATER_ELIGIBLE[species]
-
-  -- Prefer the raw dex-numbered follower strip when it exists. It is the
-  -- stable 16x96 contract DSR's Flight/Ground paths already rely on and is
-  -- deliberately independent of a provider's currently selected visual mode.
   local path = genericFollowerPath(cfg)
   if path then
     local sprite, reason = buildWaterRenderer(species, path, "dex_follower_asset", true)
@@ -195,7 +188,6 @@ local function buildWaterSprite(species)
     end
     water.lastFailure = reason
   end
-
   local provided, reason = publicWaterMountSprite(species)
   if provided then
     waterSpriteCache[species] = provided
@@ -203,7 +195,6 @@ local function buildWaterSprite(species)
     water.lastFailure = nil
     return provided
   end
-
   water.source = nil
   water.lastFailure = reason or water.lastFailure or "missing_mount_sprite"
   return nil

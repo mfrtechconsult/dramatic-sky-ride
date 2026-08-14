@@ -133,25 +133,8 @@ mod.exports._riderSourceSprite = function(player)
   return player and player.sprite or nil
 end
 
-local function writeRiderSheet(player, sourceSprite)
-  sourceSprite = sourceSprite or mod.exports._riderSourceSprite(player)
-  local sourceDef = sourceSprite and sourceSprite.def or nil
-  local sourcePath = sourceDef and sourceDef.image
-  if not sourcePath then return nil, "player_image_missing" end
-  if not (love and love.image and love.image.newImageData
-          and love.filesystem and love.filesystem.createDirectory) then
-    return nil, "image_write_unavailable"
-  end
-
-  local name = safeAssetName(sourceDef.id or sourcePath)
-  local path = string.format("%s/rider_%s_c%d_y%d.png",
-    RIDER_RUNTIME_DIR, name, RIDER_CROP_HEIGHT, RIDER_CROP_Y)
-  if fileExists(path) then return path end
-
-  local ok, result = pcall(function()
-    love.filesystem.createDirectory(RIDER_RUNTIME_DIR)
-    local src = Assets.imageData(sourcePath)
-    local sw, sh = src:getDimensions()
-    if sw < 16 or sh < 16 then error("unexpected_player_sheet_size") end
-    local sourceFrames = math.max(1, math.floor(sh / 16))
-    local declaredFrames = tonumber(sourceDef.frames)
+local function writeRiderSheet(_player, _sourceSprite)
+  -- Runtime filesystem writes are no longer part of the mod API. The caller
+  -- already falls back to the live player SpriteRenderer when this returns nil.
+  return nil, "sandbox_runtime_asset_write_disabled"
+end

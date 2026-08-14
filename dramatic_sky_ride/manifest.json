@@ -11,6 +11,7 @@
   "dependencies": [],
   "optional_dependencies": [
     "PokePCFollowers_VoxelMerge",
+    "overworld_wild_spawns",
     "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
     "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
     "STADIUM_OVERWORLD_MODELS",

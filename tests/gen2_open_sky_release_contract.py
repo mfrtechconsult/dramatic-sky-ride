@@ -13,27 +13,31 @@ def require(condition, message):
     if not condition:
         errors.append(message)
 
-open_parts = [
-    'main_53b_gen2_open_sky.lua',
-    'main_53c_gen2_open_sky_playable.lua',
-    'main_53d_gen2_open_sky_runtime_guard.lua',
-    'main_53e_gen2_open_sky_input_latch.lua',
-    'main_53f_gen2_open_sky_art_map.lua',
-    'main_53g_gen2_open_sky_stadium2_3d.lua',
-]
+logical_parts = {
+    'base': ['main_53b_gen2_open_sky.lua'],
+    'play': [f'main_53c_gen2_open_sky_playable_{i:02d}.lua' for i in range(1, 5)],
+    'guard': ['main_53d_gen2_open_sky_runtime_guard.lua'],
+    'latch': ['main_53e_gen2_open_sky_input_latch.lua'],
+    'art': [f'main_53f_gen2_open_sky_art_map_{i:02d}.lua' for i in range(1, 4)],
+    'three': [f'main_53g_gen2_open_sky_stadium2_3d_{i:02d}.lua' for i in range(1, 5)],
+}
+open_parts = [name for group in logical_parts.values() for name in group]
 for name in open_parts:
     require(name in parts, f'{name} is not loaded')
 if all(name in parts for name in open_parts):
     positions = [parts.index(name) for name in open_parts]
-    require(positions == sorted(positions), 'Open Sky modules are not loaded in the expected order')
+    require(positions == sorted(positions), 'Open Sky chunks are not loaded in the expected order')
     require(parts.index(open_parts[-1]) < parts.index('main_54_settings_ux.lua'),
             'Open Sky must be installed before the late settings/runtime bridges')
 
-base = (src / open_parts[0]).read_text(encoding='utf-8')
-play = (src / open_parts[1]).read_text(encoding='utf-8')
-latch = (src / open_parts[3]).read_text(encoding='utf-8')
-art = (src / open_parts[4]).read_text(encoding='utf-8')
-three = (src / open_parts[5]).read_text(encoding='utf-8')
+def logical(name):
+    return ''.join((src / part).read_text(encoding='utf-8') for part in logical_parts[name])
+
+base = logical('base')
+play = logical('play')
+latch = logical('latch')
+art = logical('art')
+three = logical('three')
 
 require('key = OPEN_SKY_OPTION' in base and 'OPEN_SKY_ENTRY_ALTITUDE = 88' in base
         and 'OPEN_SKY_EXIT_ALTITUDE = 76' in base,

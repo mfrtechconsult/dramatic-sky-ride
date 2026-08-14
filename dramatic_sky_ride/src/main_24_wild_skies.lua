@@ -240,7 +240,10 @@ local function tryWildSkiesIntercept(ow)
       and mod.exports.flightRules.airEncountersEnabled()) then
     return
   end
-  if not (Game.stack and Game.stack:top() == ow) then return end
+  local freeRoam = mod.exports and mod.exports._mountFreeRoam
+  if type(freeRoam) ~= "function" then return end
+  local okRoam, roam = pcall(freeRoam, Game, ow)
+  if not okRoam or roam ~= true then return end
   if wildSkies.cooldown > 0 then return end
   local take = wildSkiesTakeFlyer()
   if not take then return end

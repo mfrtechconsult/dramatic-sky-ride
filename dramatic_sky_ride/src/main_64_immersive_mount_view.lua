@@ -63,22 +63,16 @@ local function immersiveView()
   return isFirstPerson() or vrActive()
 end
 
-local function stadiumRequested()
-  local value = tostring(optionValue("flight_mount_renderer", "")):lower()
-  return value:find("stadium", 1, true) ~= nil
-end
-
 local function stadiumOperational()
-  if not stadiumRequested() then return false end
-  local bridge = mod.exports and mod.exports.stadium3DProviderRig
-  if bridge and type(bridge.active) == "function" then
-    local ok, active = pcall(bridge.active)
-    if ok and active == true then return true end
+  local rendering = mod.exports and mod.exports.flightRendering
+  if rendering and type(rendering.usesStadium) == "function" then
+    local ok, active = pcall(rendering.usesStadium)
+    if ok then return active == true end
   end
   local compat = mod.exports and mod.exports.stadiumCompatibility
-  if compat and type(compat.active) == "function" then
-    local ok, active = pcall(compat.active)
-    if ok and active == true then return true end
+  if compat and type(compat.enabled) == "function" then
+    local ok, active = pcall(compat.enabled)
+    if ok then return active == true end
   end
   return false
 end

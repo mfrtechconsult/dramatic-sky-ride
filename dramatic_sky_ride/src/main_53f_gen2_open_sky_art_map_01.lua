@@ -11,8 +11,8 @@ local WARP_X0, WARP_Y0 = 6, 22
 local WARP_W, WARP_H = 149, 117
 local WARP_STRIDE = 6
 local REGION = {
-  johto = { image="assets/open_sky_stadium2/johto/map2d.b64", root="assets/open_sky_stadium2/johto/", eye={-560,3300,4780}, at={-560,0,960}, modelFile=0 },
-  kanto = { image="assets/open_sky_stadium2/kanto/map2d.b64", root="assets/open_sky_stadium2/kanto/", eye={-10,2990,4540}, at={-10,0,420}, modelFile=1 },
+  johto = { image="assets/open_sky_stadium2/johto/map2d.b64", eye={-560,3300,4780}, at={-560,0,960}, modelFile=0 },
+  kanto = { image="assets/open_sky_stadium2/kanto/map2d.b64", eye={-10,2990,4540}, at={-10,0,420}, modelFile=1 },
 }
 local cache = { images={}, imageTried={}, warp={}, warpTried={}, basis={} }
 local function regionKey(region) return region == "kanto" and "kanto" or "johto" end
@@ -27,22 +27,6 @@ local function decodeBase64(raw)
   if type(raw)~="string" or not (love and love.data and love.data.decode) then return nil end
   local ok,value=pcall(love.data.decode,"string","base64",raw:gsub("%s+",""))
   return ok and value or nil
-end
-local function inflatePacked(raw)
-  local packed=decodeBase64(raw)
-  if not packed or not (love and love.data and love.data.decompress) then return nil end
-  local ok,value=pcall(love.data.decompress,"string","zlib",packed)
-  return ok and value or nil
-end
-local function readPackedParts(root,stem,count)
-  local chunks={}
-  for i=1,count do
-    local path=string.format("%s%s_part%02d.b64",root,stem,i)
-    local raw=readRaw(path)
-    if not raw then return nil end
-    chunks[#chunks+1]=raw:gsub("%s+","")
-  end
-  return inflatePacked(table.concat(chunks))
 end
 local function loadBundledImage(relative)
   local bytes=decodeBase64(readRaw(relative))
@@ -68,12 +52,12 @@ local function imageFor(region)
   return cache.images[region]
 end
 local function warpFor(region)
+  -- The flattened Stadium 2 render is authoritative in 0.2.14. City markers
+  -- use a stable linear town-map projection and are calibrated with the F8 editor.
   region=regionKey(region)
-  if cache.warpTried[region] then return cache.warp[region] end
   cache.warpTried[region]=true
-  local raw=readPackedParts(REGION[region].root,"warp",6)
-  if raw and #raw>=WARP_W*WARP_H*WARP_STRIDE then cache.warp[region]=raw end
-  return cache.warp[region]
+  cache.warp[region]=nil
+  return nil
 end
 local function readS16BE(raw,pos)
   local hi,lo=raw:byte(pos,pos+1); if not (hi and lo) then return 0 end
@@ -108,7 +92,8 @@ local function projectNative(region,rx,ry,rz)
   return (nx*0.5+0.5)*MAP_W,(0.5-ny*0.5)*MAP_H
 end
 local function project(region,x,y)
-  region=regionKey(region); local raw=warpFor(region)
+  region=regionKey(region)
+  local raw=warpFor(region)
   if raw then local rx,ry,rz=warpSample(raw,x,y); return projectNative(region,rx,ry,rz) end
   local nx=(clamp(x,6,154)-6)/148; local ny=(clamp(y,22,138)-22)/116
   return 10+nx*(MAP_W-20),10+ny*(MAP_H-20)
@@ -122,4 +107,6 @@ local function screenAlignedDelta(region,x,y,wantX,wantY)
   wantX,wantY=tonumber(wantX) or 0,tonumber(wantY) or 0
   local wl=math.sqrt(wantX*wantX+wantY*wantY); if wl<1e-6 then return 0,0 end
   wantX,wantY=wantX/wl,wantY/wl
-  local eps=0.75; local xa,xb=math.max(6,x-eps),math.min(154,x+eps); local ya,yb=math.max(22,y-eps),math.min(138,y+eps)
+  local eps=0.75
+  local xa,xb=math.max(6,x-eps),math.min(154,x+eps)
+  local ya,yb=math.max(22,y-eps),math.min(138,y+eps)

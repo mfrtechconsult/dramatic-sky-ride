@@ -51,24 +51,35 @@ local function providerContext(exportsOverride)
   local provider = findHandle(PROVIDER_ID)
   local ex = exportsOverride or (provider and provider.exports) or nil
   local wilds = ex and ex.wilds or nil
-  local render = wilds and wilds.render or nil
+  if type(wilds) ~= "table" then return nil end
+
+  -- 0.2.81 exposes a standalone-Wilds-compatible resolveFollowerSprite()
+  -- directly on its embedded export. Prefer that public seam: unlike the
+  -- internal SpriteProviders object it is explicitly intended for companion
+  -- mods and already translates the selected style into a sandbox-safe asset
+  -- path. Keep spriteProviders only as a compatibility fallback.
+  local directResolve = type(wilds.resolveFollowerSprite) == "function"
+  local spriteProviders = wilds.spriteProviders
+  local registryResolve = type(spriteProviders) == "table"
+    and type(spriteProviders.resolve) == "function"
+  if not directResolve and not registryResolve then return nil end
+
+  local style = "followers"
+  local render = wilds.render
   local wildsMod = render and render.mod or nil
   local options = wildsMod and wildsMod.options or nil
-  local spriteProviders = wilds and wilds.spriteProviders or nil
-  if not (wilds and spriteProviders and type(spriteProviders.resolve) == "function"
-      and options and type(options.get) == "function") then
-    return nil
+  if options and type(options.get) == "function" then
+    local okStyle, value = pcall(options.get, options, "sprite_style")
+    if okStyle and value ~= nil then style = tostring(value):lower() end
   end
-
-  local okStyle, style = pcall(options.get, options, "sprite_style")
-  if not okStyle then return nil end
-  style = tostring(style or "followers"):lower()
   state.lastStyle = style
   return {
     provider = provider,
     exports = ex,
     wilds = wilds,
     spriteProviders = spriteProviders,
+    directResolve = directResolve,
+    registryResolve = registryResolve,
     style = style,
   }
 end
@@ -95,30 +106,88 @@ local function copyMountDef(def, species, providerId, style)
   return out
 end
 
+local function speciesDex(species)
+  local cfg = (ELIGIBLE and ELIGIBLE[species])
+    or (GROUND_ELIGIBLE and GROUND_ELIGIBLE[species])
+  if cfg and tonumber(cfg.dex) then return math.floor(tonumber(cfg.dex)) end
+  local pokemon = Game and Game.data and Game.data.pokemon or nil
+  local def = pokemon and pokemon[species] or nil
+  return def and tonumber(def.dex) and math.floor(tonumber(def.dex)) or nil
+end
+
+local function directProviderAttempt(ctx, species, style)
+  if not (ctx and ctx.directResolve and type(ctx.wilds.resolveFollowerSprite) == "function") then
+    return nil, nil
+  end
+  local dex = speciesDex(species)
+  local ok, raw = pcall(ctx.wilds.resolveFollowerSprite, {
+    species = species,
+    dex = dex,
+    surface = "land",
+    style = style,
+    role = "mount",
+    game = mod.game or (mod.world and mod.world.game) or Game,
+  })
+  if not ok then return nil, tostring(raw) end
+  if type(raw) == "table" and raw.def then raw = raw.def end
+  if type(raw) ~= "table" then return nil, "direct resolver returned no definition" end
+  return raw, nil
+end
+
+local function registryProviderAttempt(ctx, species, style)
+  if not (ctx and ctx.registryResolve and ctx.spriteProviders) then return nil, nil, nil end
+  local ok, result = pcall(ctx.spriteProviders.resolve, ctx.spriteProviders,
+    style, species, "normal", mod.game or (mod.world and mod.world.game) or Game)
+  if not ok then return nil, nil, tostring(result) end
+  return type(result) == "table" and result.def or nil, result, nil
+end
+
 local function resolveProviderDef(species, exportsOverride)
   local ctx = providerContext(exportsOverride)
   if not (ctx and species) then return nil, nil, ctx end
 
-  local ok, result = pcall(ctx.spriteProviders.resolve, ctx.spriteProviders,
-    ctx.style, species, "normal", Game)
-  if not ok then
-    state.lastError = tostring(result)
-    return nil, nil, ctx
+  -- A static Pokédex front is not a mount. Try the user's current selection
+  -- first, then Randy's built-in Followers/GSC walker, then PokeMMO. This also
+  -- means a user can leave Randy on POKEDEX for roaming mons while DSR still
+  -- gets a real animated six-frame Pokemon for riding.
+  local styles, seen = {}, {}
+  for _, style in ipairs({ ctx.style, "followers", "pokemmo" }) do
+    style = tostring(style or "followers"):lower()
+    if not seen[style] then styles[#styles + 1], seen[style] = style, true end
   end
 
-  local rawDef = type(result) == "table" and result.def or nil
-  local providerId = type(result) == "table" and result.providerId or nil
-  local def = copyMountDef(rawDef, species, providerId, ctx.style)
-  if not def then
-    state.lastError = "embedded provider returned no six-frame walker"
-    return nil, result, ctx
+  local lastResult, lastError = nil, nil
+  for _, style in ipairs(styles) do
+    local rawDef, directErr = directProviderAttempt(ctx, species, style)
+    local providerId = rawDef and (rawDef.providerId or style) or nil
+    local def = copyMountDef(rawDef, species, providerId, style)
+    if def then
+      state.providerResolves = state.providerResolves + 1
+      state.lastSpecies = species
+      state.lastProviderId = providerId or "embedded_direct"
+      state.lastStyle = style
+      state.lastError = nil
+      return def, { def = rawDef, providerId = providerId }, ctx
+    end
+    if directErr then lastError = directErr end
+
+    local registryDef, result, registryErr = registryProviderAttempt(ctx, species, style)
+    lastResult = result or lastResult
+    providerId = type(result) == "table" and result.providerId or nil
+    def = copyMountDef(registryDef, species, providerId, style)
+    if def then
+      state.providerResolves = state.providerResolves + 1
+      state.lastSpecies = species
+      state.lastProviderId = providerId or "embedded_registry"
+      state.lastStyle = style
+      state.lastError = nil
+      return def, result, ctx
+    end
+    if registryErr then lastError = registryErr end
   end
 
-  state.providerResolves = state.providerResolves + 1
-  state.lastSpecies = species
-  state.lastProviderId = providerId
-  state.lastError = nil
-  return def, result, ctx
+  state.lastError = lastError or "embedded provider returned no six-frame walker"
+  return nil, lastResult, ctx
 end
 
 local function rendererFromProvider(species)
@@ -358,7 +427,7 @@ mod.events:on("mod.options_changed", function(payload)
 end)
 
 mod.exports.gen2EmbeddedSpriteMounts = {
-  api = 3,
+  api = 4,
   providerId = PROVIDER_ID,
   active = function() return providerContext() ~= nil end,
   resolve = resolveEmbeddedRenderer,

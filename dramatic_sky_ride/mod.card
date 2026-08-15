@@ -1,25 +1,26 @@
 return {
-  summary = "Ride compatible Gen 1 and Gen 2 Pokemon on land, water and in the air with native 2D and optional voxel rendering.",
+  summary = "Ride compatible Gen 1 and Gen 2 Pokemon on land, water and in the air, with Gen 2 Open Sky regional soaring over official Stadium 2 maps.",
   author = "MFR TechConsult",
-  tags = { "flying", "mount", "ground-ride", "surf", "2d", "voxel", "wild-skies", "gen2" },
+  tags = { "flying", "mount", "ground-ride", "surf", "open-sky", "2d", "3d", "voxel", "wild-skies", "gen2" },
   differences = {
     changed = {
       "requires Gen1Recomp 0.1.86+ and follows the enforced mod sandbox",
       "cross-mod sprite and voxel integrations use mod.find(...).exports instead of filesystem discovery",
-      "direct Crystal 251 DSM cache access is disabled until a sandbox-safe provider bridge exists",
-      "direct FRLG/HGSS/LGPE music-folder discovery is disabled under the sandbox",
-      "native flat 2D flight no longer requires a voxel provider",
-      "Wild Skies 1.9.0+ remains the validated Gen 2 airborne encounter integration"
+      "Open Sky calibration persistence is disabled in the release build; bundled Stadium 2 data is authoritative",
+      "native flat 2D flight remains available without a voxel provider"
     },
     added = {
-      "sandbox-safe DSR-owned asset reads through mod:read and mod.assets",
-      "Generation II flight, Ground Ride and Visible Surf support",
-      "public sprite/provider integration surfaces for compatible external mods"
+      "Generation II Open Sky regional soaring over Johto and Kanto",
+      "official Pokemon Stadium 2 Gen II regional geometry, textures and fixed regional cameras",
+      "direct cardinal map flight with no auto-forward or first/third-person chase camera",
+      "visited-city-only landing rules with individual spawn/flypoint progression checks",
+      "2D Stadium 2 regional fallback and optional voxel 3D presentation",
+      "sandbox-safe Open Sky asset reads through mod:read"
     },
     known = {
-      "HGSS-style overworld sprites can currently fail to display on the Generation II path",
-      "Wilds of Kanto compatibility is still under development and is not currently supported",
-      "legacy Crystal 251 native Stadium 2 DSM rendering waits for a sandbox-safe public provider bridge",
+      "Open Sky is Generation II only and must be enabled in settings",
+      "Open Sky 3D requires a compatible STADIUM2_OVERWORLD_MODELS provider and falls back to 2D when unavailable",
+      "legacy Crystal 251 native Stadium 2 DSM rendering still waits for a sandbox-safe public provider bridge",
       "rider seating uses procedural offsets rather than dedicated seated trainer sprites"
     }
   },
@@ -27,7 +28,8 @@ return {
     { who = "ShaneHudson/gen1recomp-mods", for_ = "Free Fly/Wild Skies public interoperability and renderer-independent flight patterns" },
     { who = "mfrtechconsult/PokePCFollowers", for_ = "maintained Gen 1/2 follower sprite provider and compatibility fork" },
     { who = "absol89/DramaticShapeVoxelMod", for_ = "Battle Art Voxel Fork and voxel camera integration" },
-    { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape voxel provider and public integration surface" }
+    { who = "artyrambles/DRAMALESS_SHAPE", for_ = "Dramaless Shape voxel provider and public integration surface" },
+    { who = "randyadr/Gen2-3D-Sprites", for_ = "public Gen2 voxel pipeline used by optional Open Sky 3D rendering" }
   },
   compat = { engine = ">=0.1.86 <2.0.0", modApi = 2 }
 }

@@ -95,6 +95,7 @@ main_53d_gen2_open_sky_runtime_guard.lua
 main_53e_gen2_open_sky_input_latch.lua
 main_53f_gen2_open_sky_art_map_01.lua
 main_53f_gen2_open_sky_art_map_02.lua
+main_53g_immersive_mount_option.lua
 
 main_54_settings_ux.lua
 main_56_gen2_player_bridge.lua
@@ -107,3 +108,4 @@ main_61_gen2_voxel_single_owner_guard.lua
 main_61a_gen2_2d_height_sync.lua
 main_62_ground_fx_retired.lua
 main_63_gen2_free_flight.lua
+main_64_immersive_mount_view.lua

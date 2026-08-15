@@ -33,27 +33,28 @@ local function readRaw(relative)
   if ok and type(raw)=="string" and raw~="" then return raw end
   return nil
 end
-local function readJoinedBase64(prefix,count)
-  if type(prefix)~="string" or not tonumber(count) then return nil end
-  local chunks={}
-  for i=1,tonumber(count) do
-    local path=string.format("%s%02d.b64",prefix,i)
-    local raw=readRaw(path)
-    if type(raw)~="string" or raw=="" then return nil,"missing "..path end
-    chunks[#chunks+1]=raw:gsub("%s+","")
-  end
-  return table.concat(chunks),nil
-end
 local function decodeBase64(raw)
   if type(raw)~="string" or not (love and love.data and love.data.decode) then return nil end
   local ok,value=pcall(love.data.decode,"string","base64",raw:gsub("%s+",""))
   return ok and value or nil
 end
+local function readJoinedBytes(prefix,count)
+  if type(prefix)~="string" or not tonumber(count) then return nil,"invalid multipart map descriptor" end
+  local chunks={}
+  for i=1,tonumber(count) do
+    local path=string.format("%s%02d.b64",prefix,i)
+    local raw=readRaw(path)
+    if type(raw)~="string" or raw=="" then return nil,"missing "..path end
+    local bytes=decodeBase64(raw)
+    if type(bytes)~="string" or bytes=="" then return nil,"invalid base64 in "..path end
+    chunks[#chunks+1]=bytes
+  end
+  return table.concat(chunks),nil
+end
 local function loadBundledImage(config,region)
-  local encoded,joinErr=readJoinedBase64(config and config.imagePartsPrefix,config and config.imageParts)
-  if not encoded then return nil,joinErr or "multipart map data unavailable" end
-  local bytes=decodeBase64(encoded)
-  if type(bytes)~="string" or bytes:sub(1,8)~="\137PNG\r\n\26\n" then return nil,"decoded map is not a PNG" end
+  local bytes,joinErr=readJoinedBytes(config and config.imagePartsPrefix,config and config.imageParts)
+  if not bytes then return nil,joinErr or "multipart map data unavailable" end
+  if bytes:sub(1,8)~="\137PNG\r\n\26\n" then return nil,"decoded map is not a PNG" end
   if not (love and love.graphics and love.filesystem and love.filesystem.newFileData) then return nil,"in-memory image decoder unavailable" end
   local okFD,fd=pcall(love.filesystem.newFileData,bytes,tostring(region or "open_sky").."_map2d.png")
   if not okFD or not fd then return nil,"could not create in-memory PNG data" end

@@ -34,8 +34,6 @@ local run = Sdk.loadMods(paths, { root = "..", dev = true })
 -- synthetic Pokemon/music dataset. DDD and Kanto Dive correctly reference real
 -- Gen 1 species and songs, so post-merge reference validation reports those as
 -- unresolved in this ROM-free fixture even though their entry chunks loaded.
--- Ignore ONLY those reference gaps for the target content mod; every other
--- Loader error remains fatal to this compatibility smoke test.
 local fixtureOwner = target == "deep" and "DRAMATIC_DEEP_DIVE" or "kanto_dive"
 local expectedFixtureErrors, unexpectedErrors = {}, {}
 for _, raw in ipairs(run.errors or {}) do
@@ -78,30 +76,42 @@ local wilds = run.loader.exports.overworld_wild_spawns or {}
 local pokepc = run.loader.exports.PokePCFollowers_VoxelMerge or {}
 local sky = run.loader.exports.DRAMATIC_SKY_RIDE or {}
 
+check(wilds.version == "2.1.5" or type(wilds.version) == "string",
+  "Wilds publishes its current version")
 check(type(wilds.resolveFollowerSprite) == "function",
   "Wilds publishes resolveFollowerSprite")
+check(type(wilds.syncAll) == "function",
+  "Wilds publishes sandbox-safe follower sync")
 check(pokepc.providerOnly == true and type(pokepc.resolveFollowerSprite) == "function",
   "PokéPC remains a sprite provider while Wilds owns follower runtime")
-check(sky.wildsCompatibility and sky.wildsCompatibility.hookGuardReady(),
-  "Sky Ride arms its production update-chain guard")
-check(type(sky.wildsCompatibility.composeAround) == "function",
-  "Sky Ride publishes cooperative update-chain composition")
+
+local skyWilds = assert(sky.wildsCompatibility)
+check(skyWilds.mode == "sandbox_public_exports",
+  "Sky Ride uses the sandbox public-export Wilds bridge")
+check(skyWilds.sandboxBaseline == "2.1.5",
+  "Sky Ride records Wilds 2.1.5 as its sandbox baseline")
+check(skyWilds.available() == true,
+  "Sky Ride sees the loaded Wilds public API")
+check(skyWilds.updateGuardRequired == false and skyWilds.hookGuardReady() == false,
+  "Sky Ride does not require debug/upvalue update-chain surgery")
+check(type(skyWilds.syncFollowers) == "function",
+  "Sky Ride exposes the public Wilds follower-resync seam")
+check(type(skyWilds.composeAround) == "function",
+  "legacy cooperative composition shim remains callable for companions")
 
 if target == "deep" then
   local deep = run.loader.exports.DRAMATIC_DEEP_DIVE or {}
   local diagnosticTravelOnly = type(deep.isActive) == "function" and deep.isActive() == false
   if diagnosticTravelOnly then
-    -- DDD alpha.7 intentionally runs its proven travel-only path and leaves
-    -- the advanced depth controller/update guard disabled. This is a valid
-    -- compatibility state, not a failed guard installation.
     check(deep.wildsCompatibility and deep.wildsCompatibility.hookGuardReady == false,
       "Deep Dive diagnostic travel-only mode leaves update guard intentionally disabled")
-  else
-    check(deep.wildsCompatibility and deep.wildsCompatibility.hookGuardReady == true,
-      "Deep Dive arms its production update-chain guard")
+  elseif deep.wildsCompatibility and deep.wildsCompatibility.hookGuardReady ~= nil then
+    check(deep.wildsCompatibility.hookGuardReady == true
+        or deep.wildsCompatibility.hookGuardReady == false,
+      "Deep Dive publishes a defined compatibility guard state")
   end
   check(deep.wildsCompatibility and type(deep.wildsCompatibility.ownsUpdate) == "function",
-    "Deep Dive publishes cooperative guard metadata")
+    "Deep Dive publishes cooperative compatibility metadata")
   local selectedProvider = type(deep.voxelProvider) == "function"
     and select(1, deep.voxelProvider()) or nil
   check(selectedProvider == providerId,

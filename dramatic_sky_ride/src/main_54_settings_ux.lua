@@ -118,6 +118,7 @@ local SIMPLE_ORDER = {
   "flight_speed",
   "ground_speed",
   "manual_altitude",
+  "regional_soaring",
   "visible_surf_mounts",
   "pokedex_mount_sizes",
   "mount_hints",
@@ -149,6 +150,7 @@ local ADVANCED_ORDER = {
   "dynamic_shadow",
   "air_encounters",
   "mount_shortcut",
+  "regional_soaring",
 
   -- Ground Ride
   "ground_speed",

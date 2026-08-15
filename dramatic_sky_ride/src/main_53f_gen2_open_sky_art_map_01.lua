@@ -1,4 +1,7 @@
 ;(function()
+-- -------------------------------------------------------------------------
+-- Gen 2 Open Sky: official Pokemon Stadium 2 regional maps -- flat 2D pass.
+-- -------------------------------------------------------------------------
 local playable = mod.exports.openSkyPlayable or {}
 local patchedStates = setmetatable({}, { __mode = "k" })
 local lastDrawError = nil
@@ -8,8 +11,8 @@ local WARP_X0, WARP_Y0 = 6, 22
 local WARP_W, WARP_H = 149, 117
 local WARP_STRIDE = 6
 local REGION = {
-  johto = { image="assets/open_sky_stadium2/johto/map2d.png", warp="assets/open_sky_stadium2/johto/warp.bin", eye={-560,3300,4780}, at={-560,0,960}, modelFile=0 },
-  kanto = { image="assets/open_sky_stadium2/kanto/map2d.png", warp="assets/open_sky_stadium2/kanto/warp.bin", eye={-10,2990,4540}, at={-10,0,420}, modelFile=1 },
+  johto = { image="assets/open_sky_stadium2/johto/map2d.b64", root="assets/open_sky_stadium2/johto/", eye={-560,3300,4780}, at={-560,0,960}, modelFile=0 },
+  kanto = { image="assets/open_sky_stadium2/kanto/map2d.b64", root="assets/open_sky_stadium2/kanto/", eye={-10,2990,4540}, at={-10,0,420}, modelFile=1 },
 }
 local cache = { images={}, imageTried={}, warp={}, warpTried={}, basis={} }
 local function regionKey(region) return region == "kanto" and "kanto" or "johto" end
@@ -20,47 +23,55 @@ local function readRaw(relative)
   if ok and type(raw)=="string" and raw~="" then return raw end
   return nil
 end
-local function assetPath(relative)
-  if mod.assets and type(mod.assets.path)=="function" then local ok,value=pcall(mod.assets.path,mod.assets,relative); if ok and value then return value end end
-  return relative
+local function decodeBase64(raw)
+  if type(raw)~="string" or not (love and love.data and love.data.decode) then return nil end
+  local ok,value=pcall(love.data.decode,"string","base64",raw:gsub("%s+",""))
+  return ok and value or nil
+end
+local function inflatePacked(raw)
+  local packed=decodeBase64(raw)
+  if not packed or not (love and love.data and love.data.decompress) then return nil end
+  local ok,value=pcall(love.data.decompress,"string","zlib",packed)
+  return ok and value or nil
+end
+local function readPackedParts(root,stem,count)
+  local chunks={}
+  for i=1,count do
+    local path=string.format("%s%s_part%02d.b64",root,stem,i)
+    local raw=readRaw(path)
+    if not raw then return nil end
+    chunks[#chunks+1]=raw:gsub("%s+","")
+  end
+  return inflatePacked(table.concat(chunks))
 end
 local function loadBundledImage(relative)
-  if not Assets then return nil end
-  local candidates={assetPath(relative),relative}; local seen={}
-  for _,candidate in ipairs(candidates) do
-    if candidate and not seen[candidate] then
-      seen[candidate]=true
-      if type(Assets.image)=="function" then local ok,image=pcall(Assets.image,candidate); if ok and image then pcall(image.setFilter,image,"linear","linear"); return image end end
-      if type(Assets.imageData)=="function" and love and love.graphics and type(love.graphics.newImage)=="function" then
-        local okData,imageData=pcall(Assets.imageData,candidate)
-        if okData and imageData then local okImage,image=pcall(love.graphics.newImage,imageData); if okImage and image then pcall(image.setFilter,image,"linear","linear"); return image end end
-      end
-    end
-  end
-  return nil
+  local bytes=decodeBase64(readRaw(relative))
+  if not bytes or not (love and love.graphics and love.filesystem and love.filesystem.newFileData) then return nil end
+  local okFD,fd=pcall(love.filesystem.newFileData,bytes,tostring(relative):gsub("%.b64$",".png"))
+  if not okFD or not fd then return nil end
+  local okIm,im=pcall(love.graphics.newImage,fd)
+  if not okIm or not im then return nil end
+  pcall(im.setFilter,im,"linear","linear")
+  return im
 end
 local function rememberDrawError(kind,err)
   lastDrawError={kind=tostring(kind or "draw"),message=tostring(err or "unknown")}
   pcall(function() log("Open Sky Stadium2 2D %s failed: %s",lastDrawError.kind,lastDrawError.message) end)
 end
-local function loadImageFromRaw(raw,filename)
-  if type(raw)~="string" or raw=="" then return nil end
-  if not (love and love.graphics and love.filesystem and love.filesystem.newFileData) then return nil end
-  local okFD,fd=pcall(love.filesystem.newFileData,raw,filename); if not okFD or not fd then return nil end
-  local okIm,im=pcall(love.graphics.newImage,fd); if not okIm or not im then return nil end
-  pcall(im.setFilter,im,"linear","linear"); return im
-end
 local function imageFor(region)
-  region=regionKey(region); if cache.imageTried[region] then return cache.images[region] end
-  cache.imageTried[region]=true; local a=REGION[region]
+  region=regionKey(region)
+  if cache.imageTried[region] then return cache.images[region] end
+  cache.imageTried[region]=true
+  local a=REGION[region]
   cache.images[region]=loadBundledImage(a.image)
-  if not cache.images[region] then cache.images[region]=loadImageFromRaw(readRaw(a.image),region.."_stadium2_map.png") end
-  if not cache.images[region] then rememberDrawError("MAP_ASSET","unable to load bundled "..tostring(a.image)) end
+  if not cache.images[region] then rememberDrawError("MAP_ASSET","unable to decode bundled "..tostring(a.image)) end
   return cache.images[region]
 end
 local function warpFor(region)
-  region=regionKey(region); if cache.warpTried[region] then return cache.warp[region] end
-  cache.warpTried[region]=true; local raw=readRaw(REGION[region].warp)
+  region=regionKey(region)
+  if cache.warpTried[region] then return cache.warp[region] end
+  cache.warpTried[region]=true
+  local raw=readPackedParts(REGION[region].root,"warp",6)
   if raw and #raw>=WARP_W*WARP_H*WARP_STRIDE then cache.warp[region]=raw end
   return cache.warp[region]
 end

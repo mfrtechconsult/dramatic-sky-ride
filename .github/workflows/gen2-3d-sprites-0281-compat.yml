@@ -65,6 +65,7 @@ jobs:
 
           options = (stadium / 'options.lua').read_text(encoding='utf-8')
           main = (stadium / 'main.lua').read_text(encoding='utf-8')
+          embedded_wilds = (stadium / 'lib/EmbeddedWildsMain.lua').read_text(encoding='utf-8')
           bridge = (stadium / 'lib/GoldVoxelBridge.lua').read_text(encoding='utf-8')
           overworld = (stadium / 'lib/OverworldStadium.lua').read_text(encoding='utf-8')
           sprites = (stadium / 'lib/sprite_providers.lua').read_text(encoding='utf-8')
@@ -77,9 +78,11 @@ jobs:
               assert token in options, token
           for token in ('mod.exports.modelsEnabled = BaseV.modelsEnabled',
                         'mod.exports.voxelPipelineState = voxelPipelineState',
-                        'mod.exports.overworld = Stadium',
-                        'mod.exports.spriteProviders = render.spriteProviders'):
+                        'mod.exports.overworld = Stadium'):
               assert token in main, token
+          for token in ('mod.exports.spriteProviders = render.spriteProviders',
+                        'mod.exports.registerSpriteProvider'):
+              assert token in embedded_wilds, token
           for token in ('function Bridge.setExtraEntitiesProvider',
                         'pokemonModels = modelsEnabled()',
                         'function Bridge.status()'):

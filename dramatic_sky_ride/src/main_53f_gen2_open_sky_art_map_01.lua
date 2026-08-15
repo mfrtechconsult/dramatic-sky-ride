@@ -11,8 +11,18 @@ local WARP_X0, WARP_Y0 = 6, 22
 local WARP_W, WARP_H = 149, 117
 local WARP_STRIDE = 6
 local REGION = {
-  johto = { image="assets/open_sky_stadium2/johto/map2d.b64", eye={-560,3300,4780}, at={-560,0,960}, modelFile=0 },
-  kanto = { image="assets/open_sky_stadium2/kanto/map2d.b64", eye={-10,2990,4540}, at={-10,0,420}, modelFile=1 },
+  johto = {
+    image="assets/open_sky_stadium2/johto/map2d.b64",
+    imagePartsPrefix="assets/open_sky_stadium2/johto/map2d_full_part",
+    imageParts=5,
+    eye={-560,3300,4780}, at={-560,0,960}, modelFile=0,
+  },
+  kanto = {
+    image="assets/open_sky_stadium2/kanto/map2d.b64",
+    imagePartsPrefix="assets/open_sky_stadium2/kanto/map2d_full_part",
+    imageParts=6,
+    eye={-10,2990,4540}, at={-10,0,420}, modelFile=1,
+  },
 }
 local cache = { images={}, imageTried={}, warp={}, warpTried={}, basis={} }
 local function regionKey(region) return region == "kanto" and "kanto" or "johto" end
@@ -28,15 +38,35 @@ local function decodeBase64(raw)
   local ok,value=pcall(love.data.decode,"string","base64",raw:gsub("%s+",""))
   return ok and value or nil
 end
-local function loadBundledImage(relative)
-  local bytes=decodeBase64(readRaw(relative))
-  if not bytes or not (love and love.graphics and love.filesystem and love.filesystem.newFileData) then return nil end
-  local okFD,fd=pcall(love.filesystem.newFileData,bytes,tostring(relative):gsub("%.b64$",".png"))
-  if not okFD or not fd then return nil end
+local function readJoinedBytes(prefix,count)
+  if type(prefix)~="string" or not tonumber(count) then return nil,"invalid multipart map descriptor" end
+  local chunks={}
+  for i=1,tonumber(count) do
+    local path=string.format("%s%02d.b64",prefix,i)
+    local raw=readRaw(path)
+    if type(raw)~="string" or raw=="" then return nil,"missing "..path end
+    local bytes=decodeBase64(raw)
+    if type(bytes)~="string" or bytes=="" then return nil,"invalid base64 in "..path end
+    chunks[#chunks+1]=bytes
+  end
+  return table.concat(chunks),nil
+end
+local function loadBundledImage(config,region)
+  local bytes,joinErr=readJoinedBytes(config and config.imagePartsPrefix,config and config.imageParts)
+  if not bytes then return nil,joinErr or "multipart map data unavailable" end
+  if bytes:sub(1,8)~="\137PNG\r\n\26\n" then return nil,"decoded map is not a PNG" end
+  if not (love and love.graphics and love.filesystem and love.filesystem.newFileData) then return nil,"in-memory image decoder unavailable" end
+  local okFD,fd=pcall(love.filesystem.newFileData,bytes,tostring(region or "open_sky").."_map2d.png")
+  if not okFD or not fd then return nil,"could not create in-memory PNG data" end
   local okIm,im=pcall(love.graphics.newImage,fd)
-  if not okIm or not im then return nil end
+  if not okIm or not im then return nil,"could not create map image" end
+  local okDim,w,h=pcall(function() return im:getWidth(),im:getHeight() end)
+  if not okDim or tonumber(w)~=MAP_W or tonumber(h)~=MAP_H then
+    pcall(function() im:release() end)
+    return nil,string.format("map size %sx%s; expected %dx%d",tostring(w),tostring(h),MAP_W,MAP_H)
+  end
   pcall(im.setFilter,im,"linear","linear")
-  return im
+  return im,nil
 end
 local function rememberDrawError(kind,err)
   lastDrawError={kind=tostring(kind or "draw"),message=tostring(err or "unknown")}
@@ -47,13 +77,14 @@ local function imageFor(region)
   if cache.imageTried[region] then return cache.images[region] end
   cache.imageTried[region]=true
   local a=REGION[region]
-  cache.images[region]=loadBundledImage(a.image)
-  if not cache.images[region] then rememberDrawError("MAP_ASSET","unable to decode bundled "..tostring(a.image)) end
+  local image,err=loadBundledImage(a,region)
+  cache.images[region]=image
+  if not image then rememberDrawError("MAP_ASSET",string.format("%s: %s",region,tostring(err or "unable to decode bundled map"))) end
   return cache.images[region]
 end
 local function warpFor(region)
-  -- The flattened Stadium 2 render is authoritative in 0.2.14. City markers
-  -- use a stable linear town-map projection and are calibrated with the F8 editor.
+  -- The flattened Stadium 2 render is authoritative. City markers use a
+  -- stable linear town-map projection and are calibrated with the F8 editor.
   region=regionKey(region)
   cache.warpTried[region]=true
   cache.warp[region]=nil

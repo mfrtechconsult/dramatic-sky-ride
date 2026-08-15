@@ -179,6 +179,11 @@ local FOLLOWER_IDS = {
   followers_ex = true,
 }
 
-local function followerPath(_species)
+local function followerPath(species)
+  local bundled = mod.exports and mod.exports.bundledFollowerSprites or nil
+  if bundled and type(bundled.path) == "function" then
+    local ok, path = pcall(bundled.path, species)
+    if ok then return path end
+  end
   return nil
 end

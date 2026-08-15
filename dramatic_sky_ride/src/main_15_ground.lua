@@ -53,9 +53,14 @@ local function groundAreaAllowed(ow)
   return tileset == "CAVERN" or tileset == "UNDERGROUND"
 end
 
-local function groundFollowerPath(_species)
-  -- Cross-mod asset access is exports-only under the sandbox. main_27 wraps
-  -- this resolver with resolveFollowerSprite providers.
+local function groundFollowerPath(species)
+  -- External providers wrap this resolver in main_27. The bundled PokePC pack
+  -- is deliberately last so installed sprite providers can still win.
+  local bundled = mod.exports and mod.exports.bundledFollowerSprites or nil
+  if bundled and type(bundled.path) == "function" then
+    local ok, path = pcall(bundled.path, species)
+    if ok then return path end
+  end
   return nil
 end
 

@@ -89,10 +89,29 @@ end
 -- scale. Reduce only that classic 2D card; native HGSS/PokeMMO keeps its exact
 -- existing size.
 local CLASSIC_2D_SCALE = { GYARADOS = 0.72 }
+-- Ground follower sheets are compact 16px companions. At the raw Pokedex
+-- scale a medium quadruped is almost entirely covered by the 16px trainer in
+-- the leaned voxel camera. Keep this floor specific to Ground Ride's 2D card;
+-- Flight, Surf, user settings and Stadium geometry retain their own scale.
+local GROUND_2D_MIN_SCALE = 1.75
+
+local function sameSpecies(a, b)
+  local function clean(value)
+    return tostring(value or ""):upper():gsub("[^A-Z0-9]", "")
+  end
+  local ca, cb = clean(a), clean(b)
+  return ca ~= "" and ca == cb
+end
+
 local function classic2DScale(species)
   local scale = mountScale(species)
   local key = tostring(species or ""):upper():gsub("[^A-Z0-9]", "")
-  return scale * (CLASSIC_2D_SCALE[key] or 1)
+  scale = scale * (CLASSIC_2D_SCALE[key] or 1)
+  if ground and ground.active == true and sameSpecies(species,
+      ground.species or (ground.mon and ground.mon.species)) then
+    scale = math.max(scale, GROUND_2D_MIN_SCALE)
+  end
+  return scale
 end
 
 -- -------------------------------------------------------------------------
@@ -320,6 +339,14 @@ local function installAll()
   installFlightBattleGate()
   install2DBillboardSizeHook()
 end
+
+-- main_58 owns Gold's rider pose. Expose the final card scale so that layer
+-- can keep the trainer on the saddle without duplicating the sizing policy.
+mod.exports.gen2Voxel2DPresentation = {
+  api = 1,
+  scale = classic2DScale,
+  groundMinimum = GROUND_2D_MIN_SCALE,
+}
 
 local previousUpdate = OverworldState.update
 function OverworldState:update(dt, ...)

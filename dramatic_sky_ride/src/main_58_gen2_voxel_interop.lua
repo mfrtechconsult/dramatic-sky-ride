@@ -18,6 +18,9 @@ local state = {
   previousExtra = nil,
   extraWrapper = nil,
   installs = 0,
+  directWorld = nil,
+  directInsertions = 0,
+  providerMode = "unavailable",
   proxyFrames = 0,
   riderFrames = 0,
   filteredFollowers = 0,
@@ -327,6 +330,52 @@ local function installExtraProvider()
   return true
 end
 
+-- Gen2-3D-Sprites 0.2.81 exports GoldPipelineBridge as voxelPipelineState,
+-- while setExtraEntitiesProvider belongs to its private GoldVoxelBridge.
+-- GoldVoxelBridge already consumes world.entities, so use that public world
+-- collection as the reversible fallback when the exported setter is absent.
+local function removeDirectProxy()
+  local ow = state.directWorld
+  local entities = ow and ow.entities or nil
+  if type(entities) == "table" then
+    for i = #entities, 1, -1 do
+      if entities[i] == proxy then table.remove(entities, i) end
+    end
+  end
+  state.directWorld = nil
+end
+
+local function ensureDirectProxy(ow)
+  if not (ow and type(ow.entities) == "table" and shouldPublish(ow)) then
+    removeDirectProxy()
+    return false
+  end
+  if state.directWorld and state.directWorld ~= ow then removeDirectProxy() end
+  for _, entity in ipairs(ow.entities) do
+    if entity == proxy then
+      state.directWorld = ow
+      return true
+    end
+  end
+  ow.entities[#ow.entities + 1] = proxy
+  state.directWorld = ow
+  state.directInsertions = state.directInsertions + 1
+  return true
+end
+
+local function syncEntityProvider()
+  local publicProvider = installExtraProvider()
+  if publicProvider then
+    state.providerMode = "public-extra-provider"
+    removeDirectProxy()
+  elseif ensureDirectProxy(world()) then
+    state.providerMode = "gold-world-entities"
+  else
+    state.providerMode = "inactive"
+  end
+  return publicProvider or state.directWorld ~= nil
+end
+
 local RIDER_FOOT = {
   LUGIA = 8.0, HO_OH = 7.5, GYARADOS = 7.0, LAPRAS = 7.0,
   MANTINE = 6.5, SUICUNE = 7.0, RAIKOU = 7.0, ENTEI = 7.2,
@@ -350,6 +399,26 @@ local function mountedRiderPose(kind, ow)
     if not (ground and ground.riderSprite) then return nil end
     riderProxy.sprite = ground.riderSprite
     sprite, px, py, facing, phase, flip, hopping = groundRiderPose(riderProxy)
+
+    local presentation = mod.exports and mod.exports.gen2Voxel2DPresentation or nil
+    if not stadiumMode() and presentation and type(presentation.scale) == "function" then
+      local _, species = mountState()
+      local okScale, visualScale = pcall(presentation.scale, species)
+      visualScale = okScale and tonumber(visualScale) or nil
+      local canonicalScale = 1
+      local scaleFn = mod.exports and mod.exports.mountVisualScale or nil
+      if type(scaleFn) == "function" then
+        local okCanonical, value = pcall(scaleFn, species)
+        value = okCanonical and tonumber(value) or nil
+        if value and value > 0 then canonicalScale = value end
+      end
+      if visualScale and visualScale > canonicalScale then
+        local cfg = GROUND_ELIGIBLE and GROUND_ELIGIBLE[species] or nil
+        local lift = tonumber(cfg and cfg.lift) or riderSeat(species)
+        py = (py or (ow.player and ow.player.py) or 0)
+          - lift * (visualScale - canonicalScale)
+      end
+    end
   elseif kind == "water" then
     local fn = mod.exports and mod.exports._waterRideRiderPose or nil
     if type(fn) ~= "function" then return nil end
@@ -559,14 +628,45 @@ local function installFollowerGate()
   return true
 end
 
+local function removeLegacyRiders(ow)
+  if not (ow and voxelActive() and mountState()) then return end
+  local legacy = {}
+  if flight and flight.riderEntity then legacy[#legacy + 1] = flight.riderEntity end
+  if ground and ground.riderEntity then legacy[#legacy + 1] = ground.riderEntity end
+  for _, entity in ipairs(legacy) do
+    if entity then
+      for _, list in ipairs({ ow.entities, ow.npcs }) do
+        if type(list) == "table" then
+          for i = #list, 1, -1 do
+            if list[i] == entity then table.remove(list, i) end
+          end
+        end
+      end
+    end
+  end
+end
+
+local function syncRuntime()
+  if not isGold() then
+    removeDirectProxy()
+    restoreRider()
+    state.providerMode = "inactive"
+    return false
+  end
+  local ow = world()
+  syncEntityProvider()
+  installProviderHooks()
+  installFollowerGate()
+  if ow and ow.player then installRider(ow) else restoreRider() end
+  removeLegacyRiders(ow)
+  return ow ~= nil
+end
+
 local previousUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = previousUpdate(self, dt, ...)
-  if isGold() and Game.overworld == self then
-    installExtraProvider()
-    installProviderHooks()
-    installFollowerGate()
-    installRider(self)
+  if isGold() then
+    syncRuntime()
   else
     restoreRider()
   end
@@ -574,22 +674,15 @@ function OverworldState:update(dt, ...)
 end
 
 mod.events:on("game.ready", function()
-  if isGold() then
-    installExtraProvider()
-    installProviderHooks()
-    installFollowerGate()
-  end
+  syncRuntime()
 end)
 
 mod.events:on("mod.options_changed", function()
-  if isGold() then
-    installExtraProvider()
-    installProviderHooks()
-  end
+  syncRuntime()
 end)
 
 mod.exports.gen2VoxelInterop = {
-  api = 4,
+  api = 5,
   providerId = PROVIDER_ID,
   active = function() return shouldPublish(world()) end,
   mountKind = function() return select(1, mountState()) end,
@@ -603,6 +696,7 @@ mod.exports.gen2VoxelInterop = {
     return "2d"
   end,
   existingExtraProviderPreserved = function() return state.previousExtra ~= nil end,
+  sync = syncRuntime,
   status = function()
     return {
       voxelActive = voxelActive(),
@@ -618,13 +712,14 @@ mod.exports.gen2VoxelInterop = {
       seatScaleFrames = state.seatScaleFrames,
       seatScaleDelta = state.lastSeatScaleDelta,
       installs = state.installs,
+      providerMode = state.providerMode,
+      directProxyActive = state.directWorld ~= nil,
+      directInsertions = state.directInsertions,
       lastError = state.lastError,
     }
   end,
 }
 
-installExtraProvider()
-installProviderHooks()
-installFollowerGate()
+syncRuntime()
 log("Clean Gen2 voxel interop loaded (one proxy/rider; Stadium saddle preserved during scaling)")
 end)();

@@ -43,3 +43,5 @@ A complete calibration report contains **20 coordinate lines** in `region|landma
 - Wild Skies `>=1.4.1 <2.0.0`.
 - Battle Art / Dramaless and current Gen 2 voxel interoperability for normal Dramatic Sky Ride mounts.
 - No cross-mod raw filesystem discovery is restored.
+
+The attached ZIP is launcher-ready and is rebuilt and LuaJIT-validated by the release workflow before publication.

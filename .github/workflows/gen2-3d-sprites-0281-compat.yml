@@ -5,8 +5,11 @@ on:
     branches:
       - main
       - hotfix/open-sky-map-quality-0.2.16
+      - hotfix/gen2-sprite-provider-0.2.17
     paths:
       - dramatic_sky_ride/src/main_28_stadium_compat.lua
+      - dramatic_sky_ride/src/main_40a_gen2_embedded_hgss.lua
+      - dramatic_sky_ride/src/main_40b_gen2_hgss_surf_visual.lua
       - dramatic_sky_ride/src/main_58_gen2_voxel_interop.lua
       - dramatic_sky_ride/src/main_60_gen2_voxel_runtime_compat.lua
       - dramatic_sky_ride/src/parts.txt
@@ -17,6 +20,8 @@ on:
       - main
     paths:
       - dramatic_sky_ride/src/main_28_stadium_compat.lua
+      - dramatic_sky_ride/src/main_40a_gen2_embedded_hgss.lua
+      - dramatic_sky_ride/src/main_40b_gen2_hgss_surf_visual.lua
       - dramatic_sky_ride/src/main_58_gen2_voxel_interop.lua
       - dramatic_sky_ride/src/main_60_gen2_voxel_runtime_compat.lua
       - dramatic_sky_ride/src/parts.txt
@@ -62,14 +67,18 @@ jobs:
           main = (stadium / 'main.lua').read_text(encoding='utf-8')
           bridge = (stadium / 'lib/GoldVoxelBridge.lua').read_text(encoding='utf-8')
           overworld = (stadium / 'lib/OverworldStadium.lua').read_text(encoding='utf-8')
+          sprites = (stadium / 'lib/sprite_providers.lua').read_text(encoding='utf-8')
           compat = (dsr / 'src/main_28_stadium_compat.lua').read_text(encoding='utf-8')
+          embedded = (dsr / 'src/main_40a_gen2_embedded_hgss.lua').read_text(encoding='utf-8')
+          surf = (dsr / 'src/main_40b_gen2_hgss_surf_visual.lua').read_text(encoding='utf-8')
           runtime = (dsr / 'src/main_60_gen2_voxel_runtime_compat.lua').read_text(encoding='utf-8')
 
           for token in ('key = "stadium3dSprites"', '3D POKéMON MODELS'):
               assert token in options, token
           for token in ('mod.exports.modelsEnabled = BaseV.modelsEnabled',
                         'mod.exports.voxelPipelineState = voxelPipelineState',
-                        'mod.exports.overworld = Stadium'):
+                        'mod.exports.overworld = Stadium',
+                        'mod.exports.spriteProviders = render.spriteProviders'):
               assert token in main, token
           for token in ('function Bridge.setExtraEntitiesProvider',
                         'pokemonModels = modelsEnabled()',
@@ -79,12 +88,36 @@ jobs:
                         'if not modelsEnabled() then return false, nil end'):
               assert token in overworld, token
 
+          # Randy 0.2.81 exposes the selected 2D art through the embedded Wilds
+          # provider registry. The new default followers style is a real six-
+          # frame walker and must be consumable by DSR without filesystem access.
+          for token in ('function SpriteProviders:resolve(style, speciesId, variant, game)',
+                        'followers = { "followers_ex", "pokemmo", "pokedex" }',
+                        'frames = 6', 'walker = true'):
+              assert token in sprites, token
+
           # DSR must not treat a live voxel WORLD as proof that Pokemon models
           # are available. Otherwise the provider suppresses/declines the model
           # while DSR also skips its custom 2D card, making the mount disappear.
           for token in ('gen2PokemonModelsEnabled', 'gen2MountModelReady',
                         'return gen2MountModelReady(species)', 'api = 8'):
               assert token in compat, token
+
+          # DSR must also consume Randy as a SPRITE provider, not only a Stadium
+          # model provider. In particular this may not be restricted to PokeMMO
+          # or to the user's requested renderer, because a requested 3D model can
+          # legitimately fall back to 2D at runtime.
+          for token in ('wilds.spriteProviders', 'ctx.spriteProviders.resolve',
+                        'registerSpriteSource', 'id = PROVIDER_ID',
+                        'dramaticSkyRideEmbeddedSpriteProvider',
+                        'gen2EmbeddedSpriteMounts', 'api = 3'):
+              assert token in embedded, token
+          assert 'style ~= "pokemmo"' not in embedded
+          assert 'requested2D' not in embedded
+          assert 'frames < 6' in embedded
+          assert 'gen2EmbeddedPokeMMOMounts = mod.exports.gen2EmbeddedSpriteMounts' in embedded
+          assert 'gen2EmbeddedPokeMMOMounts' in surf
+
           assert 'renderer2D()' in runtime
           assert 'buildNativeHgssCard' in runtime
           assert 'install2DBillboardSizeHook' in runtime
@@ -92,7 +125,7 @@ jobs:
           # Sandbox contract stays unchanged on our side.
           dsr_manifest = json.loads((dsr / 'manifest.json').read_text(encoding='utf-8'))
           assert 'filesystem' not in dsr_manifest.get('permissions', [])
-          print('Gen2-3D-Sprites v0.2.81 public contract + DSR 2D fallback: OK')
+          print('Gen2-3D-Sprites v0.2.81 model + embedded sprite-provider contract: OK')
           PY
 
       - name: Compile Dramatic Sky Ride runtime
@@ -119,3 +152,22 @@ jobs:
           Path('/tmp/dsr.lua').write_text(''.join(chunks), encoding='utf-8')
           PY
           luajit -b /tmp/dsr.lua /tmp/dsr.ljbc
+
+      - name: Build launcher-ready test archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(python -c 'import json; print(json.load(open("dsr/dramatic_sky_ride/manifest.json", encoding="utf-8"))["version"])')
+          mkdir -p /tmp/dsr-artifact
+          ARCHIVE="/tmp/dsr-artifact/dramatic-sky-ride-${VERSION}-gen2-sprite-provider-test.zip"
+          cd dsr
+          zip -qr "$ARCHIVE" dramatic_sky_ride
+          unzip -t "$ARCHIVE"
+
+      - name: Upload launcher-ready test archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-gen2-sprite-provider-test
+          path: /tmp/dsr-artifact/*.zip
+          if-no-files-found: error
+          retention-days: 14

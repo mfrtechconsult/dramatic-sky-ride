@@ -3,12 +3,13 @@
 -- -------------------------------------------------------------------------
 -- Wilds of Kanto / follower-provider compatibility.
 --
--- Gen1Recomp's current sandbox removes debug/io/love.filesystem from mods.
--- Wilds 2.1.5 moved to the supported public surfaces as well, so this bridge
--- deliberately uses only mod.find(...).exports plus the engine Assets API.
--- There is no longer any update-chain/upvalue surgery here: Wilds owns its
--- follower lifecycle and battle-return reconciliation, DSR only consumes its
--- sprite service and asks it to resync followers when a mount is restored.
+-- Gen1Recomp's current sandbox removes raw filesystem and introspection
+-- globals from mods. Wilds 2.1.5 moved to the supported public surfaces as
+-- well, so this bridge deliberately uses only mod.find(...).exports plus the
+-- engine Assets API. There is no longer any update-chain/upvalue surgery here:
+-- Wilds owns its follower lifecycle and battle-return reconciliation, DSR only
+-- consumes its sprite service and asks it to resync followers when a mount is
+-- restored.
 -- -------------------------------------------------------------------------
 local WILDS_MOD_ID = "overworld_wild_spawns"
 local WILDS_SANDBOX_BASELINE = "2.1.5"

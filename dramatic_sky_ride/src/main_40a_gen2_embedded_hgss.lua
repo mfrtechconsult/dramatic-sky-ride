@@ -1,15 +1,33 @@
 ;(function()
--- Gen2 embedded HGSS/PokeMMO source bridge.
+-- Gen2-3D-Sprites embedded sprite-provider bridge.
 --
--- Gen2-3D-Sprites embeds Wilds behind STADIUM2_OVERWORLD_MODELS instead of
--- exposing overworld_wild_spawns as a standalone mod. Reuse DSR's existing
--- native PokeMMO resolver synchronously by presenting that embedded export only
--- for the duration of resolve(). No Player/Overworld/prepare hooks live here.
+-- STADIUM2_OVERWORLD_MODELS embeds Wilds instead of exposing a standalone
+-- overworld_wild_spawns handle. 0.2.81 also defaults its 2D Pokemon art to the
+-- built-in Poke Followers/GSC provider, while older DSR code only recognized
+-- the explicit PokeMMO style. That left Flight/Ground/Surf without the selected
+-- Pokemon sprite whenever Stadium 3D fell back to 2D.
+--
+-- Treat Randy's public wilds.spriteProviders registry as the authoritative 2D
+-- source. Keep the native high-resolution PokeMMO path when that style is
+-- selected, but accept any six-frame walker returned by the embedded provider
+-- chain (notably the new default "followers" style). The 2D sprite is prepared
+-- even while Stadium 3D is requested so an unavailable/disabled model can fall
+-- back immediately without turning the mount invisible.
 
 local PROVIDER_ID = "STADIUM2_OVERWORLD_MODELS"
 local WILDS_ID = "overworld_wild_spawns"
 local PaletteFX = require("src.render.PaletteFX")
-local state = { resolves = 0, lastSpecies = nil, lastStyle = nil, lastError = nil }
+local state = {
+  resolves = 0,
+  providerResolves = 0,
+  nativeResolves = 0,
+  sourceRegistered = false,
+  lastSpecies = nil,
+  lastStyle = nil,
+  lastProviderId = nil,
+  lastError = nil,
+}
+local providerRendererCache = {}
 
 local function isGold()
   local generation = mod.exports and mod.exports.runtimeGeneration or nil
@@ -20,41 +38,118 @@ local function isGold()
   return false
 end
 
-local function requested2D()
-  local rendering = mod.exports and mod.exports.flightRendering or nil
-  if rendering and type(rendering.requested) == "function" then
-    local ok, value = pcall(rendering.requested)
-    if ok and value ~= nil then return tostring(value):lower() ~= "stadium" end
-  end
-  return true
-end
-
 local function findHandle(id)
   if type(mod.find) ~= "function" then return nil end
   local ok, handle = pcall(mod.find, mod, id)
+  if ok and handle then return handle end
+  ok, handle = pcall(mod.find, id)
   return ok and handle or nil
 end
 
-local function embeddedContext()
-  if not isGold() or not requested2D() or findHandle(WILDS_ID) then return nil end
+local function providerContext(exportsOverride)
+  if not isGold() or findHandle(WILDS_ID) then return nil end
   local provider = findHandle(PROVIDER_ID)
-  local ex = provider and provider.exports or nil
+  local ex = exportsOverride or (provider and provider.exports) or nil
   local wilds = ex and ex.wilds or nil
   local render = wilds and wilds.render or nil
   local wildsMod = render and render.mod or nil
   local options = wildsMod and wildsMod.options or nil
-  if not (wilds and options and type(options.get) == "function") then return nil end
+  local spriteProviders = wilds and wilds.spriteProviders or nil
+  if not (wilds and spriteProviders and type(spriteProviders.resolve) == "function"
+      and options and type(options.get) == "function") then
+    return nil
+  end
+
   local okStyle, style = pcall(options.get, options, "sprite_style")
   if not okStyle then return nil end
+  style = tostring(style or "followers"):lower()
   state.lastStyle = style
-  if tostring(style or ""):lower() ~= "pokemmo" then return nil end
-  return { provider = provider, wilds = wilds }
+  return {
+    provider = provider,
+    exports = ex,
+    wilds = wilds,
+    spriteProviders = spriteProviders,
+    style = style,
+  }
 end
 
-local function resolveRaw(species)
-  local ctx = embeddedContext()
+local function copyMountDef(def, species, providerId, style)
+  if type(def) ~= "table" or type(def.image) ~= "string" or def.image == "" then
+    return nil
+  end
+  local frames = tonumber(def.frames) or 1
+  -- DSR's mounted walker contract is six directional/walk frames. Static
+  -- Pokédex cards remain an intentional fallback to DSR's own mount art.
+  if frames < 6 or def.walker == false then return nil end
+
+  local out = {}
+  for k, v in pairs(def) do out[k] = v end
+  out.frames = frames
+  out.walker = true
+  out.trueColor = def.trueColor ~= false
+  out.id = "DSR_GEN2_PROVIDER_" .. tostring(species)
+  out.dramaticSkyRideMountSpecies = species
+  out.dramaticSkyRideEmbeddedSpriteProvider = true
+  out.dramaticSkyRideEmbeddedProviderId = providerId
+  out.dramaticSkyRideEmbeddedStyle = style
+  return out
+end
+
+local function resolveProviderDef(species, exportsOverride)
+  local ctx = providerContext(exportsOverride)
+  if not (ctx and species) then return nil, nil, ctx end
+
+  local ok, result = pcall(ctx.spriteProviders.resolve, ctx.spriteProviders,
+    ctx.style, species, "normal", Game)
+  if not ok then
+    state.lastError = tostring(result)
+    return nil, nil, ctx
+  end
+
+  local rawDef = type(result) == "table" and result.def or nil
+  local providerId = type(result) == "table" and result.providerId or nil
+  local def = copyMountDef(rawDef, species, providerId, ctx.style)
+  if not def then
+    state.lastError = "embedded provider returned no six-frame walker"
+    return nil, result, ctx
+  end
+
+  state.providerResolves = state.providerResolves + 1
+  state.lastSpecies = species
+  state.lastProviderId = providerId
+  state.lastError = nil
+  return def, result, ctx
+end
+
+local function rendererFromProvider(species)
+  local def, result, ctx = resolveProviderDef(species)
+  if not def then return nil end
+
+  local key = table.concat({
+    tostring(species), tostring(ctx and ctx.style), tostring(def.image),
+    tostring(def.frames), tostring(result and result.providerId),
+  }, "|")
+  local cached = providerRendererCache[key]
+  if cached then return cached end
+
+  local ok, renderer = pcall(SpriteRenderer.new, def,
+    "dsr_gen2_provider_" .. tostring(species))
+  if not ok or not renderer then
+    state.lastError = tostring(renderer or "SpriteRenderer.new failed")
+    return nil
+  end
+  providerRendererCache[key] = renderer
+  return renderer
+end
+
+-- Preserve the existing native PokeMMO resolver. It expects a standalone
+-- overworld_wild_spawns handle, so expose Randy's embedded Wilds exports only
+-- during this synchronous call. Nothing is persisted or patched globally.
+local function resolveNativePokeMMO(species)
+  local ctx = providerContext()
   local api = mod.exports and mod.exports.nativePokeMMOMounts or nil
-  if not (ctx and api and type(api.resolve) == "function" and type(mod.find) == "function") then
+  if not (ctx and ctx.style == "pokemmo" and api and type(api.resolve) == "function"
+      and type(mod.find) == "function") then
     return nil
   end
 
@@ -83,8 +178,9 @@ local function resolveRaw(species)
     return nil
   end
   if renderer then
-    state.resolves = state.resolves + 1
+    state.nativeResolves = state.nativeResolves + 1
     state.lastSpecies = species
+    state.lastProviderId = "pokemmo_native"
     state.lastError = nil
   end
   return renderer
@@ -99,13 +195,13 @@ end
 
 local function walkColumn(walkPhase)
   if tonumber(walkPhase) ~= 1 then return 0 end
-  local ow = Game and Game.overworld or nil
+  local ow = Game and (Game.overworld or Game.world) or nil
   local player = ow and ow.player or nil
   local clock = tonumber(player and player.animClock) or 0
   return math.floor(clock / 8) % 4
 end
 
-local function decorate(renderer, species)
+local function decorateNative(renderer, species)
   if not (renderer and renderer.def and renderer.def.dramaticSkyRideNativePokeMMO) then
     return renderer
   end
@@ -171,26 +267,69 @@ local function decorate(renderer, species)
   return renderer
 end
 
--- Keep Flight and Ground on the same embedded HGSS resolver. Their normal
--- builders remain the exact fallback when HGSS is unavailable or not selected.
+local function resolveEmbeddedRenderer(species)
+  if not species then return nil end
+  local native = decorateNative(resolveNativePokeMMO(species), species)
+  local renderer = native or rendererFromProvider(species)
+  if renderer then
+    state.resolves = state.resolves + 1
+    state.lastSpecies = species
+  end
+  return renderer
+end
+
+-- Also register Randy as a normal DSR sprite source. This makes the provider
+-- visible through airborneSpriteSources() and lets the existing followerPath
+-- chain use the same public contract whenever the direct renderer wrapper is
+-- not involved.
+local function registerSource()
+  local register = mod.exports and mod.exports.registerSpriteSource or nil
+  if type(register) ~= "function" then return false end
+  local ok, registered = pcall(register, {
+    id = PROVIDER_ID,
+    mod = PROVIDER_ID,
+    resolve = function(exports, game, species, dex)
+      if not isGold() then return nil end
+      local key = species or dex
+      local def, result = resolveProviderDef(key, exports)
+      if not def then return nil end
+      return {
+        image = def.image,
+        frames = def.frames,
+        walker = def.walker,
+        trueColor = def.trueColor,
+        providerId = result and result.providerId or nil,
+      }
+    end,
+  })
+  state.sourceRegistered = ok and registered == true
+  return state.sourceRegistered
+end
+
+-- Flight and Ground always retain a ready 2D Pokemon sprite, including while
+-- Stadium 3D is requested. main_28 decides whether that sprite or the model is
+-- actually presented this frame.
 local previousFlightBuilder = buildMountSprite
 if type(previousFlightBuilder) == "function" then
   buildMountSprite = function(species, ...)
-    local native = decorate(resolveRaw(species), species)
-    return native or previousFlightBuilder(species, ...)
+    local embedded = resolveEmbeddedRenderer(species)
+    return embedded or previousFlightBuilder(species, ...)
   end
 end
 
 local previousGroundBuilder = buildGroundMountSprite
 if type(previousGroundBuilder) == "function" then
   buildGroundMountSprite = function(species, ...)
-    local native = decorate(resolveRaw(species), species)
-    return native or previousGroundBuilder(species, ...)
+    local embedded = resolveEmbeddedRenderer(species)
+    return embedded or previousGroundBuilder(species, ...)
   end
 end
 
-local function refreshActive2D()
-  if not requested2D() then return end
+local function clearProviderCache()
+  providerRendererCache = {}
+end
+
+local function refreshActiveSprites()
   if flight and flight.active and flight.species and type(buildMountSprite) == "function" then
     local ok, sprite = pcall(buildMountSprite, flight.species)
     if ok and sprite then flight.sprite = sprite end
@@ -201,30 +340,47 @@ local function refreshActive2D()
   end
 end
 
+mod.events:on("mods.loaded", function()
+  if not state.sourceRegistered then registerSource() end
+end)
+
 mod.events:on("mod.options_changed", function(payload)
   if not payload then return end
-  if payload.mod == PROVIDER_ID and payload.key == "sprite_style" then
-    refreshActive2D()
+  if payload.mod == PROVIDER_ID then
+    local key = tostring(payload.key or "")
+    if key == "sprite_style" or key == "stadium3dSprites" then
+      clearProviderCache()
+      refreshActiveSprites()
+    end
   elseif payload.mod == mod.id and payload.key == "flight_mount_renderer" then
-    refreshActive2D()
+    refreshActiveSprites()
   end
 end)
 
-mod.exports.gen2EmbeddedPokeMMOMounts = {
-  api = 2,
+mod.exports.gen2EmbeddedSpriteMounts = {
+  api = 3,
   providerId = PROVIDER_ID,
-  active = function() return embeddedContext() ~= nil end,
-  resolve = function(species) return decorate(resolveRaw(species), species) end,
+  active = function() return providerContext() ~= nil end,
+  resolve = resolveEmbeddedRenderer,
+  resolveProviderDef = function(species) return resolveProviderDef(species) end,
   status = function()
     return {
-      active = embeddedContext() ~= nil,
+      active = providerContext() ~= nil,
+      sourceRegistered = state.sourceRegistered,
       resolves = state.resolves,
+      providerResolves = state.providerResolves,
+      nativeResolves = state.nativeResolves,
       lastSpecies = state.lastSpecies,
       style = state.lastStyle,
+      providerId = state.lastProviderId,
       lastError = state.lastError,
     }
   end,
 }
 
-log("Gen2 embedded HGSS/PokeMMO resolver loaded")
+-- Backward-compatible name used by main_40b and older diagnostics.
+mod.exports.gen2EmbeddedPokeMMOMounts = mod.exports.gen2EmbeddedSpriteMounts
+
+registerSource()
+log("Gen2 embedded Wilds sprite-provider bridge loaded")
 end)();

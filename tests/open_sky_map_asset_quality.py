@@ -18,11 +18,11 @@ MAPS = {
 }
 
 for region, cfg in MAPS.items():
-    encoded = "".join(
-        (ROOT / region / f"map2d_full_part{i:02d}.b64").read_text(encoding="ascii").strip()
-        for i in range(1, cfg["parts"] + 1)
-    )
-    png = base64.b64decode(encoded, validate=True)
+    chunks = []
+    for i in range(1, cfg["parts"] + 1):
+        encoded = (ROOT / region / f"map2d_full_part{i:02d}.b64").read_text(encoding="ascii").strip()
+        chunks.append(base64.b64decode(encoded, validate=True))
+    png = b"".join(chunks)
     assert png[:8] == b"\x89PNG\r\n\x1a\n", f"{region}: invalid PNG signature"
     width, height = struct.unpack(">II", png[16:24])
     assert (width, height) == (312, 232), f"{region}: {width}x{height}, expected 312x232"
@@ -33,5 +33,6 @@ for region, cfg in MAPS.items():
 
 loader = (ROOT.parents[1] / "src" / "main_53f_gen2_open_sky_art_map_01.lua").read_text(encoding="utf-8")
 assert "map2d_full_part" in loader, "Open Sky loader does not reference restored multipart maps"
+assert "readJoinedBytes" in loader, "Open Sky loader must decode multipart base64 chunks independently"
 assert "map size %sx%s; expected %dx%d" in loader, "Open Sky runtime size guard missing"
 print("PASS Open Sky loader contract")

@@ -148,13 +148,9 @@ local function decorate(renderer, species)
     if not quad then return end
 
     local mountScale = 1
-    local liveExports = mod.exports or {}
-    local presentation = liveExports.gen2Voxel2DPresentation
-    local liveCorrection = liveExports.nativePokeMMOSizeCorrection
-    local scaleFn = presentation and presentation.scale
-      or (liveCorrection and liveCorrection.scale)
-    if type(scaleFn) == "function" then
-      local okScale, value = pcall(scaleFn, species)
+    local liveCorrection = mod.exports and mod.exports.nativePokeMMOSizeCorrection or nil
+    if liveCorrection and type(liveCorrection.scale) == "function" then
+      local okScale, value = pcall(liveCorrection.scale, species)
       value = okScale and tonumber(value) or nil
       if value and value > 0 then mountScale = value end
     end

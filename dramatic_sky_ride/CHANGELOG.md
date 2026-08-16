@@ -1,14 +1,11 @@
 # Changelog
 
-## 0.2.17
+## 0.2.18
 
-- Restored the complete official 0.2.16 base before reapplying the mount fixes.
-- Restored the pre-sandbox seated rider crop entirely in memory; no runtime file writes or full standing-trainer fallback remain.
-- Bundled the PokePC Generation I-II follower sheets as a dependency-free 2D fallback for Flight, Ground Ride and Visible Surf.
-- Repaired the Gen2-3D-Sprites 0.2.81 provider bridge, including its public-provider fallback, single mount ownership and battle-transition cleanup.
-- Bounded 2D mount cards for the close third-person camera and synchronized Flight, Ground and Surf rider seats with the displayed card size.
-- Fixed Gold Surf-to-Flight state cleanup, shoreline transitions and post-battle remount for all three mount types.
-- Added live Gold probes for visual composition, movement, route connections, water landing, Surf transitions and battle remount.
+- Restored the complete pre-sandbox 0.2.11 runtime and mount system.
+- Restored the legacy filesystem-backed provider and Stadium 2 animation paths.
+- Removed every sandbox-era runtime, Open Sky and bundled fallback change introduced from 0.2.12 onward.
+- Preserved the historical 0.2.11 Flight, Ground Ride, Visible Surf and continuous Gen 2 movement behavior without modification.
 
 ## 0.2.8
 

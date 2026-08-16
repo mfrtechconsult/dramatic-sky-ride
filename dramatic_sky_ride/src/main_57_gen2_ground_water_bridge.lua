@@ -139,14 +139,9 @@ setSurfingState = function(ow, enabled, surfMon)
     end
     world:applyPlayerState(surfState)
     player.surfing = true
-  else
-    -- Ordinary Gold Surf is entered by the native party menu, so DSR does
-    -- not own that transition. Flight still has to leave the authoritative
-    -- World.playerState synchronously; clearing only player.surfing lets the
-    -- next Gold tick put Surf back underneath the airborne mount.
+  elseif waterStateOwned then
     if isSurfState(world.playerState) then
-      world:applyPlayerState(
-        waterStateOwned and (waterPreviousPlayerState or "normal") or "normal")
+      world:applyPlayerState(waterPreviousPlayerState or "normal")
     end
     player.surfing = false
     waterStateOwned = false

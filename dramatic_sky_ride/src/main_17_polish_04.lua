@@ -278,20 +278,7 @@ end
 mod.exports._waterRideRiderPose = function(entity)
   if not (water.active and water.riderSprite) then return nil end
   entity.sprite = water.riderSprite
-  local sprite, px, py, facing, phase, flip, hopping = waterRiderPose(entity)
-  -- The Gen2 2D presentation layer may cap a very tall Surf mount so its card
-  -- stays in front of the third-person camera. Keep the trainer seated on the
-  -- displayed card in both flat and voxel render paths.
-  local presentation = mod.exports and mod.exports.gen2Voxel2DPresentation or nil
-  if presentation and type(presentation.scale) == "function" then
-    local okScale, visualScale = pcall(presentation.scale, water.species)
-    visualScale = okScale and tonumber(visualScale) or nil
-    if visualScale and visualScale > 0 then
-      local cfg = WATER_ELIGIBLE[water.species] or { lift = 7 }
-      py = (py or 0) - (tonumber(cfg.lift) or 7) * (visualScale - 1)
-    end
-  end
-  return sprite, px, py, facing, phase, flip, hopping
+  return waterRiderPose(entity)
 end
 mod.exports.eligibleWaterMounts = function()
   local out = {}

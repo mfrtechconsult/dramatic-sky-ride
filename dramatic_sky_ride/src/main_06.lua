@@ -1,15 +1,33 @@
+    if declaredFrames then sourceFrames = math.min(sourceFrames, declaredFrames) end
+    local out = love.image.newImageData(16, 96)
+    for frame = 0, 5 do
+      local sourceFrame = math.min(frame, sourceFrames - 1)
+      for y = 0, RIDER_CROP_HEIGHT - 1 do
+        for x = 0, 15 do
+          out:setPixel(x, frame * 16 + RIDER_CROP_Y + y,
+                       src:getPixel(x, sourceFrame * 16 + y))
+        end
+      end
+    end
+    local encoded = out:encode("png")
+    local bytes = encoded and encoded.getString and encoded:getString() or encoded
+    if type(bytes) ~= "string" or not love.filesystem.write(path, bytes) then
+      error("rider_png_write_failed")
+    end
+    return path
+  end)
+  if not ok then return nil, result end
+  return result
+end
+
 local function buildRiderSprite(player)
   local sourceSprite = mod.exports._riderSourceSprite(player)
   if not sourceSprite then return nil, "player_sprite_missing" end
   local path, reason = writeRiderSheet(player, sourceSprite)
   if not path then
-    local sprite, cropReason = buildInMemoryRiderSprite(sourceSprite)
-    if sprite then return sprite, cropReason end
-    -- Never put the complete standing trainer on a mount. If a future port
-    -- removes the quad API, keep the mount usable without a rider and report
-    -- the precise failure instead of restoring the broken visual fallback.
-    return nil, "rider_crop_failed:" .. tostring(reason)
-      .. ":" .. tostring(cropReason)
+    -- Palette correctness is more important than cropping. An unusual port
+    -- without ImageData encoding falls back to the live player renderer.
+    return sourceSprite, "uncropped_fallback:" .. tostring(reason)
   end
   local sourceDef = sourceSprite.def or {}
   local def = shallowCopy(sourceDef)

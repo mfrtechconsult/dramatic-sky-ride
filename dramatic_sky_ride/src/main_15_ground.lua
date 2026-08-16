@@ -40,6 +40,9 @@ local function groundAreaAllowed(ow)
   local generation = mod.exports and mod.exports.runtimeGeneration or nil
   if generation and type(generation.isGen2) == "function"
      and generation.isGen2(Game) == true then
+    -- Match Gold's Bicycle CheckEnvironment rule. GATE is deliberately
+    -- rideable: gatehouses and authored inter-map passages must preserve the
+    -- mount, while INDOOR / ENVIRONMENT_5 / DUNGEON destinations remove it.
     local environment = tostring(ow.map.def.environment or ""):upper()
     return environment == "TOWN" or environment == "ROUTE"
       or environment == "CAVE" or environment == "GATE"
@@ -54,14 +57,23 @@ local function groundAreaAllowed(ow)
 end
 
 local function groundFollowerPath(species)
-  -- External providers wrap this resolver in main_27. The bundled PokePC pack
-  -- is deliberately last so installed sprite providers can still win.
-  local bundled = mod.exports and mod.exports.bundledFollowerSprites or nil
-  if bundled and type(bundled.path) == "function" then
-    local ok, path = pcall(bundled.path, species)
-    if ok then return path end
+  local cfg = GROUND_ELIGIBLE[species]
+  if not cfg or not (love and love.filesystem and love.filesystem.getDirectoryItems) then return nil end
+  local filename = string.format("follower_%03d.png", cfg.dex)
+  local ok, names = pcall(love.filesystem.getDirectoryItems, "mods")
+  if not ok or type(names) ~= "table" then return nil end
+  local fallback
+  for _, name in ipairs(names) do
+    local root = "mods/" .. name
+    local asset = root .. "/assets/sprites/" .. filename
+    if fileExists(asset) then
+      local raw = love.filesystem.read(root .. "/manifest.json")
+      local id = manifestId(raw)
+      if id and FOLLOWER_IDS[id] then return asset end
+      fallback = fallback or asset
+    end
   end
-  return nil
+  return fallback
 end
 
 local function buildGroundMountSprite(species)
@@ -194,6 +206,7 @@ local function useGroundShortcut(game)
   return true
 end
 
+-- Party menu: terrestrial mounts receive RIDE independently from RIDE & FLY.
 mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   local out = next(game, items, mon, ctx)
   if type(out) ~= "table" then out = items end
@@ -209,6 +222,9 @@ mod.hooks:wrap("ui.party.submenu", function(next, game, items, mon, ctx)
   return out
 end, 60)
 
+-- Official ledges only. The native direction runs first. When it rejects the
+-- move, Ground Ride recognizes the same authored ledge tile approached from
+-- the opposite direction and reuses the engine's two-cell hop animation.
 local nativeCheckLedgeHop = OverworldState.checkLedgeHop
 function OverworldState:checkLedgeHop(dir)
   if nativeCheckLedgeHop(self, dir) then return true end
@@ -251,6 +267,8 @@ mod.hooks:wrap("movement.speed", function(next, frames, ctx)
   return value
 end, 85)
 
+-- Wrap the already-installed flight shortcuts. H/X dismount Ground Ride then
+-- continue into the existing flight shortcut; G/Y is exclusively terrestrial.
 local groundKeypressed = Game.keypressed
 function Game:keypressed(key, ...)
   local provider = mod.exports and mod.exports._dramaticProviderState or nil
@@ -262,6 +280,9 @@ end
 
 local groundGamepadpressed = Game.gamepadpressed
 function Game:gamepadpressed(joystick, button, ...)
+  -- Y toggles Ground Ride in free-roam. X belongs to the flight wrapper below
+  -- this one; when already ground-mounted, dismount first and forward X so the
+  -- same press can transition directly into flight.
   if button == "y" and useGroundShortcut(self) then return end
   if button == "x" and ground.active then
     stopGroundRide(self, "switch_to_flight")
@@ -269,6 +290,11 @@ function Game:gamepadpressed(joystick, button, ...)
   return groundGamepadpressed(self, joystick, button, ...)
 end
 
+-- Battle Art/Dramatic Shape staged battles snapshot the overworld cast inside
+-- OverworldState:pushBattle, before battle.started. DSR loads after either
+-- voxel provider, so this wrapper is outermost and removes the Ground Ride
+-- rider before that snapshot. The later Lot 1 stopGroundRide wrapper still
+-- receives reason="battle", preserving normal post-battle remount behavior.
 local groundPushBattle = OverworldState.pushBattle
 if type(groundPushBattle) == "function" then
   function OverworldState:pushBattle(battle, ...)
@@ -279,6 +305,8 @@ if type(groundPushBattle) == "function" then
   end
 end
 
+-- Preserve the mount through outdoor/cavern map transitions, but remove it
+-- immediately when the destination metadata no longer permits Ground Ride.
 local groundSetMap = OverworldState.setMap
 function OverworldState:setMap(mapId, x, y, facing, opts, ...)
   local result = groundSetMap(self, mapId, x, y, facing, opts, ...)
@@ -293,6 +321,10 @@ local groundUpdate = OverworldState.update
 function OverworldState:update(dt, ...)
   local result = groundUpdate(self, dt, ...)
   if ground.active and Game.overworld == self then
+    -- Gold's native World:takeWarp calls World:setMap directly and therefore
+    -- bypasses the Gen 1-compatible setMap facade wrapped above. Re-check the
+    -- destination after every native tick so entering a building behaves like
+    -- the Bicycle, without treating seamless route/gate connections as doors.
     if not groundAreaAllowed(self) then
       stopGroundRide(Game, "incompatible_map")
     else

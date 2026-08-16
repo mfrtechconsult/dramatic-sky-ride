@@ -85,11 +85,9 @@ buildRiderSprite = function(player)
 
   local path, reason = originalWriteRiderSheet(proxyPlayer)
   if not path then
-    local sprite, cropReason = buildInMemoryRiderSprite(
-      sourceSprite, proxyDef, "sky_ride_rider:otf:" .. token)
-    if sprite then return sprite, cropReason end
-    return nil, "rider_crop_failed:" .. tostring(reason)
-      .. ":" .. tostring(cropReason)
+    -- Match DSR's existing graceful fallback semantics if ImageData encoding
+    -- is unavailable on an unusual port.
+    return sourceSprite, "uncropped_fallback:" .. tostring(reason)
   end
 
   local def = shallowCopy(proxyDef)

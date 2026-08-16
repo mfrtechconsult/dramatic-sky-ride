@@ -3,13 +3,11 @@
 -- Stadium 3D renderer compatibility contract.
 --
 -- Gen 2 has one important ownership rule: once STADIUM2_OVERWORLD_MODELS is
--- installed and its Gold voxel compositor is active, it owns the Gen 2 world
--- renderer for the whole session. Randy 0.2.77+ made Pokemon models an
--- independent toggle, and 0.2.78+ can also temporarily report a species model
--- unavailable while a Stadium 2 pack is being rebuilt. DSR must therefore
--- distinguish "voxel world available" from "this mount has a live 3D model".
--- When the latter is false, keep Randy as world owner but deliberately select
--- DSR's 2D mount card so the Pokemon never disappears.
+-- installed and its Gold voxel compositor is active, it owns the Gen 2 Stadium
+-- renderer for the whole session. Species/model availability must never switch
+-- DSR between external Stadium, the experimental native renderer and 2D during
+-- a mount transition. Missing models are a per-Pokemon fallback handled by the
+-- provider, not a global renderer decision.
 -- -------------------------------------------------------------------------
 
 local FLIGHT_RENDERER_OPTION = "flight_mount_renderer"
@@ -34,9 +32,6 @@ if mod.options and mod.options.define then mod.options:define(OPTION_SCHEMA) end
 local function safeHandle(id)
   if not mod.find then return nil end
   local ok, handle = pcall(mod.find, mod, id)
-  if ok and handle then return handle end
-  -- Keep compatibility with hosts exposing mod.find as a dot-style function.
-  ok, handle = pcall(mod.find, id)
   return ok and handle or nil
 end
 
@@ -118,9 +113,6 @@ local function companionSupport(handle, species, dex)
   local nested = callSupport(ow, species, dex)
   if nested ~= nil then return nested end
 
-  -- Randy 0.2.81 publicly exposes OverworldStadium.canRenderEntity(). It also
-  -- respects the new 3D POKEMON MODELS switch and StadiumPack availability,
-  -- making this the authoritative per-mount capability probe.
   local canRender = ow and ow.canRenderEntity or nil
   if type(canRender) == "function" and dex then
     local probe = {
@@ -131,7 +123,6 @@ local function companionSupport(handle, species, dex)
       stadiumModel = true,
       pokemonModel = true,
       dramaticSkyRideMountSpecies = species,
-      _stadiumSkyRideSpecies = species,
     }
     local ok, supported = pcall(canRender, probe)
     if ok then return supported == true end
@@ -155,53 +146,14 @@ local function gen2VoxelActive(handle)
     if state.active ~= nil then return state.active == true end
   end
 
-  if ex.voxelDirectWorldHook ~= nil and ex.voxelDirectWorldHook == true then
-    return true
-  end
   if ex.voxelComposeHook ~= nil then return ex.voxelComposeHook == true end
   return ex.rendererInstalled == true
-end
-
--- 0.2.77+ splits the voxel-world switch from Pokemon-model rendering. Prefer
--- the direct public function, then the bridge status added by the same release.
--- Older providers had no separate switch, so unknown retains the historical
--- "models enabled" behavior.
-local function gen2PokemonModelsEnabled(handle)
-  local ex = handle and handle.exports or nil
-  if type(ex) ~= "table" then return false end
-
-  if type(ex.modelsEnabled) == "function" then
-    local ok, value = pcall(ex.modelsEnabled)
-    if ok and value ~= nil then return value == true end
-  end
-
-  local state = ex.voxelPipelineState
-  if type(state) == "table" and type(state.status) == "function" then
-    local ok, status = pcall(state.status)
-    if ok and type(status) == "table" and status.pokemonModels ~= nil then
-      return status.pokemonModels == true
-    end
-  end
-  return true
 end
 
 local function gen2ProviderAvailable()
   if not isGen2() then return false end
   local handle = gen2CompanionHandle()
   return handle ~= nil and gen2VoxelActive(handle)
-end
-
-local function gen2MountModelReady(species)
-  local handle = gen2CompanionHandle()
-  if not (handle and gen2VoxelActive(handle) and gen2PokemonModelsEnabled(handle)) then
-    return false
-  end
-  if not species then return true end
-
-  local answer = companionSupport(handle, species, speciesDex(species))
-  -- Current Randy exports return a real boolean through canRenderEntity(). For
-  -- an older provider with no capability API, preserve the old optimistic path.
-  return answer ~= false
 end
 
 local function nativeInstalled()
@@ -233,9 +185,7 @@ end
 
 local function selectedProvider(species)
   species = species or activeMountSpecies()
-  -- Keep Randy as the Gen 2 WORLD owner even when its Pokemon-model layer is
-  -- disabled/unavailable; effectiveRenderer() below independently selects the
-  -- DSR 2D card in that situation.
+  -- Stable Gen 2 ownership: model probing is intentionally NOT consulted here.
   if gen2ProviderAvailable() then return "gen2_stadium2_voxel" end
   if nativeSupports(species) then return "native_stadium2" end
   if legacySupports(species) then return "stadium_overworld_models" end
@@ -245,7 +195,11 @@ end
 local function stadiumSupportsSpecies(species)
   local provider = selectedProvider(species)
   if provider == "gen2_stadium2_voxel" then
-    return gen2MountModelReady(species)
+    if not species then return true end
+    local answer = companionSupport(gen2CompanionHandle(), species, speciesDex(species))
+    -- Unknown means the provider is still the renderer owner; it can decide its
+    -- own card/model fallback. Only an explicit false is reported unsupported.
+    return answer ~= false
   end
   if provider == "native_stadium2" then return nativeSupports(species) end
   if provider == "stadium_overworld_models" then return legacySupports(species) end
@@ -253,16 +207,9 @@ local function stadiumSupportsSpecies(species)
 end
 
 local function stadiumRendererAvailable()
-  local species = activeMountSpecies()
-  local provider = selectedProvider(species)
+  local provider = selectedProvider(activeMountSpecies())
   if not provider then return false end
-  if provider == "gen2_stadium2_voxel" then
-    -- Critical 0.2.81 compatibility rule: a healthy voxel world is not proof
-    -- that Pokemon models are enabled or that this species exists in the
-    -- freshly rebuilt DSM7 pack. Selecting 2D here activates main_60's proper
-    -- DSR billboard path instead of leaving the mount invisible.
-    return gen2MountModelReady(species)
-  end
+  if provider == "gen2_stadium2_voxel" then return true end
   return voxelLevel() > 0
 end
 
@@ -308,7 +255,7 @@ mod.exports.flightRendering = {
 }
 
 mod.exports.stadiumCompatibility = {
-  api = 8,
+  api = 7,
   installed = function()
     return nativeInstalled() or gen2CompanionHandle() ~= nil
       or legacyCompanionHandle() ~= nil
@@ -320,13 +267,6 @@ mod.exports.stadiumCompatibility = {
   activeMountSpecies = activeMountSpecies,
   native = function() return nativeProvider() ~= nil end,
   gen2Voxel = gen2ProviderAvailable,
-  gen2PokemonModelsEnabled = function()
-    local handle = gen2CompanionHandle()
-    return handle ~= nil and gen2PokemonModelsEnabled(handle)
-  end,
-  gen2MountModelReady = function(species)
-    return gen2MountModelReady(species or activeMountSpecies())
-  end,
   gen2VoxelId = GEN2_COMPANION_ID,
   legacyCompanionId = GEN1_COMPANION_ID,
   randy = function()
@@ -338,5 +278,5 @@ mod.exports.stadiumCompatibility = {
   provider = function() return selectedProvider(activeMountSpecies()) end,
 }
 
-log("Stadium renderer compatibility API loaded (Randy 0.2.81 model toggle/DSM fallback aware)")
+log("Stadium renderer compatibility API loaded (stable Gen2 voxel ownership -> native fallback -> legacy companion)")
 end)();

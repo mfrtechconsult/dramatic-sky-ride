@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.16-mountfix.1
+## 0.2.17
 
 - Restored the complete official 0.2.16 base before reapplying the mount fixes.
 - Restored the pre-sandbox seated rider crop entirely in memory; no runtime file writes or full standing-trainer fallback remain.

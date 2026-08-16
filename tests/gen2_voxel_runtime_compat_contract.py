@@ -41,7 +41,7 @@ require('providerModule(ex, "SpriteBillboards")' in compat
         "Randy billboard modules are not patched through its public lib seam")
 require("mountVisualScale" in compat,
         "2D billboard does not use DSR's canonical/user mount size")
-require("local halfW = 8 * scale" in compat and "local y1 = 16 * scale" in compat,
+require("local halfW = 8 * scaleX" in compat and "local y1 = 16 * scaleY" in compat,
         "2D billboard geometry is not scaled around the feet like main_21")
 
 # Regression: a mount SpriteDef is shared by Gold's flat player bridge and the

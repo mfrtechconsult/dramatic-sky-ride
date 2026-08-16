@@ -78,6 +78,9 @@ require("_dramaticSkyRideVoxelRider" in interop
 require("rawset(player, \"pose\", wrapper)" in interop
         and "restoreRider" in interop,
         "player pose override is not reversible")
+require('mod.events:on("battle.started"' in interop
+        and "removeDirectProxy()" in interop,
+        "persistent provider proxy is not removed on the battle transition frame")
 
 # Flight rider and mount must use Randy's exact Gold voxel ground calculation.
 # Gold map:cellTile() is a collision class, so DSR's generic terrain helper can

@@ -3,9 +3,13 @@ local function buildRiderSprite(player)
   if not sourceSprite then return nil, "player_sprite_missing" end
   local path, reason = writeRiderSheet(player, sourceSprite)
   if not path then
-    -- Palette correctness is more important than cropping. An unusual port
-    -- without ImageData encoding falls back to the live player renderer.
-    return sourceSprite, "uncropped_fallback:" .. tostring(reason)
+    local sprite, cropReason = buildInMemoryRiderSprite(sourceSprite)
+    if sprite then return sprite, cropReason end
+    -- Never put the complete standing trainer on a mount. If a future port
+    -- removes the quad API, keep the mount usable without a rider and report
+    -- the precise failure instead of restoring the broken visual fallback.
+    return nil, "rider_crop_failed:" .. tostring(reason)
+      .. ":" .. tostring(cropReason)
   end
   local sourceDef = sourceSprite.def or {}
   local def = shallowCopy(sourceDef)

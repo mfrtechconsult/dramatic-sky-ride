@@ -39,6 +39,9 @@ require("isSurfState(world.playerState)" in bridge
         "ordinary Gold Surf is not mirrored into Visible Surf")
 require("_waterRideVisual" in water and "_waterRideRiderPose" in water,
         "Visible Surf does not expose its private read-only render bridge")
+require("gen2Voxel2DPresentation" in water
+        and "visualScale - 1" in water,
+        "Visible Surf rider does not follow the bounded 2D card seat")
 require("mod.exports._waterRideVisual" in player_bridge
         and "mod.exports._waterRideRiderPose" in player_bridge,
         "Gold's live player cannot render the private Visible Surf mount")

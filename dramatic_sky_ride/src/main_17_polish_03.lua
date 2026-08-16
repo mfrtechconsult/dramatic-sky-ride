@@ -195,6 +195,23 @@ local function buildWaterSprite(species)
     water.lastFailure = nil
     return provided
   end
+  -- Keep Surf usable when every optional follower provider is absent or
+  -- sandbox-inaccessible, just like Flight and Ground Ride.
+  local bundled = mod.exports and mod.exports.bundledFollowerSprites or nil
+  if bundled and type(bundled.path) == "function" then
+    local okPath, bundledPath = pcall(bundled.path, species)
+    if okPath and bundledPath then
+      local sprite, bundledReason = buildWaterRenderer(
+        species, bundledPath, "bundled_pokepc_fallback", true)
+      if sprite then
+        waterSpriteCache[species] = sprite
+        water.source = "bundled_pokepc_fallback"
+        water.lastFailure = nil
+        return sprite
+      end
+      reason = bundledReason or reason
+    end
+  end
   water.source = nil
   water.lastFailure = reason or water.lastFailure or "missing_mount_sprite"
   return nil

@@ -90,27 +90,48 @@ return function(game)
   wait(15)
 
   local water
-  for mapId, def in pairs(game.world.maps) do
-    if def.environment == "TOWN" or def.environment == "ROUTE" then
-      local map = Map2.new(def, game.world.tilesets[def.tileset])
-      for y = 1, map.heightCells - 2 do
-        for x = 1, map.widthCells - 2 do
-          if map:isWaterCell(x, y) and not map:warpAt(x, y) then
-            for dir, d in pairs(delta) do
-              local tx, ty = x + d[1], y + d[2]
-              if map:isWaterCell(tx, ty) and not map:warpAt(tx, ty) then
-                water = { map = mapId, x = x, y = y, dir = dir,
-                  tx = tx, ty = ty }
-                break
+  -- Stable open-water capture point: unlike the first arbitrary table entry,
+  -- this keeps Gold's third-person boom outside nearby buildings so the test
+  -- actually inspects the rider/mount composition.
+  local preferredDef = game.world.maps.CHERRYGROVE_CITY
+  if preferredDef then
+    local preferred = Map2.new(preferredDef,
+      game.world.tilesets[preferredDef.tileset])
+    local x, y = 34, 1
+    if preferred:isWaterCell(x, y) and not preferred:warpAt(x, y) then
+      for dir, d in pairs(delta) do
+        local tx, ty = x + d[1], y + d[2]
+        if preferred:isWaterCell(tx, ty) and not preferred:warpAt(tx, ty) then
+          water = { map = "CHERRYGROVE_CITY", x = x, y = y,
+            dir = dir, tx = tx, ty = ty }
+          break
+        end
+      end
+    end
+  end
+  if not water then
+    for mapId, def in pairs(game.world.maps) do
+      if def.environment == "TOWN" or def.environment == "ROUTE" then
+        local map = Map2.new(def, game.world.tilesets[def.tileset])
+        for y = 1, map.heightCells - 2 do
+          for x = 1, map.widthCells - 2 do
+            if map:isWaterCell(x, y) and not map:warpAt(x, y) then
+              for dir, d in pairs(delta) do
+                local tx, ty = x + d[1], y + d[2]
+                if map:isWaterCell(tx, ty) and not map:warpAt(tx, ty) then
+                  water = { map = mapId, x = x, y = y, dir = dir,
+                    tx = tx, ty = ty }
+                  break
+                end
               end
             end
+            if water then break end
           end
           if water then break end
         end
-        if water then break end
       end
+      if water then break end
     end
-    if water then break end
   end
   assert(water, "no adjacent Gold water cells found")
   assert(game.world:setMap(water.map, water.x, water.y, water.dir))
@@ -138,8 +159,38 @@ return function(game)
     :format(tostring(waterDiag.active), tostring(waterDiag.species),
       tostring(waterDiag.source), tostring(waterDiag.rider),
       tostring(waterDiag.lastFailure)))
+  local voxelDiag = ex.gen2VoxelInterop.status()
+  local embeddedDiag = ex.gen2EmbeddedPokeMMOMounts
+    and ex.gen2EmbeddedPokeMMOMounts.status() or {}
+  print(("[driver] water sprite id=%s native=%s image=%s embedded=%s style=%s error=%s")
+    :format(tostring(voxelDiag.mountSpriteId), tostring(voxelDiag.mountSpriteNative),
+      tostring(voxelDiag.mountSpriteImage), tostring(embeddedDiag.active),
+      tostring(embeddedDiag.style), tostring(embeddedDiag.lastError)))
   assert(bridge.visualKind() == "water", "Gold bridge did not select the water mount")
+  assert(tostring(bridge.riderSpriteId() or ""):find(
+      "SKY_RIDE_RIDER_MEMORY_", 1, true) == 1,
+    "Visible Surf rider is not the sandbox-safe seated crop")
   shot("02-flight-landed-on-water.png")
+  local presentation = assert(ex.gen2Voxel2DPresentation,
+    "Gen2 2D presentation policy is missing")
+  local runtimeCompat = assert(ex.gen2VoxelRuntimeCompat,
+    "Gen2 voxel runtime diagnostics are missing")
+  local waterScale = assert(tonumber(runtimeCompat.current2DScale()),
+    "Visible Surf did not report its final 2D scale")
+  assert(waterScale > 0 and waterScale <= presentation.waterMaximum + 0.0001,
+    "Visible Surf card exceeds the near-camera limit: " .. tostring(waterScale))
+  print(("[driver] Visible Surf final 2D scale=%.4f (max=%.4f)")
+    :format(waterScale, presentation.waterMaximum))
+  local nativeCorrection = ex.nativePokeMMOSizeCorrection
+  local mountDef = game.world.player.spriteDef
+  local crop = nativeCorrection and nativeCorrection.cropForDef
+    and nativeCorrection.cropForDef(mountDef) or nil
+  local providerEx = game.mods.exports.STADIUM2_OVERWORLD_MODELS
+  local thirdPerson = providerEx and providerEx.lib and providerEx.lib.require
+    and providerEx.lib.require("ThirdPerson") or nil
+  print(("[driver] water card crop=%sx%s fit=%s third-person-len=%s")
+    :format(tostring(crop and crop.width), tostring(crop and crop.height),
+      tostring(crop and crop.fit), tostring(thirdPerson and thirdPerson.len)))
   place(water.x, water.y, water.dir)
   local swam = game.world:movePlayer(water.dir)
   assert(swam == "moved", "water mount cannot swim: " .. tostring(swam))

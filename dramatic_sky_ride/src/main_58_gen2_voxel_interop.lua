@@ -134,6 +134,12 @@ local function mountState()
   return nil
 end
 
+local function water2DWorldLift()
+  if stadiumMode() then return 0 end
+  local presentation = mod.exports and mod.exports.gen2Voxel2DPresentation or nil
+  return math.max(0, tonumber(presentation and presentation.waterWorldLift) or 0)
+end
+
 local function providerGroundHeight(ow, player)
   if not (ow and ow.map and player) then return nil end
   local _, ex = provider()
@@ -255,7 +261,8 @@ function proxy:pose()
   local kind, species, sprite = mountState()
   local player = ow and ow.player or nil
   if not (player and configureProxy(ow, kind, species, sprite)) then return nil end
-  local lift = kind == "flight" and flightLift(ow, player) or 0
+  local lift = kind == "flight" and flightLift(ow, player)
+    or (kind == "water" and water2DWorldLift() or 0)
   local phase = 0
   if kind == "flight" then
     phase = (tonumber(flight.anim) or 0) >= 16 and 1 or 0
@@ -386,6 +393,33 @@ local function riderSeat(species)
   return RIDER_FOOT[cleanSpecies(species)] or 7.0
 end
 
+local function align2DSeat(kind, species, py)
+  local presentation = mod.exports and mod.exports.gen2Voxel2DPresentation or nil
+  if stadiumMode() or not (presentation and type(presentation.scale) == "function") then
+    return py
+  end
+  local okVisual, visualScale = pcall(presentation.scale, species)
+  visualScale = okVisual and tonumber(visualScale) or nil
+  local canonicalScale = 1
+  local scaleFn = mod.exports and mod.exports.mountVisualScale or nil
+  if type(scaleFn) == "function" then
+    local okCanonical, value = pcall(scaleFn, species)
+    value = okCanonical and tonumber(value) or nil
+    if value and value > 0 then canonicalScale = value end
+  end
+  if not visualScale then return py end
+
+  local lift = riderSeat(species)
+  if kind == "flight" then
+    local cfg = RIDER_OFFSETS and RIDER_OFFSETS[species] or DEFAULT_RIDER_OFFSET
+    lift = tonumber(cfg and cfg.lift) or lift
+  elseif kind == "ground" then
+    local cfg = GROUND_ELIGIBLE and GROUND_ELIGIBLE[species] or nil
+    lift = tonumber(cfg and cfg.lift) or lift
+  end
+  return (py or 0) - lift * (visualScale - canonicalScale)
+end
+
 local function mountedRiderPose(kind, ow)
   local player = ow and ow.player or nil
   if not player or providerFirstPerson() then return nil end
@@ -395,36 +429,22 @@ local function mountedRiderPose(kind, ow)
     if not (showRiderEnabled() and flight.riderSprite) then return nil end
     riderProxy.sprite = flight.riderSprite
     sprite, px, py, facing, phase, flip, hopping = riderPose(riderProxy)
+    local _, species = mountState()
+    py = align2DSeat("flight", species, py)
   elseif kind == "ground" then
     if not (ground and ground.riderSprite) then return nil end
     riderProxy.sprite = ground.riderSprite
     sprite, px, py, facing, phase, flip, hopping = groundRiderPose(riderProxy)
 
-    local presentation = mod.exports and mod.exports.gen2Voxel2DPresentation or nil
-    if not stadiumMode() and presentation and type(presentation.scale) == "function" then
-      local _, species = mountState()
-      local okScale, visualScale = pcall(presentation.scale, species)
-      visualScale = okScale and tonumber(visualScale) or nil
-      local canonicalScale = 1
-      local scaleFn = mod.exports and mod.exports.mountVisualScale or nil
-      if type(scaleFn) == "function" then
-        local okCanonical, value = pcall(scaleFn, species)
-        value = okCanonical and tonumber(value) or nil
-        if value and value > 0 then canonicalScale = value end
-      end
-      if visualScale and visualScale > canonicalScale then
-        local cfg = GROUND_ELIGIBLE and GROUND_ELIGIBLE[species] or nil
-        local lift = tonumber(cfg and cfg.lift) or riderSeat(species)
-        py = (py or (ow.player and ow.player.py) or 0)
-          - lift * (visualScale - canonicalScale)
-      end
-    end
+    local _, species = mountState()
+    py = align2DSeat("ground", species, py)
   elseif kind == "water" then
     local fn = mod.exports and mod.exports._waterRideRiderPose or nil
     if type(fn) ~= "function" then return nil end
     local ok
     ok, sprite, px, py, facing, phase, flip, hopping = pcall(fn, riderProxy)
     if not ok then return nil end
+    py = (py or player.py) - water2DWorldLift()
   end
   if not sprite then return nil end
 
@@ -677,6 +697,16 @@ mod.events:on("game.ready", function()
   syncRuntime()
 end)
 
+-- The 0.2.81 provider fallback keeps DSR's proxy in Gold world.entities.
+-- Battle events stop the active mount synchronously, before the next overworld
+-- update can prune that persistent proxy. Remove both render actors on the
+-- same event so the transition frame never asks pose() from an inactive mount.
+mod.events:on("battle.started", function()
+  removeDirectProxy()
+  restoreRider()
+  state.providerMode = "battle"
+end)
+
 mod.events:on("mod.options_changed", function()
   syncRuntime()
 end)
@@ -698,12 +728,17 @@ mod.exports.gen2VoxelInterop = {
   existingExtraProviderPreserved = function() return state.previousExtra ~= nil end,
   sync = syncRuntime,
   status = function()
+    local _, _, activeSprite = mountState()
+    local activeDef = activeSprite and activeSprite.def or nil
     return {
       voxelActive = voxelActive(),
       stadiumMode = stadiumMode(),
       proxyActive = shouldPublish(world()),
       mountKind = select(1, mountState()),
       mountSpecies = select(2, mountState()),
+      mountSpriteId = activeDef and activeDef.id or nil,
+      mountSpriteImage = activeDef and activeDef.image or nil,
+      mountSpriteNative = activeDef and activeDef.dramaticSkyRideNativePokeMMO == true or false,
       proxyFrames = state.proxyFrames,
       riderFrames = state.riderFrames,
       filteredFollowers = state.filteredFollowers,

@@ -92,7 +92,18 @@ return function(game)
     "Gold player sprite is not Ho-Oh")
   assert((game.world.player.spriteYOffset or 0) < 0,
     "Gold flight sprite never rose above the ground")
+  assert(tostring(bridge.riderSpriteId() or ""):find(
+      "SKY_RIDE_RIDER_MEMORY_", 1, true) == 1,
+    "Flight rider is not the sandbox-safe seated crop")
   shot(out .. "/02-flight-ho-oh.png")
+  local presentation = assert(exports.gen2Voxel2DPresentation)
+  local runtimeCompat = assert(exports.gen2VoxelRuntimeCompat)
+  local flight2DScale = assert(tonumber(runtimeCompat.current2DScale()))
+  assert(flight2DScale <= presentation.thirdPersonMaximum + 0.0001,
+    "Flight card exceeds the third-person camera limit")
+  local ownerStatus = assert(exports.gen2VoxelSingleOwnerGuard).status()
+  assert((ownerStatus.croppedRiderBillboards or 0) > 0,
+    "voxel provider never consumed the seated rider crop")
 
   local x, y, tx, ty, dir = assert(blockedPair(game.world.map))
   place(x, y, dir)
@@ -119,8 +130,9 @@ return function(game)
   assert(not exports.isFlying(), "Gold A-button landing did not finish")
   assert(not bridge.active(), "Gold bridge kept the flight sprite after landing")
 
-  -- Return to a normal outdoor cell for Ground Ride.
-  place(x, y, "down")
+  -- Return to a central outdoor cell so the visual capture shows the complete
+  -- mount/rider composition instead of clipping it against the map boundary.
+  place(10, 10, "down")
   print("[driver] starting Ground Ride")
   game:keypressed("g")
   print("[driver] Ground Ride key dispatched")
@@ -133,7 +145,13 @@ return function(game)
   assert(game.world.player.spriteDef
       and tostring(game.world.player.spriteDef.id):find("RAIKOU", 1, true),
     "Gold player sprite is not Raikou")
+  assert(tostring(bridge.riderSpriteId() or ""):find(
+      "SKY_RIDE_RIDER_MEMORY_", 1, true) == 1,
+    "Ground rider is not the sandbox-safe seated crop")
   shot(out .. "/03-ground-raikou.png")
+  local ground2DScale = assert(tonumber(runtimeCompat.current2DScale()))
+  assert(ground2DScale <= presentation.thirdPersonMaximum + 0.0001,
+    "Ground card exceeds the third-person camera limit")
 
   place(x, y, dir)
   local blocked = game.world:movePlayer(dir)

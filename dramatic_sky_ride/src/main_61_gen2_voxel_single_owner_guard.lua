@@ -21,9 +21,11 @@ local state = {
   contextDef = nil,
   contextSpecies = nil,
   narrowedBillboardDraws = 0,
+  croppedRiderBillboards = 0,
   suppressedDuplicatePoses = 0,
   lastError = nil,
 }
+local riderCropMeshes = {}
 
 local function isGold()
   return type(generation.isGen2) == "function"
@@ -131,13 +133,76 @@ local function clearBillboardContext()
   state.contextSpecies = nil
 end
 
+local function isRiderCropDef(def)
+  return type(def) == "table" and def.dramaticSkyRideRiderCrop == true
+    and type(def.image) == "string" and def.image ~= ""
+end
+
+-- SpriteBillboards normally maps a complete 16x16 frame onto a complete card.
+-- The sandbox-safe rider keeps the original sheet, so build a 13px card whose
+-- UVs select source rows 0..12 and whose position matches rows 1..13 of the old
+-- runtime PNG. Solid, ghost and shadow passes all receive this same outline.
+local function riderCropMesh(voxel3D, def, frame)
+  if not (isRiderCropDef(def) and type(voxel3D) == "table"
+          and type(voxel3D.newMesh) == "function"
+          and type(voxel3D.pushQuad) == "function") then
+    return nil
+  end
+
+  local sourceStride = math.max(1,
+    math.floor(tonumber(def.dramaticSkyRideRiderSourceStride) or 16))
+  local sourceFrames = math.max(1,
+    math.floor(tonumber(def.dramaticSkyRideRiderSourceFrames) or 1))
+  local cropHeight = math.max(1, math.min(16,
+    math.floor(tonumber(def.dramaticSkyRideRiderCropHeight) or 13)))
+  local outputY = math.max(0, math.min(16 - cropHeight,
+    math.floor(tonumber(def.dramaticSkyRideRiderCropOutputY) or 1)))
+  frame = math.max(0, math.floor(tonumber(frame) or 0))
+  local sourceFrame = math.min(frame, sourceFrames - 1)
+  local key = table.concat({
+    tostring(def.image), "#dsr-rider#", tostring(sourceFrame), "#",
+    tostring(sourceStride), "#", tostring(cropHeight), "#", tostring(outputY),
+  })
+  if riderCropMeshes[key] ~= nil then return riderCropMeshes[key] or nil end
+
+  local ok, mesh = pcall(function()
+    local image = Assets.image(def.image)
+    local iw, ih = image:getDimensions()
+    local sourceY = sourceFrame * sourceStride
+    if iw < 16 or sourceY + cropHeight > ih then return nil end
+
+    local u0, u1 = 0.02 / iw, (16 - 0.02) / iw
+    local v0 = (sourceY + 0.05) / ih
+    local v1 = (sourceY + cropHeight - 0.05) / ih
+    local cardTop = 16 - outputY
+    local cardBottom = 16 - outputY - cropHeight
+    local verts = {
+      { 0, cardBottom, 0, u0, v1, 1 },
+      { 16, cardBottom, 0, u1, v1, 1 },
+      { 16, cardTop, 0, u1, v0, 1 },
+      { 0, cardTop, 0, u0, v0, 1 },
+    }
+    local indices = {}
+    voxel3D.pushQuad(indices, 0)
+    return voxel3D.newMesh(verts, indices)
+  end)
+  riderCropMeshes[key] = (ok and mesh) or false
+  return riderCropMeshes[key] or nil
+end
+
+Assets.register(function()
+  riderCropMeshes = {}
+end)
+
 local function install()
   if not isGold() then return false end
   local _, ex = provider()
   local stadium = ex and ex.overworld or nil
   local billboards = providerModule(ex, "SpriteBillboards")
+  local voxel3D = providerModule(ex, "Voxel3D")
   if not (type(stadium) == "table" and type(stadium.safeDraw) == "function"
-          and type(stadium.prepare) == "function" and type(billboards) == "table") then
+          and type(stadium.prepare) == "function" and type(billboards) == "table"
+          and type(voxel3D) == "table") then
     return false
   end
 
@@ -162,6 +227,13 @@ local function install()
   local rawShadow = sizeMarker.rawShadow
 
   local narrowMesh = function(def, frame)
+    if isRiderCropDef(def) then
+      local mesh = riderCropMesh(voxel3D, def, frame)
+      if mesh then
+        state.croppedRiderBillboards = state.croppedRiderBillboards + 1
+        return mesh
+      end
+    end
     if state.contextDef ~= nil and def == state.contextDef then
       state.narrowedBillboardDraws = state.narrowedBillboardDraws + 1
       clearBillboardContext()
@@ -175,6 +247,9 @@ local function install()
   -- placeholder passes into a second Ho-Oh. Randy's original shadow card is a
   -- safer fallback; visible mount sizing remains exact in the solid pass.
   local narrowShadow = function(def, frame)
+    if isRiderCropDef(def) then
+      return riderCropMesh(voxel3D, def, frame) or rawShadow(def, frame)
+    end
     return rawShadow(def, frame)
   end
 
@@ -286,11 +361,13 @@ mod.exports.gen2VoxelSingleOwnerGuard = {
   api = 1,
   installed = function() return state.installed end,
   narrowedBillboardDraws = function() return state.narrowedBillboardDraws end,
+  croppedRiderBillboards = function() return state.croppedRiderBillboards end,
   suppressedDuplicatePoses = function() return state.suppressedDuplicatePoses end,
   status = function()
     return {
       installed = state.installed,
       narrowedBillboardDraws = state.narrowedBillboardDraws,
+      croppedRiderBillboards = state.croppedRiderBillboards,
       suppressedDuplicatePoses = state.suppressedDuplicatePoses,
       contextSpecies = state.contextSpecies,
       lastError = state.lastError,

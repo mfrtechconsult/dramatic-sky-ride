@@ -109,10 +109,10 @@ return function(game)
   place(10, 10, "down")
   game:keypressed("h")
   wait(75)
-  assert(ex.isFlying() and ex.mountSpecies() == "HO_OH",
+  assert(ex.isFlying() and ex.gen2VoxelInterop.mountSpecies() == "HO_OH",
     "Ho-Oh Flight did not start")
   finishTestBattle("Flight")
-  assert(ex.isFlying() and ex.mountSpecies() == "HO_OH",
+  assert(ex.isFlying() and ex.gen2VoxelInterop.mountSpecies() == "HO_OH",
     "Ho-Oh was not restored after battle")
   assert(bridge.visualKind() == "flight",
     "Gold did not restore the Flight visual after battle")

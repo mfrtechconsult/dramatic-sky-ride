@@ -134,7 +134,95 @@ mod.exports._riderSourceSprite = function(player)
 end
 
 local function writeRiderSheet(_player, _sourceSprite)
-  -- Runtime filesystem writes are no longer part of the mod API. The caller
-  -- already falls back to the live player SpriteRenderer when this returns nil.
+  -- Kept as a compatibility seam for older extensions. Runtime filesystem
+  -- writes are not part of the sandbox API; buildInMemoryRiderSprite below is
+  -- the normal path on current builds.
   return nil, "sandbox_runtime_asset_write_disabled"
+end
+
+local function buildInMemoryRiderSprite(sourceSprite, sourceDefOverride, seed)
+  if not sourceSprite then return nil, "player_sprite_missing" end
+  local sourceDef = sourceDefOverride or sourceSprite.def or {}
+  local sourcePath = sourceDef.image
+  if not sourcePath then return nil, "player_image_missing" end
+  if not (love and love.graphics and love.graphics.newQuad) then
+    return nil, "quad_api_unavailable"
+  end
+
+  local okImage, sourceImage = pcall(Assets.image, sourcePath)
+  if not (okImage and sourceImage and sourceImage.getDimensions) then
+    return nil, "player_image_load_failed"
+  end
+  local iw, ih = sourceImage:getDimensions()
+  if iw < 16 or ih < 16 then return nil, "unexpected_player_sheet_size" end
+
+  local sourceFrames = math.max(1, math.floor(ih / 16))
+  local declaredFrames = tonumber(sourceDef.frames)
+  if declaredFrames then
+    sourceFrames = math.max(1, math.min(sourceFrames, math.floor(declaredFrames)))
+  end
+
+  local def = shallowCopy(sourceDef)
+  def.id = "SKY_RIDE_RIDER_MEMORY_" .. safeAssetName(sourceDef.id or sourcePath)
+  def.image = sourcePath
+  def.frames = 6
+  def.walker = true
+  def.frameWidth = 16
+  def.frameHeight = 16
+  -- Provider-side renderers only receive SpriteDef, not the SpriteRenderer
+  -- instance. These scalars let the voxel billboard path reproduce the exact
+  -- same crop without reading pixels or creating a runtime asset.
+  def.dramaticSkyRideRiderCrop = true
+  def.dramaticSkyRideRiderCropHeight = RIDER_CROP_HEIGHT
+  def.dramaticSkyRideRiderCropOutputY = RIDER_CROP_Y
+  def.dramaticSkyRideRiderSourceStride = 16
+  def.dramaticSkyRideRiderSourceFrames = sourceFrames
+
+  local okSprite, sprite = pcall(SpriteRenderer.new, def,
+    seed or ("sky_ride_rider:memory:" .. tostring(sourceDef.id or sourcePath)))
+  if not (okSprite and sprite) then
+    return nil, "rider_renderer_failed:" .. tostring(sprite)
+  end
+  sprite.image = sourceImage
+  sprite.frameWidth = 16
+  sprite.frameHeight = RIDER_CROP_HEIGHT
+  sprite.anchorX = tonumber(sourceDef.anchorX) or 8
+  sprite.anchorY = (tonumber(sourceDef.anchorY) or 16) - RIDER_CROP_Y
+  sprite.frames = {}
+  sprite.dramaticSkyRideRiderSourceFrames = {}
+
+  local okQuads, quadReason = pcall(function()
+    for frame = 0, 5 do
+      local sourceFrame = math.min(frame, sourceFrames - 1)
+      sprite.dramaticSkyRideRiderSourceFrames[frame] = sourceFrame
+      sprite.frames[frame] = love.graphics.newQuad(
+        0, sourceFrame * 16, 16, RIDER_CROP_HEIGHT, iw, ih)
+    end
+  end)
+  if not okQuads then return nil, "rider_quad_failed:" .. tostring(quadReason) end
+
+  -- SpriteRenderer's default geometry derives sheet Y from frameHeight. Our
+  -- crop is 13 px high but frames remain 16 px apart in the source sheet, so
+  -- report the true source rectangle to custom render pipelines.
+  sprite.getFrameGeometry = function(self, frame)
+    frame = math.floor(tonumber(frame) or 0)
+    if frame < 0 then frame = 0 end
+    if frame >= self.frameCount then frame = self.frameCount - 1 end
+    local sourceFrame = self.dramaticSkyRideRiderSourceFrames[frame] or 0
+    return {
+      frame = frame,
+      x = 0,
+      y = sourceFrame * 16,
+      width = 16,
+      height = RIDER_CROP_HEIGHT,
+      anchorX = self.anchorX,
+      anchorY = self.anchorY,
+      quad = self.frames[frame],
+    }
+  end
+
+  if sourceSprite.objColors and type(sprite.setObjPalette) == "function" then
+    sprite:setObjPalette(sourceSprite.objColors, sourceSprite.objGroup)
+  end
+  return sprite, "in_memory_crop"
 end

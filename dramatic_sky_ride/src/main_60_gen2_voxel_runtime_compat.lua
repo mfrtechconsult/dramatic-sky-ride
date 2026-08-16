@@ -86,14 +86,29 @@ end
 
 -- The canonical 16x96 Gyarados silhouette fills almost the entire square and
 -- reads substantially larger than the native HGSS crop at the same Pokédex
--- scale. Reduce only that classic 2D card; native HGSS/PokeMMO keeps its exact
--- existing size.
+-- scale. Reduce that classic card before applying the shared presentation
+-- limits below.
 local CLASSIC_2D_SCALE = { GYARADOS = 0.72 }
+-- The 16px fallback Gyarados is a very narrow upright follower silhouette.
+-- Widen its card without increasing height: the mount remains visible around
+-- the seated trainer without crossing the third-person camera's near plane.
+local CLASSIC_2D_WIDTH_SCALE = { GYARADOS = 1.45 }
 -- Ground follower sheets are compact 16px companions. At the raw Pokedex
 -- scale a medium quadruped is almost entirely covered by the 16px trainer in
 -- the leaned voxel camera. Keep this floor specific to Ground Ride's 2D card;
--- Flight, Surf, user settings and Stadium geometry retain their own scale.
+-- Flight, user settings and Stadium geometry retain their own scale.
 local GROUND_2D_MIN_SCALE = 1.75
+-- A Pokedex-sized Gyarados/Lugia card can be taller than the near third-person
+-- camera distance. The camera then starts inside the opaque billboard and the
+-- whole screen becomes a handful of sprite colours. Cap only the active Surf
+-- card; Stadium geometry is not routed through this 2D policy.
+local WATER_2D_MAX_SCALE = 1.40
+-- The provider's 3RD camera is designed around a 16px player card and can
+-- collapse to a roughly one-cell boom near walls. Larger Pokedex cards then
+-- cross its near plane. Bound every active 2D mount only in that camera mode;
+-- diorama/flat views keep the policies above and Stadium geometry is separate.
+local THIRD_PERSON_2D_MAX_SCALE = 1.25
+local WATER_2D_WORLD_LIFT = 4.0
 
 local function sameSpecies(a, b)
   local function clean(value)
@@ -103,15 +118,36 @@ local function sameSpecies(a, b)
   return ca ~= "" and ca == cb
 end
 
+local function providerThirdPerson()
+  local ex = providerExports()
+  if not (ex and type(ex.voxelCameraMode) == "function") then return false end
+  local ok, mode = pcall(ex.voxelCameraMode)
+  return ok and tostring(mode or ""):lower() == "third"
+end
+
+local function presentation2DScale(species, baseScale)
+  local scale = tonumber(baseScale) or mountScale(species)
+  local kind, activeSpecies = currentMount()
+  if not sameSpecies(species, activeSpecies) then return scale end
+  if kind == "ground" then
+    scale = math.max(scale, GROUND_2D_MIN_SCALE)
+  end
+  if kind == "water" then
+    scale = math.min(scale, WATER_2D_MAX_SCALE)
+  end
+  if providerThirdPerson() then
+    local cameraMaximum = kind == "water" and WATER_2D_MAX_SCALE
+      or THIRD_PERSON_2D_MAX_SCALE
+    scale = math.min(scale, cameraMaximum)
+  end
+  return scale
+end
+
 local function classic2DScale(species)
   local scale = mountScale(species)
   local key = tostring(species or ""):upper():gsub("[^A-Z0-9]", "")
   scale = scale * (CLASSIC_2D_SCALE[key] or 1)
-  if ground and ground.active == true and sameSpecies(species,
-      ground.species or (ground.mon and ground.mon.species)) then
-    scale = math.max(scale, GROUND_2D_MIN_SCALE)
-  end
-  return scale
+  return presentation2DScale(species, scale)
 end
 
 -- -------------------------------------------------------------------------
@@ -164,8 +200,8 @@ local function providerModule(ex, name)
 end
 
 local function activeMountDef()
-  local _, species, sprite = currentMount()
-  return species, sprite and sprite.def or nil
+  local kind, species, sprite = currentMount()
+  return kind, species, sprite and sprite.def or nil
 end
 
 local function clearScaledMeshes()
@@ -205,6 +241,7 @@ local function buildNativeHgssCard(Voxel3D, def, frame, species)
     value = ok and tonumber(value) or nil
     if value and value > 0 then correctedScale = value end
   end
+  correctedScale = presentation2DScale(species, correctedScale)
   local scale = (tonumber(crop.fit) or 1) * correctedScale
   state.last2DScale = correctedScale
 
@@ -240,7 +277,7 @@ local function buildNativeHgssCard(Voxel3D, def, frame, species)
   return ok and mesh or nil
 end
 
-local function buildScaledCard(Voxel3D, def, frame, scale)
+local function buildScaledCard(Voxel3D, def, frame, scaleX, scaleY)
   if not (Voxel3D and type(Voxel3D.newMesh) == "function"
           and type(Voxel3D.pushQuad) == "function"
           and def and type(def.image) == "string") then
@@ -255,9 +292,11 @@ local function buildScaledCard(Voxel3D, def, frame, scale)
   if fy + 16 > ih then fy = 0 end
   local u0, u1 = 0.02 / iw, (16 - 0.02) / iw
   local v0, v1 = (fy + 0.05) / ih, (fy + 15.95) / ih
-  local halfW = 8 * scale
+  scaleX = tonumber(scaleX) or 1
+  scaleY = tonumber(scaleY) or scaleX
+  local halfW = 8 * scaleX
   local x0, x1 = 8 - halfW, 8 + halfW
-  local y1 = 16 * scale
+  local y1 = 16 * scaleY
   local verts = {
     { x0, 0,  0, u0, v1, 1 }, { x1, 0,  0, u1, v1, 1 },
     { x1, y1, 0, u1, v0, 1 }, { x0, y1, 0, u0, v0, 1 },
@@ -289,7 +328,7 @@ local function install2DBillboardSizeHook()
 
   local function scaled(def, frame, fallback)
     if not (isGold() and renderer2D()) then return fallback(def, frame) end
-    local species, activeDef = activeMountDef()
+    local _, species, activeDef = activeMountDef()
     if not (species and activeDef and def == activeDef) then
       return fallback(def, frame)
     end
@@ -299,15 +338,20 @@ local function install2DBillboardSizeHook()
     end
 
     local scale = classic2DScale(species)
+    local speciesKey = tostring(species or ""):upper():gsub("[^A-Z0-9]", "")
+    local widthScale = scale * (CLASSIC_2D_WIDTH_SCALE[speciesKey] or 1)
     state.last2DScale = scale
-    if math.abs(scale - 1) < 0.0001 then return fallback(def, frame) end
+    if math.abs(scale - 1) < 0.0001 and math.abs(widthScale - 1) < 0.0001 then
+      return fallback(def, frame)
+    end
 
     local key = table.concat({
       tostring(def.image), tostring(frame), tostring(species),
-      string.format("%.4f", scale),
+      string.format("%.4f", scale), string.format("%.4f", widthScale),
     }, "#")
     if scaledMeshes[key] == nil then
-      scaledMeshes[key] = buildScaledCard(voxel3D, def, frame, scale) or false
+      scaledMeshes[key] = buildScaledCard(
+        voxel3D, def, frame, widthScale, scale) or false
       if scaledMeshes[key] then state.scaled2DMeshes = state.scaled2DMeshes + 1 end
     end
     return scaledMeshes[key] or fallback(def, frame)
@@ -343,9 +387,12 @@ end
 -- main_58 owns Gold's rider pose. Expose the final card scale so that layer
 -- can keep the trainer on the saddle without duplicating the sizing policy.
 mod.exports.gen2Voxel2DPresentation = {
-  api = 1,
+  api = 2,
   scale = classic2DScale,
   groundMinimum = GROUND_2D_MIN_SCALE,
+  waterMaximum = WATER_2D_MAX_SCALE,
+  thirdPersonMaximum = THIRD_PERSON_2D_MAX_SCALE,
+  waterWorldLift = WATER_2D_WORLD_LIFT,
 }
 
 local previousUpdate = OverworldState.update

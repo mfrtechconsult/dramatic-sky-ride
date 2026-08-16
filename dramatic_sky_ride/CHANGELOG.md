@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.16-mountfix.1
+
+- Restored the complete official 0.2.16 base before reapplying the mount fixes.
+- Restored the pre-sandbox seated rider crop entirely in memory; no runtime file writes or full standing-trainer fallback remain.
+- Bundled the PokePC Generation I-II follower sheets as a dependency-free 2D fallback for Flight, Ground Ride and Visible Surf.
+- Repaired the Gen2-3D-Sprites 0.2.81 provider bridge, including its public-provider fallback, single mount ownership and battle-transition cleanup.
+- Bounded 2D mount cards for the close third-person camera and synchronized Flight, Ground and Surf rider seats with the displayed card size.
+- Fixed Gold Surf-to-Flight state cleanup, shoreline transitions and post-battle remount for all three mount types.
+- Added live Gold probes for visual composition, movement, route connections, water landing, Surf transitions and battle remount.
+
 ## 0.2.8
 
 - Aligned Generation II Ground Ride map restrictions with Gold's native Bicycle environments.

@@ -20,6 +20,8 @@ local sprites = loadModule("sprites")
 local presentation = loadModule("presentation")
 local runtime = loadModule("runtime")
 local ground = loadModule("ground")
+local safety = loadModule("safety")
+local stadium = loadModule("stadium")
 local hud = loadModule("hud")
 local wildSkies = loadModule("wild_skies")
 local music = loadModule("music")
@@ -36,6 +38,13 @@ runtime.install({
   presentation = presentation,
 })
 ground.install({ runtime = runtime, compat = compat, settings = settings })
+safety.install({
+  runtime = runtime,
+  compat = compat,
+  settings = settings,
+  progression = progression,
+})
+stadium.install({ runtime = runtime, compat = compat, presentation = presentation })
 hud.install({ runtime = runtime, settings = settings })
 wildSkies.install({
   runtime = runtime,
@@ -54,7 +63,8 @@ mod.exports.progression = progression
 mod.exports.presentation = presentation
 mod.exports.compatibility = {
   wilds = sprites.wildsStatus,
-  stadium2 = sprites.stadiumStatus,
+  stadium = stadium.status,
+  stadiumSprites = sprites.stadiumStatus,
   crystal251 = compat.crystalStatus,
   wildSkies = wildSkies.status,
   music = music.status,

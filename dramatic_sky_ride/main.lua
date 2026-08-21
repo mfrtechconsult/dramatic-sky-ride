@@ -19,12 +19,14 @@ local progression = loadModule("progression")
 local sprites = loadModule("sprites")
 local presentation = loadModule("presentation")
 local runtime = loadModule("runtime")
+local ground = loadModule("ground")
+local hud = loadModule("hud")
 local wildSkies = loadModule("wild_skies")
 local music = loadModule("music")
 
 settings.install({ catalog = catalog, compat = compat })
 progression.install({ catalog = catalog, compat = compat, settings = settings })
-presentation.install({ settings = settings, compat = compat })
+presentation.install({ settings = settings, compat = compat, progression = progression })
 runtime.install({
   catalog = catalog,
   compat = compat,
@@ -33,6 +35,8 @@ runtime.install({
   progression = progression,
   presentation = presentation,
 })
+ground.install({ runtime = runtime, compat = compat, settings = settings })
+hud.install({ runtime = runtime, settings = settings })
 wildSkies.install({
   runtime = runtime,
   compat = compat,

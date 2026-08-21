@@ -21,7 +21,7 @@
     "Music_LGPE"
   ],
   "conflicts": ["free_fly"],
-  "permissions": ["engine_internals", "filesystem"],
+  "permissions": ["engine_internals"],
   "affects_link": false,
   "description": "Clean Gen 1 + Gen 2 mount runtime: Flight, Ground Ride and Visible Surf with optional Wilds of Kanto, Gen2-3D-Sprites, Crystal 251, Wild Skies, music packs and bundled PokePC sprite fallback.",
   "github": "burgerslayer7/dramatic-sky-ride"

@@ -12,8 +12,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: python tests/clean_contract.py
-      - name: Lua syntax
+      - name: Lua syntax + runtime contract
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y lua5.1 >/dev/null
           find dramatic_sky_ride -name '*.lua' -print0 | xargs -0 -n1 luac5.1 -p
+          lua5.1 tests/runtime_contract.lua dramatic_sky_ride/src/runtime.lua

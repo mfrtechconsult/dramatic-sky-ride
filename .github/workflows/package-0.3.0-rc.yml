@@ -1,7 +1,5 @@
-name: Package 0.3.0 RC
+name: Package 0.3.0 RC (manual)
 on:
-  push:
-    branches: [release/0.3.0-clean-rewrite]
   workflow_dispatch:
 jobs:
   package:

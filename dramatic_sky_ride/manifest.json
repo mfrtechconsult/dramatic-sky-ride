@@ -12,10 +12,14 @@
   "dependencies": [],
   "optional_dependencies": [
     "overworld_wild_spawns",
-    "STADIUM2_OVERWORLD_MODELS",
     "PokePCFollowers_VoxelMerge",
+    "BATTLE_ART_VOXEL_FORK@>=1.7.6 <2.0.0",
+    "DRAMALESS_SHAPE@>=1.6.4 <2.0.0",
+    "STADIUM_OVERWORLD_MODELS",
+    "STADIUM2_OVERWORLD_MODELS",
     "CRYSTAL_251@>=0.11.5 <1.0.0",
     "wild_skies@>=1.9.0 <3.0.0",
+    "otf-player-switcher",
     "Music_FRLG",
     "Music_HGSS",
     "Music_LGPE"
@@ -23,6 +27,6 @@
   "conflicts": ["free_fly"],
   "permissions": ["engine_internals"],
   "affects_link": false,
-  "description": "Clean Gen 1 + Gen 2 mount runtime: Flight, Ground Ride and Visible Surf with optional Wilds of Kanto, Gen2-3D-Sprites, Crystal 251, Wild Skies, music packs and bundled PokePC sprite fallback.",
+  "description": "Clean Gen 1 + Gen 2 mount runtime: Flight, Ground Ride and Visible Surf with optional Wilds of Kanto, Battle Art/Dramaless, Stadium renderers, Crystal 251, Wild Skies, music packs and bundled PokePC sprite fallback.",
   "github": "burgerslayer7/dramatic-sky-ride"
 }

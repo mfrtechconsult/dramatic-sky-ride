@@ -59,14 +59,9 @@ local Sprites = {
   end,
 }
 
-local Settings = {
-  get=function(_, key, fallback)
-    if opts[key] ~= nil then return opts[key] end
-    return fallback
-  end,
-}
+local Settings = {}
 Settings.get=function(key, fallback) if opts[key] ~= nil then return opts[key] end return fallback end
-Settings.bool=function(key, fallback) local v=Settings.get(key,fallback); return v == true end
+Settings.bool=function(key, fallback) return Settings.get(key,fallback) == true end
 Settings.number=function(key, fallback) return tonumber(Settings.get(key,fallback)) or tonumber(fallback) or 0 end
 
 local Progression = {
@@ -140,6 +135,7 @@ assert(hooks["core.update"])(function() end,game,1/60)
 eq(Runtime.public.state().mode,"ground","suicune retains ground ownership on water")
 yes(Runtime.public.state().amphibious,"suicune amphibious marker")
 Runtime.public.stop(game,"test")
+surfing=false
 
 -- Battle lifecycle retains a pending remount and restores it on free-roam update.
 party[1]=arcanine

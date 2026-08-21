@@ -15,8 +15,17 @@ assert "filesystem" not in manifest.get("permissions", [])
 assert not list(src.glob("main_*.lua")), "legacy layered runtime must stay deleted"
 assert not (src / "parts.txt").exists(), "legacy parts loader must stay deleted"
 
+for name in [
+    "catalog", "compat", "settings", "progression", "sprites", "presentation",
+    "runtime", "ground", "hud", "wild_skies", "music",
+]:
+    assert (src / f"{name}.lua").is_file(), name
+
 text = "\n".join(p.read_text(encoding="utf-8") for p in src.glob("*.lua"))
-for hook in ["movement.collision", "movement.speed", "core.update", "ui.party.submenu"]:
+for hook in [
+    "movement.collision", "movement.speed", "core.update", "ui.party.submenu",
+    "ui.start_menu.items", "render.hud", "music.select",
+]:
     assert hook in text, hook
 
 catalog = (src / "catalog.lua").read_text(encoding="utf-8")
@@ -25,6 +34,22 @@ for feature in ["flight", "ground", "surf"]:
 for species in ["CHARIZARD", "HO_OH", "ARCANINE", "SUICUNE", "LAPRAS", "LUGIA"]:
     assert species in catalog, species
 assert len(re.findall(r'\{"[A-Z0-9_]+",\d+', catalog)) == 41
+
+settings = (src / "settings.lua").read_text(encoding="utf-8")
+for key in [
+    "settings_view", "show_rider", "mount_cries", "mount_hints", "mount_menu",
+    "show_followers_while_mounted", "flight_speed", "ground_speed",
+    "manual_altitude", "flight_boost", "ground_gallop", "ground_hud",
+    "ground_dust", "reverse_ledge_jumps", "remount_after_battle",
+    "visible_surf_mounts", "require_fly_move", "badge_checks", "story_gates",
+    "discovery_gates", "story_safe", "flight_mount_renderer",
+    "pokedex_mount_sizes", "flying_music", "size_overrides",
+]:
+    assert f'key="{key}"' in settings or f'key = "{key}"' in settings, key
+
+progression = (src / "progression.lua").read_text(encoding="utf-8")
+for token in ["THUNDERBADGE", "SOULBADGE", "STORM", "FOG", "fieldmove.eligibility", "badgeGates"]:
+    assert token in progression, token
 
 sprites = (src / "sprites.lua").read_text(encoding="utf-8")
 assert "resolveFollowerSprite" in sprites
@@ -35,12 +60,29 @@ compat = (src / "compat.lua").read_text(encoding="utf-8")
 assert "mod.world.current" not in compat
 assert "mod.world.overworld" in compat
 assert 'state == "surf" or state == "surf_pika"' in compat
+assert "applyPlayerState" in compat
 
 runtime = (src / "runtime.lua").read_text(encoding="utf-8")
-assert "mountSprite" in runtime
-assert "native surf started" in runtime
-assert "start Surf through the game first" in runtime
+for token in [
+    "mountSprite", "native surf started", "start Surf through the game first",
+    "dramaticSkyRideMountSpecies", "_stadiumSkyRideSpecies", "freeFlying",
+    "amphibious", "pendingResume", "triggerright", "triggerleft", "MOUNTS",
+]:
+    assert token in runtime, token
+
+presentation = (src / "presentation.lua").read_text(encoding="utf-8")
+for token in ["REF_METERS", "dynamic_shadow", "landing_marker", "ground_dust", "show_rider"]:
+    assert token in presentation, token
+
+ground = (src / "ground.lua").read_text(encoding="utf-8")
+assert "checkLedgeHop" in ground and "tryLedgeJump" in ground
+
+music = (src / "music.lua").read_text(encoding="utf-8")
+assert "Music_Surfing" in music and "Music_BikeRiding" in music
+assert "music.select" in music
+assert "filesystem" not in music
 
 assert any("wild_skies" in x for x in manifest["optional_dependencies"])
 assert any("CRYSTAL_251" in x for x in manifest["optional_dependencies"])
+assert any("Music_FRLG" in x for x in manifest["optional_dependencies"])
 print("clean-contract-ok")

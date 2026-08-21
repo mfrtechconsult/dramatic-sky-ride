@@ -4,6 +4,8 @@ local SpriteRenderer = require("src.render.SpriteRenderer")
 local Sprites = {}
 local sources = {}
 
+local STADIUM_IDS = { "STADIUM2_OVERWORLD_MODELS", "STADIUM_OVERWORLD_MODELS" }
+
 local function find(id)
   if not mod.find then return nil end
   local ok, h = pcall(mod.find, mod, id)
@@ -65,17 +67,23 @@ local function registered(game, species, dex, kind)
 end
 
 local function stadium(game, species, dex, kind)
-  local h = find("STADIUM2_OVERWORLD_MODELS")
-  local ex = h and h.exports
-  if not ex then return nil end
-  for _, name in ipairs({"resolveMountSprite", "resolveFollowerSprite"}) do
-    local fn = ex[name]
-    if type(fn) == "function" then
-      local ok, def = pcall(fn, { game = game, species = species, speciesId = dex, dex = dex,
-        role = "dramatic_sky_ride_" .. tostring(kind), surface = kind == "surf" and "water" or "land" })
-      if ok then
-        def = normalize(def, "STADIUM2_OVERWORLD_MODELS", species, dex)
-        if def then return def end
+  for _, id in ipairs(STADIUM_IDS) do
+    local h = find(id)
+    local ex = h and h.exports
+    if ex then
+      for _, name in ipairs({"resolveMountSprite", "resolveFollowerSprite"}) do
+        local fn = ex[name]
+        if type(fn) == "function" then
+          local ok, def = pcall(fn, {
+            game=game, species=species, speciesId=dex, dex=dex,
+            role="dramatic_sky_ride_" .. tostring(kind),
+            surface=kind == "surf" and "water" or "land",
+          })
+          if ok then
+            def = normalize(def, id, species, dex)
+            if def then return def end
+          end
+        end
       end
     end
   end
@@ -88,9 +96,9 @@ local function wilds(game, species, dex, kind)
   local fn = ex and ex.resolveFollowerSprite
   if type(fn) ~= "function" then return nil end
   local ok, def = pcall(fn, {
-    game = game, species = species, speciesId = dex, dex = dex,
-    role = "dramatic_sky_ride_" .. tostring(kind),
-    surface = kind == "surf" and "water" or "land",
+    game=game, species=species, speciesId=dex, dex=dex,
+    role="dramatic_sky_ride_" .. tostring(kind),
+    surface=kind == "surf" and "water" or "land",
   })
   if not ok then return nil end
   return normalize(def, "overworld_wild_spawns", species, dex)
@@ -100,7 +108,7 @@ local function bundled(species, dex)
   if not dex then return nil end
   local rel = string.format("assets/pokepc/follower_%03d.png", dex)
   local path = mod.assets and mod.assets.path and mod.assets:path(rel) or (mod.path .. "/" .. rel)
-  local def = normalize({ image = path, frames = 6, walker = true, trueColor = true },
+  local def = normalize({ image=path, frames=6, walker=true, trueColor=true },
     "bundled_pokepc", species, dex)
   if not def then return nil end
   local ok = pcall(SpriteRenderer.new, def, "dsr_probe_" .. tostring(dex))
@@ -113,8 +121,9 @@ local function installedPokePC(game, species, dex, kind)
     local ex = h and h.exports
     if ex and type(ex.resolveFollowerSprite) == "function" then
       local ok, def = pcall(ex.resolveFollowerSprite, {
-        game = game, species = species, speciesId = dex, dex = dex,
-        role = "dramatic_sky_ride_" .. tostring(kind), surface = kind == "surf" and "water" or "land",
+        game=game, species=species, speciesId=dex, dex=dex,
+        role="dramatic_sky_ride_" .. tostring(kind),
+        surface=kind == "surf" and "water" or "land",
       })
       if ok then
         def = normalize(def, id, species, dex)
@@ -135,7 +144,8 @@ end
 function Sprites.build(game, species, dex, kind)
   local def = Sprites.resolve(game, species, dex, kind)
   if not def then return nil, "no sprite provider" end
-  local ok, sprite = pcall(SpriteRenderer.new, def, "dramatic_sky_ride_" .. tostring(kind) .. "_" .. tostring(dex))
+  local ok, sprite = pcall(SpriteRenderer.new, def,
+    "dramatic_sky_ride_" .. tostring(kind) .. "_" .. tostring(dex))
   if not ok then return nil, tostring(sprite) end
   return sprite, def
 end
@@ -143,16 +153,30 @@ end
 function Sprites.wildsStatus()
   local h = find("overworld_wild_spawns")
   local ex = h and h.exports
-  return { active = h ~= nil, version = ex and ex.version or nil,
-    resolver = ex and type(ex.resolveFollowerSprite) == "function" or false }
+  return {
+    active=h ~= nil,
+    version=ex and ex.version or nil,
+    resolver=ex and type(ex.resolveFollowerSprite)=="function" or false,
+  }
 end
 
 function Sprites.stadiumStatus()
-  local h = find("STADIUM2_OVERWORLD_MODELS")
-  local ex = h and h.exports
-  return { active = h ~= nil, version = ex and ex.version or nil,
-    rendererInstalled = ex and ex.rendererInstalled or nil,
-    mountResolver = ex and (type(ex.resolveMountSprite) == "function" or type(ex.resolveFollowerSprite) == "function") or false }
+  local providers = {}
+  for _, id in ipairs(STADIUM_IDS) do
+    local h=find(id)
+    local ex=h and h.exports
+    if h then
+      providers[#providers+1]={
+        id=id,
+        version=ex and ex.version or nil,
+        rendererInstalled=ex and ex.rendererInstalled or nil,
+        mountResolver=ex and (type(ex.resolveMountSprite)=="function"
+          or type(ex.resolveFollowerSprite)=="function") or false,
+        library=ex and ex.lib ~= nil or false,
+      }
+    end
+  end
+  return { active=#providers>0, providers=providers }
 end
 
 return Sprites

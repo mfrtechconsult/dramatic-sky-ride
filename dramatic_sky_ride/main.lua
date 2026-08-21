@@ -23,6 +23,7 @@ local ground = loadModule("ground")
 local safety = loadModule("safety")
 local stadium = loadModule("stadium")
 local interop = loadModule("interop")
+local followers = loadModule("followers")
 local hud = loadModule("hud")
 local wildSkies = loadModule("wild_skies")
 local music = loadModule("music")
@@ -47,6 +48,7 @@ safety.install({
 })
 stadium.install({ runtime = runtime, compat = compat, presentation = presentation })
 interop.install({ runtime = runtime, compat = compat, settings = settings })
+followers.install({ runtime = runtime, compat = compat, settings = settings })
 hud.install({ runtime = runtime, settings = settings })
 wildSkies.install({
   runtime = runtime,

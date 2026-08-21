@@ -17,7 +17,7 @@ assert not (src / "parts.txt").exists(), "legacy parts loader must stay deleted"
 
 for name in [
     "catalog", "compat", "settings", "progression", "sprites", "presentation",
-    "runtime", "ground", "hud", "wild_skies", "music",
+    "runtime", "ground", "safety", "stadium", "hud", "wild_skies", "music",
 ]:
     assert (src / f"{name}.lua").is_file(), name
 
@@ -54,6 +54,7 @@ for token in ["THUNDERBADGE", "SOULBADGE", "STORM", "FOG", "fieldmove.eligibilit
 sprites = (src / "sprites.lua").read_text(encoding="utf-8")
 assert "resolveFollowerSprite" in sprites
 assert "STADIUM2_OVERWORLD_MODELS" in sprites
+assert "STADIUM_OVERWORLD_MODELS" in sprites
 assert "bundled_pokepc" in sprites
 
 compat = (src / "compat.lua").read_text(encoding="utf-8")
@@ -71,18 +72,32 @@ for token in [
     assert token in runtime, token
 
 presentation = (src / "presentation.lua").read_text(encoding="utf-8")
-for token in ["REF_METERS", "dynamic_shadow", "landing_marker", "ground_dust", "show_rider"]:
+for token in ["REF_METERS", "dynamic_shadow", "landing_marker", "ground_dust", "show_rider", "visualAltitude"]:
     assert token in presentation, token
 
 ground = (src / "ground.lua").read_text(encoding="utf-8")
 assert "checkLedgeHop" in ground and "tryLedgeJump" in ground
+
+safety = (src / "safety.lua").read_text(encoding="utf-8")
+assert "legitimately_reached_maps" in safety
+assert "crossConnection" in safety
+assert "AREA NOT VISITED" in safety
+
+stadium = (src / "stadium.lua").read_text(encoding="utf-8")
+assert "OverworldStadium" in stadium and "tagger" in stadium
+
+wild = (src / "wild_skies.lua").read_text(encoding="utf-8")
+assert "takeFlyer" in wild and "queueScript" in wild
 
 music = (src / "music.lua").read_text(encoding="utf-8")
 assert "Music_Surfing" in music and "Music_BikeRiding" in music
 assert "music.select" in music
 assert "filesystem" not in music
 
-assert any("wild_skies" in x for x in manifest["optional_dependencies"])
-assert any("CRYSTAL_251" in x for x in manifest["optional_dependencies"])
-assert any("Music_FRLG" in x for x in manifest["optional_dependencies"])
+optional = manifest["optional_dependencies"]
+for dep in [
+    "wild_skies", "CRYSTAL_251", "Music_FRLG", "BATTLE_ART_VOXEL_FORK",
+    "DRAMALESS_SHAPE", "STADIUM2_OVERWORLD_MODELS", "otf-player-switcher",
+]:
+    assert any(dep in x for x in optional), dep
 print("clean-contract-ok")

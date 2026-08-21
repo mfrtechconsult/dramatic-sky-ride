@@ -28,3 +28,66 @@ jobs:
         run: python gen1recomp-upstream/tools/modkit.py validate dramatic_sky_ride
       - name: Current Gen1Recomp Gen2 compatibility audit
         run: python gen1recomp-upstream/tools/modkit.py gen2check dramatic_sky_ride --notes
+
+  compatibility-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Check out Wilds of Kanto
+        uses: actions/checkout@v4
+        with:
+          repository: YoDrehDenSwagAuf/overworld-spawn-mod
+          ref: main
+          path: compat/wilds
+      - name: Check out Gen2-3D-Sprites
+        uses: actions/checkout@v4
+        with:
+          repository: randyadr/Gen2-3D-Sprites
+          ref: main
+          path: compat/stadium2
+      - name: Check out Crystal 251
+        uses: actions/checkout@v4
+        with:
+          repository: Deftones565/gen1recomp-mod-crystal-251
+          ref: main
+          path: compat/crystal251
+      - name: Check out Wild Skies source
+        uses: actions/checkout@v4
+        with:
+          repository: shanehudson-gen1recomp-mods/monorepo
+          ref: main
+          path: compat/shane
+      - name: Verify public contracts used by DSR
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          root = Path('compat')
+          wilds = json.loads((root/'wilds/manifest.json').read_text())
+          assert wilds['id'] == 'overworld_wild_spawns'
+          assert 'gen1' in wilds.get('games', []) and 'gen2' in wilds.get('games', [])
+          wilds_main = (root/'wilds/main.lua').read_text()
+          assert 'mod.exports.resolveFollowerSprite' in wilds_main
+
+          stadium = json.loads((root/'stadium2/manifest.json').read_text())
+          assert stadium['id'] == 'STADIUM2_OVERWORLD_MODELS'
+
+          crystal = json.loads((root/'crystal251/manifest.json').read_text())
+          assert crystal['id'] == 'CRYSTAL_251'
+          version = tuple(int(x) for x in crystal['version'].split('-')[0].split('.')[:3])
+          assert version >= (0, 11, 5)
+
+          skies = json.loads((root/'shane/wild_skies/manifest.json').read_text())
+          assert skies['id'] == 'wild_skies'
+          skies_main = (root/'shane/wild_skies/main.lua').read_text()
+          assert 'mod.exports.registerSpriteSource' in skies_main
+          assert 'mod.exports.unregisterSpriteSource' in skies_main
+
+          dsr = (Path('dramatic_sky_ride/src/sprites.lua')).read_text()
+          assert 'resolveFollowerSprite' in dsr
+          assert 'STADIUM2_OVERWORLD_MODELS' in dsr
+          print('optional-mod-public-contracts-ok')
+          PY

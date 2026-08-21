@@ -17,7 +17,7 @@ assert not (src / "parts.txt").exists(), "legacy parts loader must stay deleted"
 
 for name in [
     "catalog", "compat", "settings", "progression", "sprites", "presentation",
-    "runtime", "ground", "safety", "stadium", "hud", "wild_skies", "music",
+    "runtime", "ground", "safety", "stadium", "interop", "hud", "wild_skies", "music",
 ]:
     assert (src / f"{name}.lua").is_file(), name
 
@@ -85,6 +85,13 @@ assert "AREA NOT VISITED" in safety
 
 stadium = (src / "stadium.lua").read_text(encoding="utf-8")
 assert "OverworldStadium" in stadium and "tagger" in stadium
+
+interop = (src / "interop.lua").read_text(encoding="utf-8")
+for token in ["DRAMALESS_SHAPE", "BATTLE_ART_VOXEL_FORK", "otf-player-switcher", 'keyboardDown("j")']:
+    assert token in interop, token
+
+hud = (src / "hud.lua").read_text(encoding="utf-8")
+assert "mount_hints" in hud and "altitude_display" in hud and "ground_hud" in hud
 
 wild = (src / "wild_skies.lua").read_text(encoding="utf-8")
 assert "takeFlyer" in wild and "queueScript" in wild

@@ -1,0 +1,19 @@
+name: Clean rewrite CI
+on:
+  push:
+    branches: [release/0.3.0-clean-rewrite]
+  pull_request:
+    paths: ['dramatic_sky_ride/**','tests/**']
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python tests/clean_contract.py
+      - name: Lua syntax
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y lua5.1 >/dev/null
+          find dramatic_sky_ride -name '*.lua' -print0 | xargs -0 -n1 luac5.1 -p

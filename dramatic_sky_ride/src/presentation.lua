@@ -1,7 +1,7 @@
 local mod = ...
 
 local Presentation = {}
-local Settings, Compat
+local Settings, Compat, Progression
 
 local REF_METERS = 1.70
 local GROUND_LIFT = {
@@ -60,57 +60,108 @@ local function lift(kind, species)
   return GROUND_LIFT[species] or 6.7
 end
 
-local function transformedDraw(raw, self, scale, px, py, camX, camY, ...)
-  local g = love and love.graphics
-  if not (g and g.push and g.pop and g.translate and g.scale) or math.abs(scale-1) < 0.001 then
-    return raw(self, px, py, camX, camY, ...)
+local function pushAll(g)
+  if not (g and g.push) then return false end
+  local ok = pcall(g.push,"all")
+  if not ok then pcall(g.push) end
+  return true
+end
+
+local function visualAltitude(game, kind)
+  if kind ~= "flight" then return 0 end
+  local p=Compat.player(game)
+  local altitude=p and tonumber(p.dramaticSkyRideAltitude) or 20
+  -- Logical altitude remains 20..96. The native 2D card uses a deliberately
+  -- smaller screen lift so it stays visible without altering its world cell.
+  return clamp((altitude-20)*0.42,0,32)
+end
+
+local function groundEffects(game, kind, px, py, camX, camY, scale)
+  local g=love and love.graphics
+  if not (g and g.ellipse and g.setColor and pushAll(g)) then return end
+  local x=(tonumber(px) or 0)-(tonumber(camX) or 0)+8
+  local y=(tonumber(py) or 0)-(tonumber(camY) or 0)+15
+  local player=Compat.player(game)
+  local altitude=player and tonumber(player.dramaticSkyRideAltitude) or 20
+
+  if kind == "flight" and Settings.bool("dynamic_shadow",true) then
+    local t=clamp((altitude-20)/(96-20),0,1)
+    g.setColor(0,0,0,0.34-0.18*t)
+    g.ellipse("fill",x,y,clamp(5*scale*(1-0.28*t),2.5,10),clamp(1.8*scale,1,4))
   end
-  local ax = (tonumber(px) or 0) - (tonumber(camX) or 0) + 8
-  local ay = (tonumber(py) or 0) - (tonumber(camY) or 0) + 12
+
+  if kind == "flight" and Settings.bool("landing_marker",true) and altitude <= 36 then
+    local okay=true
+    if Compat.isWaterCell(game) and Progression then okay=Progression.canLandOnWater(game) == true end
+    if okay then g.setColor(0.35,1,0.45,0.55) else g.setColor(1,0.25,0.25,0.55) end
+    g.ellipse("line",x,y,5.5*scale,2.2*scale)
+  end
+
+  if kind == "ground" and Settings.bool("ground_dust",true)
+      and player and (player.moving or player.stepLanded) then
+    local phase=(tonumber(player.animClock) or 0)%12
+    local spread=2+(phase/12)*4
+    g.setColor(0.75,0.70,0.58,0.35)
+    g.ellipse("fill",x-spread,y,1.3,0.7)
+    g.ellipse("fill",x+spread,y,1.1,0.6)
+  end
+  g.pop()
+end
+
+local function transformedDraw(raw,self,scale,px,py,camX,camY,...)
+  local g=love and love.graphics
+  if not (g and g.push and g.pop and g.translate and g.scale) or math.abs(scale-1)<0.001 then
+    return raw(self,px,py,camX,camY,...)
+  end
+  local ax=(tonumber(px) or 0)-(tonumber(camX) or 0)+8
+  local ay=(tonumber(py) or 0)-(tonumber(camY) or 0)+12
   g.push()
-  g.translate(ax, ay)
-  g.scale(scale, scale)
-  g.translate(-ax, -ay)
-  local ok, a,b,c,d = pcall(raw, self, px, py, camX, camY, ...)
+  g.translate(ax,ay)
+  g.scale(scale,scale)
+  g.translate(-ax,-ay)
+  local ok,a,b,c,d=pcall(raw,self,px,py,camX,camY,...)
   g.pop()
   if not ok then error(a) end
   return a,b,c,d
 end
 
-function Presentation.decorate(game, row, kind, mountSprite, riderSprite)
-  if not (mountSprite and type(mountSprite.draw) == "function" and row) then return mountSprite end
-  local raw = mountSprite.draw
-  local species, dex = row.species, row.dex
-  mountSprite.def = mountSprite.def or {}
-  mountSprite.def.dramaticSkyRideMountSpecies = species
-  mountSprite.def.dramaticSkyRideMountDex = dex
+function Presentation.decorate(game,row,kind,mountSprite,riderSprite)
+  if not (mountSprite and type(mountSprite.draw)=="function" and row) then return mountSprite end
+  local raw=mountSprite.draw
+  local species,dex=row.species,row.dex
+  mountSprite.def=mountSprite.def or {}
+  mountSprite.def.dramaticSkyRideMountSpecies=species
+  mountSprite.def.dramaticSkyRideMountDex=dex
 
-  mountSprite.draw = function(self, px, py, camX, camY, facing, walkPhase, stepFlip, topHalf)
-    local scale = Presentation.scale(game, species, dex)
-    transformedDraw(raw, self, scale, px, py, camX, camY, facing, walkPhase, stepFlip, topHalf)
-    if Settings.bool("show_rider", true) and riderSprite and type(riderSprite.draw) == "function" then
-      local riderY = (tonumber(py) or 0) - lift(kind, species) * math.max(0.75, math.min(scale, 2.5))
-      -- SpriteRenderer's topHalf path is the clean built-in way to hide the
-      -- trainer's lower body behind the mount card.
-      pcall(riderSprite.draw, riderSprite, px, riderY, camX, camY,
-        facing or "down", walkPhase or 0, stepFlip or false, true)
+  mountSprite.draw=function(self,px,py,camX,camY,facing,walkPhase,stepFlip,topHalf)
+    local scale=Presentation.scale(game,species,dex)
+    if topHalf then
+      return transformedDraw(raw,self,scale,px,py,camX,camY,facing,walkPhase,stepFlip,topHalf)
+    end
+    groundEffects(game,kind,px,py,camX,camY,scale)
+    local altitudeLift=visualAltitude(game,kind)
+    local mountY=(tonumber(py) or 0)-altitudeLift
+    transformedDraw(raw,self,scale,px,mountY,camX,camY,facing,walkPhase,stepFlip,false)
+    if Settings.bool("show_rider",true) and riderSprite and type(riderSprite.draw)=="function" then
+      local riderY=mountY-lift(kind,species)*math.max(0.75,math.min(scale,2.5))
+      pcall(riderSprite.draw,riderSprite,px,riderY,camX,camY,
+        facing or "down",walkPhase or 0,stepFlip or false,true)
     end
   end
   return mountSprite
 end
 
 function Presentation.rendererWantsStadium()
-  local choice = tostring(Settings.get("flight_mount_renderer", "auto"))
-  if choice == "2d" then return false end
-  if choice == "stadium3d" then return true end
-  local h = Compat.find("STADIUM2_OVERWORLD_MODELS")
-  return h ~= nil
+  local choice=tostring(Settings.get("flight_mount_renderer","auto"))
+  if choice=="2d" then return false end
+  if choice=="stadium3d" then return true end
+  return Compat.find("STADIUM2_OVERWORLD_MODELS") ~= nil
 end
 
 function Presentation.install(deps)
-  Settings, Compat = deps.settings, deps.compat
-  mod.exports.mountVisualScale = Presentation.scale
-  mod.exports.mountPokedexHeightMeters = heightMeters
+  Settings,Compat,Progression=deps.settings,deps.compat,deps.progression
+  mod.exports.mountVisualScale=Presentation.scale
+  mod.exports.mountPokedexHeightMeters=heightMeters
 end
 
 return Presentation

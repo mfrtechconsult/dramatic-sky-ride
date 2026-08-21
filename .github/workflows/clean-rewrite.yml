@@ -69,8 +69,7 @@ jobs:
           wilds = json.loads((root/'wilds/manifest.json').read_text())
           assert wilds['id'] == 'overworld_wild_spawns'
           assert 'gen1' in wilds.get('games', []) and 'gen2' in wilds.get('games', [])
-          wilds_main = (root/'wilds/main.lua').read_text()
-          assert 'mod.exports.resolveFollowerSprite' in wilds_main
+          assert 'mod.exports.resolveFollowerSprite' in (root/'wilds/main.lua').read_text()
 
           stadium = json.loads((root/'stadium2/manifest.json').read_text())
           assert stadium['id'] == 'STADIUM2_OVERWORLD_MODELS'
@@ -86,8 +85,35 @@ jobs:
           assert 'mod.exports.registerSpriteSource' in skies_main
           assert 'mod.exports.unregisterSpriteSource' in skies_main
 
-          dsr = (Path('dramatic_sky_ride/src/sprites.lua')).read_text()
+          dsr = Path('dramatic_sky_ride/src/sprites.lua').read_text()
           assert 'resolveFollowerSprite' in dsr
           assert 'STADIUM2_OVERWORLD_MODELS' in dsr
           print('optional-mod-public-contracts-ok')
           PY
+
+  package-rc:
+    needs: [contract, compatibility-contracts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bundle pinned PokePC 001-251 fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit=78c80f61e166e67efd92d929207caa92e896e789
+          git clone --filter=blob:none --no-checkout https://github.com/burgerslayer7/PokePCFollowers.git /tmp/pokepc
+          git -C /tmp/pokepc checkout "$commit" -- assets/sprites THIRD_PARTY_NOTICES.md
+          mkdir -p dramatic_sky_ride/assets/pokepc
+          cp /tmp/pokepc/assets/sprites/follower_*.png dramatic_sky_ride/assets/pokepc/
+          test "$(find dramatic_sky_ride/assets/pokepc -name 'follower_*.png' | wc -l)" -eq 251
+          cp /tmp/pokepc/THIRD_PARTY_NOTICES.md dramatic_sky_ride/POKEPC_THIRD_PARTY_NOTICES.md
+      - name: Revalidate packaged tree
+        run: python tests/clean_contract.py
+      - name: Build and verify archive
+        run: |
+          zip -qr dramatic-sky-ride-0.3.0-rc.1.zip dramatic_sky_ride
+          unzip -tq dramatic-sky-ride-0.3.0-rc.1.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dramatic-sky-ride-0.3.0-rc.1
+          path: dramatic-sky-ride-0.3.0-rc.1.zip
